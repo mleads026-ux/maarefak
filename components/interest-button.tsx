@@ -1,0 +1,3 @@
+ 'use client'
+import { useState } from 'react';import { Button } from '@/components/ui/button';import { createClient } from '@/lib/supabase/client'
+export function InterestButton({userId}:{userId:string}){const [on,setOn]=useState(false);const [busy,setBusy]=useState(false);async function toggle(){setBusy(true);const {data}=await createClient().rpc('toggle_interest',{p_target:userId});if(typeof data==='boolean')setOn(data);setBusy(false)}return <Button size="sm" variant={on?'default':'secondary'} disabled={busy} onClick={toggle}>{on?'مهتم':'اهتمام'}</Button>}

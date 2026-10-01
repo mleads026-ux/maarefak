@@ -1,0 +1,4 @@
+ 'use client'
+import Link from 'next/link';import { usePathname } from 'next/navigation';import { Home,Shuffle,UsersRound,MessagesSquare,UserRound } from 'lucide-react';import { cn } from '@/lib/utils'
+const items=[['/home','الرئيسية',Home],['/discover','اكتشف',Shuffle],['/spaces','المساحات',UsersRound],['/chats','حواراتي',MessagesSquare],['/me','أنا',UserRound]] as const
+export function BottomNav(){const path=usePathname();return <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur">{items.map(([href,label,Icon])=>{const active=path.startsWith(href);return <Link key={href} href={href} className={cn('flex flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-[11px] font-bold',active?'text-[#1560BD]':'text-slate-500')}><Icon size={20}/><span>{label}</span></Link>})}</nav>}

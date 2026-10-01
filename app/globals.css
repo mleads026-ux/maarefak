@@ -1,0 +1,4 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root{color-scheme:light}*{box-sizing:border-box}html{direction:rtl;background:#f7f9fc}body{margin:0;background:#f7f9fc;color:#111827;font-family:Tajawal,Alexandria,"Segoe UI",Tahoma,Arial,sans-serif}button,input,textarea,select{font:inherit}.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{scrollbar-width:none}

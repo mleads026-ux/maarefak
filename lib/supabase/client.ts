@@ -1,0 +1,3 @@
+import { createBrowserClient } from '@supabase/ssr'
+import { supabaseUrl, supabasePublishableKey } from './config'
+export function createClient(){return createBrowserClient(supabaseUrl,supabasePublishableKey)}

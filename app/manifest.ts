@@ -1,0 +1,2 @@
+import type { MetadataRoute } from 'next'
+export default function manifest():MetadataRoute.Manifest{return {name:'معارفك',short_name:'معارفك',description:'معارف جديدة تبدأ بخطوة',start_url:'/home',display:'standalone',background_color:'#F7F9FC',theme_color:'#1560BD',lang:'ar',dir:'rtl'}}

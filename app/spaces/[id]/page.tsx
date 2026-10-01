@@ -530,7 +530,7 @@ export default function SpaceChat({
 
                 <Button
                   size="sm"
-                  variant="destructive"
+                  variant="danger"
                   onClick={leaveVoice}
                 >
                   خروج

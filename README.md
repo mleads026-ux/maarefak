@@ -24,4 +24,5 @@ Arabic-first RTL social web app / PWA.
 The connected project is already provisioned. `supabase/migrations/001_initial_schema.sql` reproduces the database schema on a fresh project.
 
 ## Environment
-Copy `.env.example` to `.env.local` if you want to override the built-in public Supabase project configuration. Never put a service-role key in browser code.
+Copy `.env.example` to `.env.local` if you want to override the built-in public Supabase project configuration. Never put a service-role key in browser code. 
+Deployment trigger for Vercel.

@@ -1,2 +1,110 @@
-import Link from 'next/link';import { redirect } from 'next/navigation';import { createClient } from '@/lib/supabase/server';import { AppShell } from '@/components/app-shell';import { PageHeader } from '@/components/page-header';import { Card,CardContent } from '@/components/ui/card';import { MessagesSquare } from 'lucide-react'
-export default async function Chats(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect('/login');const {data:own}=await s.from('conversation_members').select('conversation_id').eq('user_id',user.id);const ids=(own||[]).map(x=>x.conversation_id);let rows:any[]=[];if(ids.length){const [{data:members},{data:messages}]=await Promise.all([s.from('conversation_members').select('conversation_id,user_id,profiles(display_name,avatar_url)').in('conversation_id',ids),s.from('messages').select('conversation_id,body,created_at,sender_id').in('conversation_id',ids).order('created_at',{ascending:false})]);rows=ids.map(id=>{const other=(members||[]).find((m:any)=>m.conversation_id===id&&m.user_id!==user.id);const last=(messages||[]).find((m:any)=>m.conversation_id===id);return {id,other,last}})}return <AppShell><PageHeader title="حواراتي"/><main className="space-y-3 p-4">{rows.map((x:any)=><Link key={x.id} href={`/chats/${x.id}`} className="block"><Card><CardContent className="flex items-center gap-3"><div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-blue-50 font-black text-[#1560BD]">{x.other?.profiles?.avatar_url?<img src={x.other.profiles.avatar_url} alt="" className="h-full w-full object-cover"/>:(x.other?.profiles?.display_name||'م')[0]}</div><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="font-extrabold">{x.other?.profiles?.display_name||'مستخدم'}</p><span className="text-[10px] text-slate-400">{x.last?new Date(x.last.created_at).toLocaleDateString('ar-EG'):''}</span></div><p className="truncate text-sm text-slate-500">{x.last?.body||'ابدأ الحوار الآن'}</p></div></CardContent></Card></Link>)}{!rows.length&&<div className="py-20 text-center"><MessagesSquare className="mx-auto mb-3 text-slate-300" size={44}/><p className="font-bold">لا توجد حوارات حتى الآن</p><p className="mt-1 text-sm text-slate-500">ابدأ بالتعرف على أشخاص جدد من اكتشف.</p></div>}</main></AppShell>}
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { AppShell } from '@/components/app-shell'
+import { PageHeader } from '@/components/page-header'
+import { Card, CardContent } from '@/components/ui/card'
+import { MessagesSquare } from 'lucide-react'
+
+export default async function Chats() {
+  const s = await createClient()
+
+  const {
+    data: { user },
+  } = await s.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: own } = await s
+    .from('conversation_members')
+    .select('conversation_id')
+    .eq('user_id', user.id)
+
+  const ids = (own || []).map((x) => x.conversation_id)
+  let rows: any[] = []
+
+  if (ids.length) {
+    const [{ data: members }, { data: messages }] = await Promise.all([
+      s.from('conversation_members')
+        .select('conversation_id,user_id,profiles(display_name,avatar_url)')
+        .in('conversation_id', ids),
+
+      s.from('messages')
+        .select('conversation_id,body,created_at,sender_id,message_type')
+        .in('conversation_id', ids)
+        .order('created_at', { ascending: false }),
+    ])
+
+    rows = ids.map((id) => {
+      const other = (members || []).find(
+        (m: any) => m.conversation_id === id && m.user_id !== user.id
+      )
+
+      const last = (messages || []).find(
+        (m: any) => m.conversation_id === id
+      )
+
+      return { id, other, last }
+    })
+  }
+
+  return (
+    <AppShell>
+      <PageHeader title="كلامنا" />
+
+      <main className="space-y-3 p-4">
+        {rows.map((x: any) => (
+          <Link key={x.id} href={`/chats/${x.id}`} className="block">
+            <Card>
+              <CardContent className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-blue-50 font-black text-[#1560BD]">
+                  {x.other?.profiles?.avatar_url ? (
+                    <img
+                      src={x.other.profiles.avatar_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    (x.other?.profiles?.display_name || 'م')[0]
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-extrabold">
+                      {x.other?.profiles?.display_name || 'مستخدم'}
+                    </p>
+                    <span className="text-[10px] text-slate-400">
+                      {x.last
+                        ? new Date(x.last.created_at).toLocaleDateString('ar-EG')
+                        : ''}
+                    </span>
+                  </div>
+
+                  <p className="truncate text-sm text-slate-500">
+                    {x.last?.message_type === 'image'
+                      ? '📷 صورة'
+                      : x.last?.body || 'ابدأ الكلام الآن'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+
+        {!rows.length ? (
+          <div className="py-20 text-center">
+            <MessagesSquare
+              className="mx-auto mb-3 text-slate-300"
+              size={44}
+            />
+            <p className="font-bold">لسه مفيش كلام بينكم</p>
+            <p className="mt-1 text-sm text-slate-500">
+              ابدأ بالتعرف على أشخاص جدد من اكتشف.
+            </p>
+          </div>
+        ) : null}
+      </main>
+    </AppShell>
+  )
+}

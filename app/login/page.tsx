@@ -1,3 +1,154 @@
- 'use client'
-import { useState } from 'react';import { useRouter } from 'next/navigation';import { createClient } from '@/lib/supabase/client';import { Button } from '@/components/ui/button';import { Input } from '@/components/ui/input';import { Card,CardContent } from '@/components/ui/card';import { friendlyError } from '@/lib/utils'
-export default function LoginPage(){const r=useRouter();const [mode,setMode]=useState<'login'|'signup'>('login');const [name,setName]=useState('');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [msg,setMsg]=useState('');const [busy,setBusy]=useState(false);async function submit(){setBusy(true);setMsg('');const s=createClient();if(mode==='signup'){const {data,error}=await s.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:`${location.origin}/auth/callback`}});if(error)setMsg(friendlyError(error.message));else if(data.session)r.push('/onboarding');else setMsg('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده ثم سجل الدخول.')}else{const {error}=await s.auth.signInWithPassword({email,password});if(error)setMsg(friendlyError(error.message));else{const {data:{user}}=await s.auth.getUser();const {data:p}=await s.from('profiles').select('profile_complete').eq('id',user!.id).single();r.push(p?.profile_complete?'/home':'/onboarding');r.refresh()}}setBusy(false)}return <main className="mx-auto flex min-h-screen max-w-md items-center p-5"><div className="w-full"><div className="mb-8 text-center"><div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-3xl bg-[#1560BD] text-2xl font-black text-white">م</div><h1 className="text-2xl font-extrabold">معارفك</h1><p className="mt-1 text-sm text-slate-500">معارف جديدة تبدأ بخطوة</p></div><Card><CardContent className="space-y-3 p-5">{mode==='signup'&&<Input placeholder="الاسم الظاهر" value={name} onChange={e=>setName(e.target.value)}/>}<Input type="email" placeholder="البريد الإلكتروني" value={email} onChange={e=>setEmail(e.target.value)}/><Input type="password" placeholder="كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)}/>{msg&&<p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">{msg}</p>}<Button className="w-full" disabled={busy||!email||password.length<6||(mode==='signup'&&!name.trim())} onClick={submit}>{busy?'جاري التنفيذ...':mode==='login'?'تسجيل الدخول':'إنشاء الحساب'}</Button><Button className="w-full" variant="ghost" onClick={()=>{setMode(mode==='login'?'signup':'login');setMsg('')}}>{mode==='login'?'إنشاء حساب جديد':'لدي حساب بالفعل'}</Button></CardContent></Card><p className="mt-4 text-center text-xs text-slate-400">باستخدام معارفك أنت تقر بأن عمرك 18 سنة فأكثر.</p></div></main>}
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { CrowdMark } from '@/components/crowd-mark'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { friendlyError } from '@/lib/utils'
+
+export default function LoginPage() {
+  const r = useRouter()
+
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit() {
+    setBusy(true)
+    setMsg('')
+
+    const s = createClient()
+
+    if (mode === 'signup') {
+      const { data, error } = await s.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: name },
+          emailRedirectTo: `${location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        setMsg(friendlyError(error.message))
+      } else if (data.session) {
+        r.push('/onboarding')
+      } else {
+        setMsg(
+          'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده ثم سجل الدخول.'
+        )
+      }
+    } else {
+      const { error } = await s.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        setMsg(friendlyError(error.message))
+      } else {
+        const {
+          data: { user },
+        } = await s.auth.getUser()
+
+        const { data: p } = await s
+          .from('profiles')
+          .select('profile_complete')
+          .eq('id', user!.id)
+          .single()
+
+        r.push(p?.profile_complete ? '/home' : '/onboarding')
+        r.refresh()
+      }
+    }
+
+    setBusy(false)
+  }
+
+  return (
+    <main className="mx-auto flex min-h-screen max-w-md items-center p-5">
+      <div className="w-full">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-3 grid h-20 w-20 place-items-center rounded-[28px] bg-[#1560BD] text-white shadow-sm">
+            <CrowdMark size={54} />
+          </div>
+
+          <h1 className="text-2xl font-extrabold">معارفك</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            معارف جديدة تبدأ بخطوة
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="space-y-3 p-5">
+            {mode === 'signup' ? (
+              <Input
+                placeholder="الاسم الظاهر"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            ) : null}
+
+            <Input
+              type="email"
+              placeholder="البريد الإلكتروني"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            <Input
+              type="password"
+              placeholder="كلمة المرور"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+
+            {msg ? (
+              <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                {msg}
+              </p>
+            ) : null}
+
+            <Button
+              className="w-full"
+              disabled={
+                busy ||
+                !email ||
+                password.length < 6 ||
+                (mode === 'signup' && !name.trim())
+              }
+              onClick={submit}
+            >
+              {busy
+                ? 'جاري التنفيذ...'
+                : mode === 'login'
+                  ? 'تسجيل الدخول'
+                  : 'إنشاء الحساب'}
+            </Button>
+
+            <Button
+              className="w-full"
+              variant="ghost"
+              onClick={() => {
+                setMode(mode === 'login' ? 'signup' : 'login')
+                setMsg('')
+              }}
+            >
+              {mode === 'login' ? 'إنشاء حساب جديد' : 'لدي حساب بالفعل'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <p className="mt-4 text-center text-xs text-slate-400">
+          باستخدام معارفك أنت تقر بأن عمرك 18 سنة فأكثر.
+        </p>
+      </div>
+    </main>
+  )
+}

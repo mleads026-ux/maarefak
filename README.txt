@@ -1,18 +1,24 @@
-MAAREFAK — PERSISTENT LOGIN PATCH
+MAAREFAK — SIGNUP EMAIL OTP PATCH
 
-Replace/add:
-1) lib/supabase/client.ts
-2) app/manifest.ts   (new)
-3) app/layout.tsx
+Replace:
+1) app/login/page.tsx
+2) lib/utils.ts
 
-Behavior:
-- Supabase session is persisted.
-- Access token refreshes automatically.
-- Installed app/PWA opens at /home.
-- If a valid session exists, the user goes straight to Home.
-- If there is no valid session, existing middleware redirects to /login.
-- Session stays active until logout or auth invalidation/expiry.
+Then configure Supabase confirmation email template manually:
+Supabase Dashboard -> Authentication -> Email Templates -> Confirm signup
 
-Then Commit to main -> Push origin.
-Suggested summary:
-Keep users signed in and open app on Home
+Subject:
+رمز تأكيد حسابك في معارفك
+
+Body:
+Use the content in SUPABASE_EMAIL_TEMPLATE.txt
+
+IMPORTANT:
+The template MUST contain {{ .Token }} so Supabase sends the 6-digit code instead of relying only on a confirmation link.
+
+Flow:
+Create account with email + password -> OTP screen -> verify 6-digit code -> onboarding -> home.
+Normal future login remains email + password.
+
+Suggested GitHub Summary:
+Add 6-digit email OTP signup verification

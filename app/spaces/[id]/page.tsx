@@ -496,15 +496,15 @@ export default function SpaceChat({
 
       <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
         {notice ? (
-          <p className="mb-3 rounded-2xl bg-blue-50 p-3 text-xs font-bold text-[#1560BD]">
+          <p className="mb-3 rounded-2xl bg-[#E7F5F1] p-3 text-xs font-bold text-[#006B57]">
             {notice}
           </p>
         ) : null}
 
-        <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#1560BD] to-[#0D3D78] p-4 text-white">
+        <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#006B57] to-[#004D40] p-4 text-white">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-blue-100">الصوت الجماعي</p>
+              <p className="text-xs text-[#CDECE3]">الصوت الجماعي</p>
               <p className="mt-1 font-extrabold">
                 {voiceMembers.length} متواجد بالصوت
               </p>
@@ -512,7 +512,7 @@ export default function SpaceChat({
 
             {!inVoice ? (
               <Button
-                className="bg-white text-[#1560BD] hover:bg-blue-50"
+                className="bg-white text-[#006B57] hover:bg-[#E7F5F1]"
                 onClick={joinVoice}
               >
                 <PhoneCall size={16} />
@@ -561,7 +561,7 @@ export default function SpaceChat({
 
         <section className="mb-4">
           <div className="mb-2 flex items-center gap-2">
-            <Users size={17} className="text-[#1560BD]" />
+            <Users size={17} className="text-[#006B57]" />
             <h2 className="font-extrabold">أعضاء اللَمّة</h2>
           </div>
 
@@ -574,7 +574,7 @@ export default function SpaceChat({
                 onClick={() => setSelectedMember(m)}
                 className="min-w-[96px] rounded-2xl border border-slate-200 bg-white p-3 text-center disabled:opacity-60"
               >
-                <div className="mx-auto grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-blue-50 font-black text-[#1560BD]">
+                <div className="mx-auto grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-[#E7F5F1] font-black text-[#006B57]">
                   {m.profiles?.avatar_url ? (
                     <img
                       src={m.profiles.avatar_url}
@@ -661,7 +661,7 @@ export default function SpaceChat({
               key={m.id}
               className={
                 m.sender_id === uid
-                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] p-3 text-white'
+                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#006B57] p-3 text-white'
                   : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white p-3 shadow-sm'
               }
             >
@@ -674,8 +674,8 @@ export default function SpaceChat({
                 }}
                 className={
                   m.sender_id === uid
-                    ? 'text-[11px] font-bold text-blue-100'
-                    : 'text-[11px] font-bold text-[#1560BD]'
+                    ? 'text-[11px] font-bold text-[#CDECE3]'
+                    : 'text-[11px] font-bold text-[#006B57]'
                 }
               >
                 {(m.profiles as any)?.display_name || 'عضو'}

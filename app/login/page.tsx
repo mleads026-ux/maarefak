@@ -162,13 +162,13 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-md items-center p-5">
       <div className="w-full">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 grid h-20 w-20 place-items-center rounded-[28px] bg-[#1560BD] text-white shadow-sm">
+          <div className="mx-auto mb-3 -translate-y-1 grid h-20 w-20 place-items-center rounded-[28px] bg-[#006B57] text-white shadow-sm">
             <CrowdMark size={54} />
           </div>
 
-          <h1 className="text-2xl font-extrabold">معارفك</h1>
+          <h1 className="text-2xl font-extrabold">لمتنا</h1>
           <p className="mt-1 text-sm text-slate-500">
-            معارف جديدة تبدأ بخطوة
+            لمّتنا تبدأ بخطوة
           </p>
         </div>
 
@@ -181,7 +181,7 @@ export default function LoginPage() {
                   <p className="mt-1 text-sm leading-6 text-slate-500">
                     أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى
                   </p>
-                  <p className="mt-1 text-sm font-bold text-[#1560BD]">
+                  <p className="mt-1 text-sm font-bold text-[#006B57]">
                     {email}
                   </p>
                 </div>
@@ -299,7 +299,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="mt-4 text-center text-xs text-slate-400">
-          باستخدام معارفك أنت تقر بأن عمرك 18 سنة فأكثر.
+          باستخدام لمتنا أنت تقر بأن عمرك 18 سنة فأكثر.
         </p>
       </div>
     </main>

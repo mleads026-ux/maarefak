@@ -576,7 +576,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
       <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="truncate text-xs font-bold text-[#1560BD]">
+          <p className="truncate text-xs font-bold text-[#006B57]">
             {callLabel || 'مكالمات صوتية بموافقة الطرفين'}
           </p>
 
@@ -638,7 +638,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         ) : null}
 
         {incomingCall ? (
-          <div className="mb-4 rounded-3xl border border-blue-100 bg-blue-50 p-4">
+          <div className="mb-4 rounded-3xl border border-[#CDECE3] bg-[#E7F5F1] p-4">
             <p className="font-extrabold">
               {other?.profiles?.display_name || 'الطرف الآخر'} يتصل بك صوتيًا
             </p>
@@ -675,7 +675,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
               key={m.id}
               className={
                 m.sender_id === uid
-                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] px-4 py-3 text-white'
+                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#006B57] px-4 py-3 text-white'
                   : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white px-4 py-3 shadow-sm'
               }
             >
@@ -730,7 +730,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
               <p
                 className={
                   m.sender_id === uid
-                    ? 'mt-1 text-[10px] text-blue-100'
+                    ? 'mt-1 text-[10px] text-[#CDECE3]'
                     : 'mt-1 text-[10px] text-slate-400'
                 }
               >

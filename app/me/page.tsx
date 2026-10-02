@@ -94,7 +94,7 @@ export default async function Me() {
       <main className="space-y-4 p-4">
         <Card>
           <CardContent className="text-center">
-            <div className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-blue-50 text-3xl font-black text-[#1560BD]">
+            <div className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-[#E7F5F1] text-3xl font-black text-[#006B57]">
               {p?.avatar_url ? (
                 <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -113,7 +113,7 @@ export default async function Me() {
             <p className="mt-3 text-sm leading-6 text-slate-600">
               {p?.bio || 'أضف نبذة قصيرة عنك من الإعدادات.'}
             </p>
-            <p className="mt-3 inline-flex rounded-full bg-[#EAF2FC] px-3 py-2 text-xs font-bold text-[#1560BD]">
+            <p className="mt-3 inline-flex rounded-full bg-[#EAF2FC] px-3 py-2 text-xs font-bold text-[#006B57]">
               {p?.mood || '☕ رايق'}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -136,7 +136,7 @@ export default async function Me() {
               href={href}
               className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-4"
             >
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#EAF2FC] text-[#1560BD]">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#EAF2FC] text-[#006B57]">
                 <Icon size={19} />
               </div>
               <div className="flex-1">

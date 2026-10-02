@@ -237,14 +237,14 @@ export default function Discover() {
 
       <main className="p-4">
         {notice ? (
-          <p className="mb-4 rounded-2xl bg-blue-50 p-3 text-sm font-bold text-[#1560BD]">
+          <p className="mb-4 rounded-2xl bg-[#E7F5F1] p-3 text-sm font-bold text-[#006B57]">
             {notice}
           </p>
         ) : null}
 
         {!match ? (
           <div className="flex min-h-[68vh] flex-col items-center justify-center text-center">
-            <div className="mb-6 grid h-24 w-24 place-items-center rounded-full bg-[#EAF2FC] text-[#1560BD]">
+            <div className="mb-6 grid h-24 w-24 place-items-center rounded-full bg-[#EAF2FC] text-[#006B57]">
               <Shuffle size={42} />
             </div>
 
@@ -256,7 +256,7 @@ export default function Discover() {
 
             {waiting ? (
               <>
-                <div className="mt-7 h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-[#1560BD]" />
+                <div className="mt-7 h-8 w-8 animate-spin rounded-full border-4 border-[#CDECE3] border-t-[#006B57]" />
                 <p className="mt-3 text-sm font-bold">جاري انتظار شخص متاح...</p>
                 <Button className="mt-4" variant="outline" onClick={cancel}>
                   إلغاء البحث
@@ -280,7 +280,7 @@ export default function Discover() {
                 {match.avatar_url ? (
                   <img src={match.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-4xl font-black text-[#1560BD]">
+                  <span className="text-4xl font-black text-[#006B57]">
                     {match.display_name?.[0]}
                   </span>
                 )}

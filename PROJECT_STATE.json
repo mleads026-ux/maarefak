@@ -1,0 +1,37 @@
+{
+  "project_name": "لمتنا",
+  "english_name": "Lammetna",
+  "repo": "mleads026-ux/maarefak",
+  "supabase_project_ref": "hxinaxjcdwsngiqvdryq",
+  "stack": ["Next.js", "TypeScript", "Tailwind", "shadcn/ui", "Supabase", "Vercel"],
+  "iap_refund_debt_status": "already_implemented_and_verified_in_live_database",
+  "localized_star_pricing_status": "implemented_live",
+  "localized_star_pricing_version": "2026-10-local-v2",
+  "live_migrations_added": [
+    "20261001234255 localized_star_pack_pricing_v2",
+    "20261001234406 index_star_pack_price_country"
+  ],
+  "egypt_star_pack_prices_egp": {
+    "100": 70,
+    "500": 325,
+    "1200": 720,
+    "3000": 1650
+  },
+  "next_step": "Wire app/me/page.tsx to public.get_my_star_packs(), remove remaining Maarefak branding from GitHub source, then run next build and Vercel Preview.",
+  "github_write_status": "403 Resource not accessible by integration on branch creation; no repository write succeeded",
+  "security_todos": [
+    "Enable Leaked Password Protection before launch",
+    "Review authenticated SECURITY DEFINER RPC grants before launch",
+    "Confirm Email + OTP ON and test",
+    "TURN server for voice",
+    "KYC provider",
+    "Payout provider credentials",
+    "Google/Apple IAP verification integration"
+  ],
+  "do_not_do": [
+    "Do not rename back to Maarefak",
+    "Do not deploy old GitHub main as if it were the full current frontend",
+    "Do not enable real payouts without provider credentials/KYC",
+    "Do not claim full build succeeded unless next build actually succeeds"
+  ]
+}

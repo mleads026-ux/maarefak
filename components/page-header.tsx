@@ -3,7 +3,7 @@ import { Bell, Star } from 'lucide-react'
 import { CrowdMark } from '@/components/crowd-mark'
 
 export function PageHeader({
-  title = 'معارفك',
+  title = 'لمتنا',
   stars,
 }: {
   title?: string
@@ -14,7 +14,7 @@ export function PageHeader({
       <div>
         <div className="flex items-center gap-1.5 text-[#1560BD]">
           <CrowdMark size={17} />
-          <p className="text-[12px] font-extrabold">معارفك</p>
+          <p className="text-[12px] font-extrabold">لمتنا</p>
         </div>
 
         <h1 className="text-lg font-extrabold">{title}</h1>

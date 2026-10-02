@@ -1,0 +1,24 @@
+LAMMETNA BRANCH UPLOAD
+======================
+
+Target repository:
+mleads026-ux/maarefak
+
+Target branch:
+chatgpt/lammetna-production-hardeni
+
+These files were prepared from the current contents of that branch and contain:
+1) Branding: معارفك -> لمتنا in layout, manifest, and page header.
+2) Star packs UI reads localized prices from Supabase RPC get_my_star_packs().
+3) Store checkout disclaimer: Apple/Google storefront price is final.
+
+Files to replace:
+- app/layout.tsx
+- app/manifest.ts
+- components/page-header.tsx
+- app/me/page.tsx
+
+Do NOT upload to main.
+Commit to the target branch only.
+Suggested commit message:
+Lammetna branding and localized star pack pricing

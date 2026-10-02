@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'معارفك',
-  description: 'معارف جديدة تبدأ بخطوة',
-  applicationName: 'معارفك',
+  title: 'لمتنا',
+  description: 'مساحتك للتعارف والتواصل',
+  applicationName: 'لمتنا',
   appleWebApp: {
     capable: true,
-    title: 'معارفك',
+    title: 'لمتنا',
     statusBarStyle: 'default',
   },
   robots: {

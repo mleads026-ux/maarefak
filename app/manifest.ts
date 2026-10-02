@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'معارفك',
-    short_name: 'معارفك',
-    description: 'معارف جديدة تبدأ بخطوة',
+    name: 'لمتنا',
+    short_name: 'لمتنا',
+    description: 'مساحتك للتعارف والتواصل',
     start_url: '/home',
     scope: '/',
     display: 'standalone',

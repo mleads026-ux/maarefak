@@ -1,110 +1,15 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { AppShell } from '@/components/app-shell'
-import { PageHeader } from '@/components/page-header'
-import { Card, CardContent } from '@/components/ui/card'
-import { MessagesSquare } from 'lucide-react'
-
-export default async function Chats() {
-  const s = await createClient()
-
-  const {
-    data: { user },
-  } = await s.auth.getUser()
-
-  if (!user) redirect('/login')
-
-  const { data: own } = await s
-    .from('conversation_members')
-    .select('conversation_id')
-    .eq('user_id', user.id)
-
-  const ids = (own || []).map((x) => x.conversation_id)
-  let rows: any[] = []
-
-  if (ids.length) {
-    const [{ data: members }, { data: messages }] = await Promise.all([
-      s.from('conversation_members')
-        .select('conversation_id,user_id,profiles(display_name,avatar_url)')
-        .in('conversation_id', ids),
-
-      s.from('messages')
-        .select('conversation_id,body,created_at,sender_id,message_type')
-        .in('conversation_id', ids)
-        .order('created_at', { ascending: false }),
-    ])
-
-    rows = ids.map((id) => {
-      const other = (members || []).find(
-        (m: any) => m.conversation_id === id && m.user_id !== user.id
-      )
-
-      const last = (messages || []).find(
-        (m: any) => m.conversation_id === id
-      )
-
-      return { id, other, last }
-    })
-  }
-
-  return (
-    <AppShell>
-      <PageHeader title="كلامنا" />
-
-      <main className="space-y-3 p-4"><section className="mb-4 overflow-hidden rounded-[30px] bg-gradient-to-l from-[#7657FF] via-[#3E67D8] to-[#168CD8] p-5 text-white shadow-[0_16px_38px_rgba(72,91,203,.16)]"><h2 className="text-2xl font-black">كلامنا</h2><p className="mt-1 text-sm text-white/80">محادثات أجمل مع أصدقاء جدد</p></section>
-        {rows.map((x: any) => (
-          <Link key={x.id} href={`/chats/${x.id}`} className="block">
-            <Card>
-              <CardContent className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-[#EAF2FC] font-black text-[#1560BD]">
-                  {x.other?.profiles?.avatar_url ? (
-                    <img
-                      src={x.other.profiles.avatar_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (x.other?.profiles?.display_name || 'م')[0]
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-extrabold">
-                      {x.other?.profiles?.display_name || 'مستخدم'}
-                    </p>
-                    <span className="text-[10px] text-slate-400">
-                      {x.last
-                        ? new Date(x.last.created_at).toLocaleDateString('ar-EG')
-                        : ''}
-                    </span>
-                  </div>
-
-                  <p className="truncate text-sm text-slate-500">
-                    {x.last?.message_type === 'image'
-                      ? '📷 صورة'
-                      : x.last?.body || 'ابدأ الكلام الآن'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-
-        {!rows.length ? (
-          <div className="py-20 text-center">
-            <MessagesSquare
-              className="mx-auto mb-3 text-slate-300"
-              size={44}
-            />
-            <p className="font-bold">لسه مفيش كلام بينكم</p>
-            <p className="mt-1 text-sm text-slate-500">
-              ابدأ بالتعرف على أشخاص جدد من اكتشف.
-            </p>
-          </div>
-        ) : null}
-      </main>
-    </AppShell>
-  )
+import {redirect} from 'next/navigation'
+import {Search,Plus,ChevronLeft,LockKeyhole} from 'lucide-react'
+import {createClient} from '@/lib/supabase/server'
+import {AppShell} from '@/components/app-shell'
+import {PageHeader} from '@/components/page-header'
+export default async function Chats(){
+ const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect('/login')
+ const {data:own}=await s.from('conversation_members').select('conversation_id').eq('user_id',user.id);const ids=(own||[]).map(x=>x.conversation_id);let rows:any[]=[]
+ if(ids.length){const [{data:members},{data:messages}]=await Promise.all([s.from('conversation_members').select('conversation_id,user_id,profiles(display_name,avatar_url)').in('conversation_id',ids),s.from('messages').select('conversation_id,body,created_at,sender_id,message_type').in('conversation_id',ids).order('created_at',{ascending:false})]);rows=ids.map(id=>({id,other:(members||[]).find((m:any)=>m.conversation_id===id&&m.user_id!==user.id),last:(messages||[]).find((m:any)=>m.conversation_id===id)}))}
+ return <AppShell><PageHeader title="كلامنا"/><main className="px-4 pb-5 pt-4"><div className="flex h-14 items-center gap-3 rounded-[24px] bg-white px-4 shadow-sm ring-1 ring-[#E1ECF8]"><Search size={22} className="text-[#3E5070]"/><span className="text-sm font-bold text-[#8993A7]">ابحث في المحادثات...</span></div>
+ <Link href="/discover" className="lammetna-gradient hero-shadow mt-4 grid grid-cols-[1fr_120px] items-center overflow-hidden rounded-[28px] p-5 text-white"><div><h2 className="text-[27px] font-black">ابدأ تعارف جديد</h2><p className="mt-2 text-sm font-bold text-white/85">اكتشف أشخاصًا جدد وتواصل الآن</p><span className="mt-4 inline-flex items-center gap-2 rounded-[18px] bg-white px-4 py-2 text-sm font-black text-[#5827D8]">اكتشف الآن <ChevronLeft size={17}/></span></div><div className="grid h-24 w-24 place-items-center rounded-full bg-white/15"><Plus size={46}/></div></Link>
+ <div className="mt-4 space-y-2">{rows.map((x:any)=><Link href={`/chats/${x.id}`} key={x.id} className="mobile-card flex items-center gap-3 rounded-[24px] p-3"><div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-[#E9F2FB] ring-2 ring-[#37D6E6]">{x.other?.profiles?.avatar_url?<img src={x.other.profiles.avatar_url} alt="" className="h-full w-full object-cover"/>:<div className="grid h-full w-full place-items-center text-xl font-black text-[#1268F5]">{(x.other?.profiles?.display_name||'م')[0]}</div>}<span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#0FD18A] ring-2 ring-white"/></div><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="font-black">{x.other?.profiles?.display_name||'مستخدم'}</p><span className="text-[10px] font-bold text-[#78849A]">{x.last?new Date(x.last.created_at).toLocaleDateString('ar-EG'):''}</span></div><p className="mt-1 truncate text-sm font-bold text-[#66738C]">{x.last?.message_type==='image'?'🔒 صورة — اضغط لعرض الصورة':x.last?.body||'ابدأ الكلام الآن'}</p></div></Link>)}{!rows.length?<div className="py-16 text-center text-sm font-bold text-[#758199]">لسه مفيش محادثات — ابدأ من «اكتشف».</div>:null}</div>
+ </main></AppShell>
 }

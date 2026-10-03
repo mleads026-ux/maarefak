@@ -12,20 +12,36 @@ import { friendlyError } from '@/lib/utils'
 type Mode = 'login' | 'signup'
 type Step = 'form' | 'otp'
 
+const isStrongPassword = (value: string) =>
+  value.length >= 8 &&
+  /[a-z]/.test(value) &&
+  /[A-Z]/.test(value) &&
+  /[0-9]/.test(value) &&
+  /[^A-Za-z0-9]/.test(value)
+
 export default function LoginPage() {
   const r = useRouter()
 
   const [mode, setMode] = useState<Mode>('login')
   const [step, setStep] = useState<Step>('form')
-
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
+  const [legalAccepted, setLegalAccepted] = useState(false)
+
+  const [isReset, setIsReset] = useState(false)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetPassword2, setResetPassword2] = useState('')
 
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [resendSeconds, setResendSeconds] = useState(0)
+
+  useEffect(() => {
+    setIsReset(
+      new URLSearchParams(window.location.search).get('reset') === '1',
+    )
+  }, [])
 
   useEffect(() => {
     if (resendSeconds <= 0) return
@@ -37,20 +53,51 @@ export default function LoginPage() {
     return () => window.clearInterval(timer)
   }, [resendSeconds])
 
+  async function acceptSignupLegal() {
+    const s = createClient()
+    const { error } = await s.rpc('accept_signup_legal')
+
+    if (error) {
+      setMsg(
+        'تم إنشاء الحساب، لكن تعذر تسجيل الموافقات القانونية. حاول مرة أخرى.',
+      )
+      return false
+    }
+
+    return true
+  }
+
   async function submit() {
-    if(mode==='signup' && !(password.length>=8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password))){setMsg('كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز.');return}
-    setBusy(true)
     setMsg('')
 
+    if (!email.trim()) {
+      setMsg('أدخل بريدك الإلكتروني.')
+      return
+    }
+
+    if (mode === 'signup') {
+      if (!isStrongPassword(password)) {
+        setMsg(
+          'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز.',
+        )
+        return
+      }
+
+      if (!legalAccepted) {
+        setMsg(
+          'يجب الموافقة على الشروط وسياسة الخصوصية ومعايير المجتمع وتأكيد أن عمرك 18 سنة فأكثر.',
+        )
+        return
+      }
+    }
+
+    setBusy(true)
     const s = createClient()
 
     if (mode === 'signup') {
       const { data, error } = await s.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: { display_name: name.trim() },
-        },
       })
 
       if (error) {
@@ -60,6 +107,12 @@ export default function LoginPage() {
       }
 
       if (data.session) {
+        const accepted = await acceptSignupLegal()
+        if (!accepted) {
+          setBusy(false)
+          return
+        }
+
         r.push('/onboarding')
         r.refresh()
         return
@@ -85,17 +138,84 @@ export default function LoginPage() {
 
     const {
       data: { user },
+      error: userError,
     } = await s.auth.getUser()
 
-    const { data: p } = await s
+    if (userError || !user) {
+      setMsg('تعذر تحميل بيانات الحساب. حاول تسجيل الدخول مرة أخرى.')
+      setBusy(false)
+      return
+    }
+
+    const { data: profile, error: profileError } = await s
       .from('profiles')
       .select('profile_complete')
-      .eq('id', user!.id)
+      .eq('id', user.id)
       .single()
 
-    r.push(p?.profile_complete ? '/home' : '/onboarding')
+    if (profileError) {
+      setMsg(friendlyError(profileError.message))
+      setBusy(false)
+      return
+    }
+
+    r.push(profile?.profile_complete ? '/home' : '/onboarding')
     r.refresh()
+  }
+
+  async function forgotPassword() {
+    setMsg('')
+
+    if (!email.trim()) {
+      setMsg('أدخل بريدك الإلكتروني أولًا.')
+      return
+    }
+
+    setBusy(true)
+
+    const s = createClient()
+    const { error } = await s.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/login?reset=1`,
+    })
+
+    setMsg(
+      error
+        ? friendlyError(error.message)
+        : 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك.',
+    )
     setBusy(false)
+  }
+
+  async function finishPasswordReset() {
+    setMsg('')
+
+    if (!isStrongPassword(resetPassword)) {
+      setMsg(
+        'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز.',
+      )
+      return
+    }
+
+    if (resetPassword !== resetPassword2) {
+      setMsg('كلمتا المرور غير متطابقتين.')
+      return
+    }
+
+    setBusy(true)
+
+    const s = createClient()
+    const { error } = await s.auth.updateUser({
+      password: resetPassword,
+    })
+
+    if (error) {
+      setMsg(friendlyError(error.message))
+      setBusy(false)
+      return
+    }
+
+    await s.auth.signOut()
+    window.location.replace('/login?reset_done=1')
   }
 
   async function verifyCode() {
@@ -119,6 +239,12 @@ export default function LoginPage() {
 
     if (error) {
       setMsg(friendlyError(error.message))
+      setBusy(false)
+      return
+    }
+
+    const accepted = await acceptSignupLegal()
+    if (!accepted) {
       setBusy(false)
       return
     }
@@ -156,6 +282,8 @@ export default function LoginPage() {
     setStep('form')
     setOtp('')
     setMsg('')
+    setPassword('')
+    setLegalAccepted(false)
     setResendSeconds(0)
   }
 
@@ -175,10 +303,61 @@ export default function LoginPage() {
 
         <Card>
           <CardContent className="space-y-3 p-5">
-            {step === 'otp' ? (
+            {isReset ? (
+              <div
+                data-password-reset-panel
+                className="space-y-3"
+              >
+                <h2 className="text-center text-lg font-extrabold">
+                  تعيين كلمة مرور جديدة
+                </h2>
+
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="كلمة المرور الجديدة"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                />
+
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="تأكيد كلمة المرور"
+                  value={resetPassword2}
+                  onChange={(e) => setResetPassword2(e.target.value)}
+                />
+
+                <p className="text-xs leading-5 text-slate-500">
+                  8 أحرف على الأقل + حرف كبير + حرف صغير + رقم + رمز.
+                </p>
+
+                {msg ? (
+                  <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                    {msg}
+                  </p>
+                ) : null}
+
+                <Button
+                  className="w-full"
+                  disabled={
+                    busy ||
+                    !isStrongPassword(resetPassword) ||
+                    resetPassword !== resetPassword2
+                  }
+                  onClick={finishPasswordReset}
+                >
+                  {busy
+                    ? 'جاري الحفظ...'
+                    : 'حفظ كلمة المرور الجديدة'}
+                </Button>
+              </div>
+            ) : step === 'otp' ? (
               <>
                 <div className="pb-2 text-center">
-                  <h2 className="text-lg font-extrabold">تأكيد البريد الإلكتروني</h2>
+                  <h2 className="text-lg font-extrabold">
+                    تأكيد البريد الإلكتروني
+                  </h2>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
                     أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى
                   </p>
@@ -194,12 +373,12 @@ export default function LoginPage() {
                   value={otp}
                   maxLength={6}
                   onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+                    setOtp(
+                      e.target.value.replace(/\D/g, '').slice(0, 6),
+                    )
                   }
                   className="h-14 text-center text-2xl font-black tracking-[0.35em]"
                 />
-
-                {mode === 'signup' ? <p className="text-xs leading-5 text-slate-500">كلمة المرور: 8 أحرف على الأقل + حرف كبير + حرف صغير + رقم + رمز.</p> : null}
 
                 {msg ? (
                   <p className="rounded-2xl bg-slate-50 p-3 text-center text-sm text-slate-600">
@@ -229,10 +408,12 @@ export default function LoginPage() {
                 <Button
                   className="w-full"
                   variant="ghost"
+                  disabled={busy}
                   onClick={() => {
                     setStep('form')
                     setOtp('')
                     setMsg('')
+                    setResendSeconds(0)
                   }}
                 >
                   تغيير البريد الإلكتروني
@@ -241,15 +422,25 @@ export default function LoginPage() {
             ) : (
               <>
                 {mode === 'signup' ? (
-                  <Input
-                    placeholder="الاسم الظاهر"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
+                  <label className="flex items-start gap-2 rounded-2xl bg-[#F4F8FD] p-3 text-xs leading-5 text-slate-600">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={legalAccepted}
+                      onChange={(e) =>
+                        setLegalAccepted(e.target.checked)
+                      }
+                    />
+                    <span>
+                      أوافق على شروط الاستخدام وسياسة الخصوصية
+                      ومعايير المجتمع، وأؤكد أن عمري 18 سنة فأكثر.
+                    </span>
+                  </label>
                 ) : null}
 
                 <Input
                   type="email"
+                  autoComplete="email"
                   placeholder="البريد الإلكتروني"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -257,10 +448,22 @@ export default function LoginPage() {
 
                 <Input
                   type="password"
+                  autoComplete={
+                    mode === 'login'
+                      ? 'current-password'
+                      : 'new-password'
+                  }
                   placeholder="كلمة المرور"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+
+                {mode === 'signup' ? (
+                  <p className="text-xs leading-5 text-slate-500">
+                    كلمة المرور: 8 أحرف على الأقل + حرف كبير +
+                    حرف صغير + رقم + رمز.
+                  </p>
+                ) : null}
 
                 {msg ? (
                   <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
@@ -273,8 +476,10 @@ export default function LoginPage() {
                   disabled={
                     busy ||
                     !email.trim() ||
-                    (mode === 'login' ? password.length < 6 : !(password.length>=8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password))) ||
-                    (mode === 'signup' && !name.trim())
+                    (mode === 'login'
+                      ? password.length < 6
+                      : !isStrongPassword(password) ||
+                        !legalAccepted)
                   }
                   onClick={submit}
                 >
@@ -285,11 +490,25 @@ export default function LoginPage() {
                       : 'إنشاء الحساب'}
                 </Button>
 
+                {mode === 'login' ? (
+                  <Button
+                    className="w-full"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={forgotPassword}
+                  >
+                    نسيت كلمة المرور؟
+                  </Button>
+                ) : null}
+
                 <Button
                   className="w-full"
                   variant="ghost"
+                  disabled={busy}
                   onClick={() =>
-                    resetToForm(mode === 'login' ? 'signup' : 'login')
+                    resetToForm(
+                      mode === 'login' ? 'signup' : 'login',
+                    )
                   }
                 >
                   {mode === 'login'

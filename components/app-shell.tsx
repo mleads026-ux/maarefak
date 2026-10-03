@@ -1,2 +1,2 @@
 import { BottomNav } from './bottom-nav'
-export function AppShell({children}:{children:React.ReactNode}){return <div className="mx-auto min-h-screen w-full max-w-md bg-[#F7F9FC] pb-24 shadow-[0_0_50px_rgba(15,23,42,.06)]">{children}<BottomNav/></div>}
+export function AppShell({children}:{children:React.ReactNode}){return <div className="relative mx-auto min-h-[100dvh] w-full max-w-md overflow-x-hidden bg-[linear-gradient(180deg,#F8FBFF_0%,#F8FAFD_42%,#F5F9FE_100%)] pb-24 shadow-[0_0_60px_rgba(15,23,42,.07)]">{children}<BottomNav/></div>}

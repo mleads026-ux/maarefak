@@ -291,13 +291,13 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-md items-center p-5">
       <div className="w-full">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 -translate-y-1 grid h-20 w-20 place-items-center rounded-[28px] bg-gradient-to-br from-[#20CADB] via-[#1560BD] to-[#7657FF] text-white shadow-[0_16px_36px_rgba(21,96,189,.20)]">
+          <div className="mx-auto mb-3 -translate-y-1 grid h-20 w-20 place-items-center rounded-[28px] bg-[#1560BD] text-white shadow-sm">
             <CrowdMark size={54} />
           </div>
 
           <h1 className="text-2xl font-extrabold">لمتنا</h1>
           <p className="mt-1 text-sm text-slate-500">
-            مكانك للتعارف واللمة الصوتية
+            لمّتنا تبدأ بخطوة
           </p>
         </div>
 

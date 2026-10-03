@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -185,16 +185,16 @@ export default function SpaceChat({
     }
   }, [id])
 
-  async function joinQueue(){const {error}=await s.rpc('join_mic_queue',{p_space:id});setNotice(error?'تعذر دخول قائمة الميكروفون.':'تمت إضافتك لقائمة انتظار الميكروفون.');await load()}
-  async function leaveSeat(){const {error}=await s.rpc('leave_lamma_seat',{p_space:id});setNotice(error?'تعذر مغادرة المقعد.':'غادرت المقعد.');await load()}
-  async function starSeat(){const {error}=await s.rpc('request_star_seat',{p_space:id});setNotice(error?(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر طلب المقعد الملكي.'):'تم إرسال طلب المقعد الملكي للمضيف 👑');await load()}
-  async function seatNext(n:number){const {error}=await s.rpc('host_seat_next_from_queue',{p_space:id,p_seat_no:n});setNotice(error?'تعذر إجلاس العضو.':'تم نقل العضو التالي للمقعد.');await load()}
-  async function starDecision(req:string,ok:boolean){const {error}=await s.rpc('respond_star_seat_request',{p_request:req,p_accept:ok});setNotice(error?'تعذر تنفيذ القرار.':ok?'تم قبول المقعد الملكي.':'تم رفض الطلب.');await load()}
-  async function mystery(enabled:boolean){const {error}=await s.rpc('set_mystery_guest',{p_space:id,p_enabled:enabled});setNotice(error?'تعذر تغيير وضع الضيف الغامض.':enabled?'تم تفعيل الضيف الغامض.':'تم إيقاف الضيف الغامض.')}
-  async function revealMystery(){const {error}=await s.rpc('reveal_mystery_guest',{p_space:id});setNotice(error?'تعذر كشف الضيف الآن.':'تم كشف الضيف الغامض 🎭')}
-  async function startSpot(){const picks=members.filter(x=>x.user_id!==uid).slice(0,2);if(picks.length<2){setNotice('يلزم عضوان على الأقل.');return}const {error}=await s.rpc('start_lamma_pair_spotlight',{p_space:id,p_user_a:picks[0].user_id,p_user_b:picks[1].user_id});setNotice(error?'تعذر بدء Pair Spotlight.':'بدأ Pair Spotlight لمدة محدودة ✨');await load()}
-  async function endSpot(){const {error}=await s.rpc('end_lamma_pair_spotlight',{p_space:id});setNotice(error?'تعذر إنهاء Spotlight.':'تم إنهاء Spotlight.');await load()}
-  async function moderate(target:string,action:string){const {error}=await s.rpc('host_moderate_lamma_member',{p_space:id,p_target:target,p_action:action,p_duration_minutes:action==='mute'?10:null,p_reason:'إجراء إدارة من المضيف'});setNotice(error?'تعذر تنفيذ إجراء الإدارة.':'تم تنفيذ إجراء المضيف.');await load()}
+  async function joinQueue(){const {error}=await s.rpc('join_mic_queue',{p_space:id});setNotice(error?'ØªØ¹Ø°Ø± Ø¯Ø®ÙˆÙ„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ÙŠÙƒØ±ÙˆÙÙˆÙ†.':'ØªÙ…Øª Ø¥Ø¶Ø§ÙØªÙƒ Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù…ÙŠÙƒØ±ÙˆÙÙˆÙ†.');await load()}
+  async function leaveSeat(){const {error}=await s.rpc('leave_lamma_seat',{p_space:id});setNotice(error?'ØªØ¹Ø°Ø± Ù…ØºØ§Ø¯Ø±Ø© Ø§Ù„Ù…Ù‚Ø¹Ø¯.':'ØºØ§Ø¯Ø±Øª Ø§Ù„Ù…Ù‚Ø¹Ø¯.');await load()}
+  async function starSeat(){const {error}=await s.rpc('request_star_seat',{p_space:id});setNotice(error?(error.message.includes('insufficient_stars')?'Ø±ØµÙŠØ¯ Ø§Ù„Ù†Ø¬ÙˆÙ… ØºÙŠØ± ÙƒØ§ÙÙ.':'ØªØ¹Ø°Ø± Ø·Ù„Ø¨ Ø§Ù„Ù…Ù‚Ø¹Ø¯ Ø§Ù„Ù…Ù„ÙƒÙŠ.'):'ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„Ù…Ù‚Ø¹Ø¯ Ø§Ù„Ù…Ù„ÙƒÙŠ Ù„Ù„Ù…Ø¶ÙŠÙ ðŸ‘‘');await load()}
+  async function seatNext(n:number){const {error}=await s.rpc('host_seat_next_from_queue',{p_space:id,p_seat_no:n});setNotice(error?'ØªØ¹Ø°Ø± Ø¥Ø¬Ù„Ø§Ø³ Ø§Ù„Ø¹Ø¶Ùˆ.':'ØªÙ… Ù†Ù‚Ù„ Ø§Ù„Ø¹Ø¶Ùˆ Ø§Ù„ØªØ§Ù„ÙŠ Ù„Ù„Ù…Ù‚Ø¹Ø¯.');await load()}
+  async function starDecision(req:string,ok:boolean){const {error}=await s.rpc('respond_star_seat_request',{p_request:req,p_accept:ok});setNotice(error?'ØªØ¹Ø°Ø± ØªÙ†ÙÙŠØ° Ø§Ù„Ù‚Ø±Ø§Ø±.':ok?'ØªÙ… Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ù…Ù‚Ø¹Ø¯ Ø§Ù„Ù…Ù„ÙƒÙŠ.':'ØªÙ… Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨.');await load()}
+  async function mystery(enabled:boolean){const {error}=await s.rpc('set_mystery_guest',{p_space:id,p_enabled:enabled});setNotice(error?'ØªØ¹Ø°Ø± ØªØºÙŠÙŠØ± ÙˆØ¶Ø¹ Ø§Ù„Ø¶ÙŠÙ Ø§Ù„ØºØ§Ù…Ø¶.':enabled?'ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø¶ÙŠÙ Ø§Ù„ØºØ§Ù…Ø¶.':'ØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¶ÙŠÙ Ø§Ù„ØºØ§Ù…Ø¶.')}
+  async function revealMystery(){const {error}=await s.rpc('reveal_mystery_guest',{p_space:id});setNotice(error?'ØªØ¹Ø°Ø± ÙƒØ´Ù Ø§Ù„Ø¶ÙŠÙ Ø§Ù„Ø¢Ù†.':'ØªÙ… ÙƒØ´Ù Ø§Ù„Ø¶ÙŠÙ Ø§Ù„ØºØ§Ù…Ø¶ ðŸŽ­')}
+  async function startSpot(){const picks=members.filter(x=>x.user_id!==uid).slice(0,2);if(picks.length<2){setNotice('ÙŠÙ„Ø²Ù… Ø¹Ø¶ÙˆØ§Ù† Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.');return}const {error}=await s.rpc('start_lamma_pair_spotlight',{p_space:id,p_user_a:picks[0].user_id,p_user_b:picks[1].user_id});setNotice(error?'ØªØ¹Ø°Ø± Ø¨Ø¯Ø¡ Pair Spotlight.':'Ø¨Ø¯Ø£ Pair Spotlight Ù„Ù…Ø¯Ø© Ù…Ø­Ø¯ÙˆØ¯Ø© âœ¨');await load()}
+  async function endSpot(){const {error}=await s.rpc('end_lamma_pair_spotlight',{p_space:id});setNotice(error?'ØªØ¹Ø°Ø± Ø¥Ù†Ù‡Ø§Ø¡ Spotlight.':'ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Spotlight.');await load()}
+  async function moderate(target:string,action:string){const {error}=await s.rpc('host_moderate_lamma_member',{p_space:id,p_target:target,p_action:action,p_duration_minutes:action==='mute'?10:null,p_reason:'Ø¥Ø¬Ø±Ø§Ø¡ Ø¥Ø¯Ø§Ø±Ø© Ù…Ù† Ø§Ù„Ù…Ø¶ÙŠÙ'});setNotice(error?'ØªØ¹Ø°Ø± ØªÙ†ÙÙŠØ° Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©.':'ØªÙ… ØªÙ†ÙÙŠØ° Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ù…Ø¶ÙŠÙ.');await load()}
   async function send() {
     const text = body.trim()
     if (!text) return
@@ -219,19 +219,19 @@ export default function SpaceChat({
 
     if (error) {
       if (error.message.includes('insufficient_stars')) {
-        setNotice('رصيد النجوم غير كافٍ.')
+        setNotice('Ø±ØµÙŠØ¯ Ø§Ù„Ù†Ø¬ÙˆÙ… ØºÙŠØ± ÙƒØ§ÙÙ.')
       } else if (error.message.includes('already_connected')) {
-        setNotice('أنتم بالفعل متصلون في كلامنا.')
+        setNotice('Ø£Ù†ØªÙ… Ø¨Ø§Ù„ÙØ¹Ù„ Ù…ØªØµÙ„ÙˆÙ† ÙÙŠ ÙƒÙ„Ø§Ù…Ù†Ø§.')
       } else if (error.message.includes('target_not_accepting_requests')) {
-        setNotice('هذا المستخدم لا يستقبل طلبات تواصل حاليًا.')
+        setNotice('Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„Ø§ ÙŠØ³ØªÙ‚Ø¨Ù„ Ø·Ù„Ø¨Ø§Øª ØªÙˆØ§ØµÙ„ Ø­Ø§Ù„ÙŠÙ‹Ø§.')
       } else {
-        setNotice('تعذر إرسال طلب التواصل.')
+        setNotice('ØªØ¹Ø°Ø± Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªÙˆØ§ØµÙ„.')
       }
       return
     }
 
     setNotice(
-      `تم خصم ${privateContactPrice} نجمة وإرسال طلب تواصل خاص. لن يفتح الشات إلا بعد موافقة الطرف الآخر.`
+      `ØªÙ… Ø®ØµÙ… ${privateContactPrice} Ù†Ø¬Ù…Ø© ÙˆØ¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ ØªÙˆØ§ØµÙ„ Ø®Ø§Øµ. Ù„Ù† ÙŠÙØªØ­ Ø§Ù„Ø´Ø§Øª Ø¥Ù„Ø§ Ø¨Ø¹Ø¯ Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ù„Ø·Ø±Ù Ø§Ù„Ø¢Ø®Ø±.`
     )
     setSelectedMember(null)
   }
@@ -249,15 +249,15 @@ export default function SpaceChat({
 
     if (error) {
       if (error.message.includes('insufficient_stars')) {
-        setNotice('رصيد النجوم غير كافٍ لإرسال الهدية.')
+        setNotice('Ø±ØµÙŠØ¯ Ø§Ù„Ù†Ø¬ÙˆÙ… ØºÙŠØ± ÙƒØ§ÙÙ Ù„Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù‡Ø¯ÙŠØ©.')
       } else {
-        setNotice('تعذر إرسال الهدية.')
+        setNotice('ØªØ¹Ø°Ø± Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù‡Ø¯ÙŠØ©.')
       }
       return
     }
 
     setNotice(
-      `تم إرسال ${gift.emoji} ${gift.name_ar}. المنصة تحتفظ بـ15% ويصل للمستلم 85% من قيمة النجوم.`
+      `ØªÙ… Ø¥Ø±Ø³Ø§Ù„ ${gift.emoji} ${gift.name_ar}. Ø§Ù„Ù…Ù†ØµØ© ØªØ­ØªÙØ¸ Ø¨Ù€15% ÙˆÙŠØµÙ„ Ù„Ù„Ù…Ø³ØªÙ„Ù… 85% Ù…Ù† Ù‚ÙŠÙ…Ø© Ø§Ù„Ù†Ø¬ÙˆÙ….`
     )
     setShowGifts(false)
     setSelectedMember(null)
@@ -283,7 +283,7 @@ export default function SpaceChat({
       if (error) {
         stream.getTracks().forEach((t) => t.stop())
         localStreamRef.current = null
-        setNotice('تعذر دخول الصوت.')
+        setNotice('ØªØ¹Ø°Ø± Ø¯Ø®ÙˆÙ„ Ø§Ù„ØµÙˆØª.')
         return
       }
 
@@ -292,7 +292,7 @@ export default function SpaceChat({
       await startVoiceRealtime()
       await refreshVoiceMembers()
     } catch {
-      setNotice('اسمح للموقع باستخدام الميكروفون ثم حاول مرة أخرى.')
+      setNotice('Ø§Ø³Ù…Ø­ Ù„Ù„Ù…ÙˆÙ‚Ø¹ Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…ÙŠÙƒØ±ÙˆÙÙˆÙ† Ø«Ù… Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.')
     }
   }
 
@@ -518,7 +518,7 @@ export default function SpaceChat({
   return (
     <AppShell>
       <PageHeader
-        title={space ? `${space.emoji || '🎙️'} ${space.name}` : 'اللَمّة'}
+        title={space ? `${space.emoji || 'ðŸŽ™ï¸'} ${space.name}` : 'Ø§Ù„Ù„ÙŽÙ…Ù‘Ø©'}
       />
 
       <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
@@ -531,9 +531,9 @@ export default function SpaceChat({
         <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#1560BD] to-[#0D3D78] p-4 text-white">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-[#D7E7FB]">الصوت الجماعي</p>
+              <p className="text-xs text-[#D7E7FB]">Ø§Ù„ØµÙˆØª Ø§Ù„Ø¬Ù…Ø§Ø¹ÙŠ</p>
               <p className="mt-1 font-extrabold">
-                {voiceMembers.length} متواجد بالصوت
+                {voiceMembers.length} Ù…ØªÙˆØ§Ø¬Ø¯ Ø¨Ø§Ù„ØµÙˆØª
               </p>
             </div>
 
@@ -543,7 +543,7 @@ export default function SpaceChat({
                 onClick={joinVoice}
               >
                 <PhoneCall size={16} />
-                انضم للصوت
+                Ø§Ù†Ø¶Ù… Ù„Ù„ØµÙˆØª
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -560,7 +560,7 @@ export default function SpaceChat({
                   variant="danger"
                   onClick={leaveVoice}
                 >
-                  خروج
+                  Ø®Ø±ÙˆØ¬
                 </Button>
               </div>
             )}
@@ -579,7 +579,7 @@ export default function SpaceChat({
                   className="flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-xs font-bold"
                 >
                   {m.mic_enabled ? <Mic size={13} /> : <MicOff size={13} />}
-                  {m.profiles?.display_name || 'عضو'}
+                  {m.profiles?.display_name || 'Ø¹Ø¶Ùˆ'}
                 </button>
               ))}
             </div>
@@ -587,16 +587,16 @@ export default function SpaceChat({
         </section>
 
         <section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4">
-          <div className="flex items-center justify-between"><div><p className="font-extrabold">مقاعد اللَمّة</p><p className="text-xs text-slate-500">Stage حتى {space?.seat_count||8} مقاعد</p></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={joinQueue}><Mic size={14}/> اطلب المايك</Button><Button size="sm" variant="outline" onClick={starSeat}><Crown size={14}/> المقعد الملكي</Button></div></div>
-          <div className="mt-3 grid grid-cols-4 gap-2">{Array.from({length:Math.min(Number(space?.seat_count||8),8)},(_,i)=>i+1).map(n=>{const seat=seats.find(x=>x.seat_no===n);return <button key={n} onClick={()=>isHost&&!seat&&seatNext(n)} className={seat?.seat_type==='star'?'rounded-2xl border border-amber-300 bg-amber-50 p-3 text-center':'rounded-2xl bg-[#F4F8FD] p-3 text-center'}><div className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white">{seat?.seat_type==='star'?<Crown size={17} className="text-amber-700"/>:<Armchair size={17} className="text-[#1560BD]"/>}</div><p className="mt-1 truncate text-[10px] font-bold">{seat?.profiles?.display_name||('مقعد '+n)}</p></button>})}</div>
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>قائمة الانتظار: {queue.length}</span>{seats.some(x=>x.user_id===uid)?<Button size="sm" variant="outline" onClick={leaveSeat}>مغادرة المقعد</Button>:null}</div>
+          <div className="flex items-center justify-between"><div><p className="font-extrabold">Ù…Ù‚Ø§Ø¹Ø¯ Ø§Ù„Ù„ÙŽÙ…Ù‘Ø©</p><p className="text-xs text-slate-500">Stage Ø­ØªÙ‰ {space?.seat_count||8} Ù…Ù‚Ø§Ø¹Ø¯</p></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={joinQueue}><Mic size={14}/> Ø§Ø·Ù„Ø¨ Ø§Ù„Ù…Ø§ÙŠÙƒ</Button><Button size="sm" variant="outline" onClick={starSeat}><Crown size={14}/> Ø§Ù„Ù…Ù‚Ø¹Ø¯ Ø§Ù„Ù…Ù„ÙƒÙŠ</Button></div></div>
+          <div className="mt-3 grid grid-cols-4 gap-2">{Array.from({length:Math.min(Number(space?.seat_count||8),8)},(_,i)=>i+1).map(n=>{const seat=seats.find(x=>x.seat_no===n);return <button key={n} onClick={()=>isHost&&!seat&&seatNext(n)} className={seat?.seat_type==='star'?'rounded-2xl border border-amber-300 bg-amber-50 p-3 text-center':'rounded-2xl bg-[#F4F8FD] p-3 text-center'}><div className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white">{seat?.seat_type==='star'?<Crown size={17} className="text-amber-700"/>:<Armchair size={17} className="text-[#1560BD]"/>}</div><p className="mt-1 truncate text-[10px] font-bold">{seat?.profiles?.display_name||('Ù…Ù‚Ø¹Ø¯ '+n)}</p></button>})}</div>
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±: {queue.length}</span>{seats.some(x=>x.user_id===uid)?<Button size="sm" variant="outline" onClick={leaveSeat}>Ù…ØºØ§Ø¯Ø±Ø© Ø§Ù„Ù…Ù‚Ø¹Ø¯</Button>:null}</div>
         </section>
-        {spotlight?<section className="mb-4 rounded-3xl bg-gradient-to-l from-[#EAF2FC] to-white p-4"><p className="font-extrabold text-[#1560BD]">Pair Spotlight ✨ نشط الآن</p><p className="mt-1 text-xs text-slate-500">تركيز مؤقت على شخصين داخل اللَمّة.</p>{isHost?<Button className="mt-2" size="sm" variant="outline" onClick={endSpot}>إنهاء Spotlight</Button>:null}</section>:null}
-        {isHost?<section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4"><div className="flex items-center gap-2"><Shield size={17} className="text-[#1560BD]"/><p className="font-extrabold">تحكم المضيف</p></div><div className="mt-3 grid grid-cols-3 gap-2"><Button size="sm" variant="secondary" onClick={startSpot}><Sparkles size={14}/> Spotlight</Button><Button size="sm" variant="outline" onClick={()=>mystery(true)}>🎭 ضيف غامض</Button><Button size="sm" variant="outline" onClick={revealMystery}>كشف الضيف</Button></div>{starRequests.length?<div className="mt-3 space-y-2">{starRequests.map((q:any)=><div key={q.id} className="flex items-center gap-2 rounded-2xl bg-[#F4F8FD] p-2"><UserRoundPlus size={16}/><span className="flex-1 text-xs font-bold">{q.profiles?.display_name||'عضو'} · {q.cost_stars} ⭐</span><Button size="sm" onClick={()=>starDecision(q.id,true)}>قبول</Button><Button size="sm" variant="outline" onClick={()=>starDecision(q.id,false)}>رفض</Button></div>)}</div>:null}</section>:null}
+        {spotlight?<section className="mb-4 rounded-3xl bg-gradient-to-l from-[#EAF2FC] to-white p-4"><p className="font-extrabold text-[#1560BD]">Pair Spotlight âœ¨ Ù†Ø´Ø· Ø§Ù„Ø¢Ù†</p><p className="mt-1 text-xs text-slate-500">ØªØ±ÙƒÙŠØ² Ù…Ø¤Ù‚Øª Ø¹Ù„Ù‰ Ø´Ø®ØµÙŠÙ† Ø¯Ø§Ø®Ù„ Ø§Ù„Ù„ÙŽÙ…Ù‘Ø©.</p>{isHost?<Button className="mt-2" size="sm" variant="outline" onClick={endSpot}>Ø¥Ù†Ù‡Ø§Ø¡ Spotlight</Button>:null}</section>:null}
+        {isHost?<section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4"><div className="flex items-center gap-2"><Shield size={17} className="text-[#1560BD]"/><p className="font-extrabold">ØªØ­ÙƒÙ… Ø§Ù„Ù…Ø¶ÙŠÙ</p></div><div className="mt-3 grid grid-cols-3 gap-2"><Button size="sm" variant="secondary" onClick={startSpot}><Sparkles size={14}/> Spotlight</Button><Button size="sm" variant="outline" onClick={()=>mystery(true)}>ðŸŽ­ Ø¶ÙŠÙ ØºØ§Ù…Ø¶</Button><Button size="sm" variant="outline" onClick={revealMystery}>ÙƒØ´Ù Ø§Ù„Ø¶ÙŠÙ</Button></div>{starRequests.length?<div className="mt-3 space-y-2">{starRequests.map((q:any)=><div key={q.id} className="flex items-center gap-2 rounded-2xl bg-[#F4F8FD] p-2"><UserRoundPlus size={16}/><span className="flex-1 text-xs font-bold">{q.profiles?.display_name||'Ø¹Ø¶Ùˆ'} Â· {q.cost_stars} â­</span><Button size="sm" onClick={()=>starDecision(q.id,true)}>Ù‚Ø¨ÙˆÙ„</Button><Button size="sm" variant="outline" onClick={()=>starDecision(q.id,false)}>Ø±ÙØ¶</Button></div>)}</div>:null}</section>:null}
         <section className="mb-4">
           <div className="mb-2 flex items-center gap-2">
             <Users size={17} className="text-[#1560BD]" />
-            <h2 className="font-extrabold">أعضاء اللَمّة</h2>
+            <h2 className="font-extrabold">Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ù„ÙŽÙ…Ù‘Ø©</h2>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -616,14 +616,14 @@ export default function SpaceChat({
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    (m.profiles?.display_name || 'م')[0]
+                    (m.profiles?.display_name || 'Ù…')[0]
                   )}
                 </div>
 
                 <p className="mt-2 truncate text-xs font-bold">
                   {m.user_id === uid
-                    ? 'أنت'
-                    : m.profiles?.display_name || 'عضو'}
+                    ? 'Ø£Ù†Øª'
+                    : m.profiles?.display_name || 'Ø¹Ø¶Ùˆ'}
                 </p>
               </button>
             ))}
@@ -635,10 +635,10 @@ export default function SpaceChat({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-extrabold">
-                  {selectedMember.profiles?.display_name || 'عضو'}
+                  {selectedMember.profiles?.display_name || 'Ø¹Ø¶Ùˆ'}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {selectedMember.profiles?.mood || 'عضو في اللَمّة'}
+                  {selectedMember.profiles?.mood || 'Ø¹Ø¶Ùˆ ÙÙŠ Ø§Ù„Ù„ÙŽÙ…Ù‘Ø©'}
                 </p>
               </div>
 
@@ -656,7 +656,7 @@ export default function SpaceChat({
                 onClick={() => requestPrivateContact(selectedMember)}
               >
                 <Star size={16} />
-                تواصل خاص · {privateContactPrice} ⭐
+                ØªÙˆØ§ØµÙ„ Ø®Ø§Øµ Â· {privateContactPrice} â­
               </Button>
 
               <Button
@@ -664,7 +664,7 @@ export default function SpaceChat({
                 onClick={() => setShowGifts(!showGifts)}
               >
                 <Gift size={16} />
-                إرسال هدية
+                Ø¥Ø±Ø³Ø§Ù„ Ù‡Ø¯ÙŠØ©
               </Button>
             </div>
 
@@ -680,7 +680,7 @@ export default function SpaceChat({
                     <div className="text-2xl">{gift.emoji}</div>
                     <p className="mt-1 text-xs font-bold">{gift.name_ar}</p>
                     <p className="text-[11px] text-amber-700">
-                      {gift.price_stars} ⭐
+                      {gift.price_stars} â­
                     </p>
                   </button>
                 ))}
@@ -712,7 +712,7 @@ export default function SpaceChat({
                     : 'text-[11px] font-bold text-[#1560BD]'
                 }
               >
-                {(m.profiles as any)?.display_name || 'عضو'}
+                {(m.profiles as any)?.display_name || 'Ø¹Ø¶Ùˆ'}
               </button>
 
               <p className="mt-1 text-sm">{m.body}</p>
@@ -722,7 +722,7 @@ export default function SpaceChat({
 
         <div className="sticky bottom-20 flex gap-2 rounded-3xl border border-slate-200 bg-white p-2">
           <Input
-            placeholder="اكتب رسالة..."
+            placeholder="Ø§ÙƒØªØ¨ Ø±Ø³Ø§Ù„Ø©..."
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={(e) => {
@@ -737,3 +737,4 @@ export default function SpaceChat({
     </AppShell>
   )
 }
+

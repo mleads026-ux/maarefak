@@ -147,7 +147,7 @@ export default function Spaces() {
           <div>
             <h1 className="text-xl font-extrabold">اللَمّة</h1>
             <p className="text-sm text-slate-500">
-              غرف صوتية مباشرة تجمعنا دائماً
+              غرف صوتية جماعية عامة أو خاصة
             </p>
           </div>
 

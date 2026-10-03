@@ -52,7 +52,7 @@ export default async function Chats() {
     <AppShell>
       <PageHeader title="كلامنا" />
 
-      <main className="space-y-3 p-4"><section className="mb-4 overflow-hidden rounded-[30px] bg-gradient-to-l from-[#7657FF] via-[#3E67D8] to-[#168CD8] p-5 text-white shadow-[0_16px_38px_rgba(72,91,203,.16)]"><h2 className="text-2xl font-black">كلامنا</h2><p className="mt-1 text-sm text-white/80">محادثات أجمل مع أصدقاء جدد</p></section>
+      <main className="space-y-3 p-4">
         {rows.map((x: any) => (
           <Link key={x.id} href={`/chats/${x.id}`} className="block">
             <Card>

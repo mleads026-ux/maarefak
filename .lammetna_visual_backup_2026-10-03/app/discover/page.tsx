@@ -269,10 +269,10 @@ export default function Discover() {
               <Shuffle size={42} />
             </div>
 
-            <h1 className="text-2xl font-black">دردشة عشوائية</h1>
+            <h1 className="text-2xl font-extrabold">Random Chat</h1>
 
             <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
-              المحادثة تبدأ بعد موافقة الطرفين. اكتشف شخصًا جديدًا وابدأ الكلام لما تكونوا أنتم الاثنين جاهزين.
+              المطابقة لا تفتح الحوار تلقائيًا. لازم الطرفين يوافقوا أولًا.
             </p>
 
             {waiting ? (
@@ -290,7 +290,7 @@ export default function Discover() {
                 disabled={busy}
                 onClick={start}
               >
-                {busy ? 'جاري البحث...' : 'ابدأ محادثة عشوائية الآن'}
+                {busy ? 'جاري البحث...' : 'ابدأ دردشة عشوائية'}
               </Button>
             )}
           </div>

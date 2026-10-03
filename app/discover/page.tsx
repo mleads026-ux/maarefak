@@ -1,189 +1,175 @@
 'use client'
 import {useEffect,useMemo,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {Users,Heart,Mic2,MapPin,Smile,Gamepad2,ShieldCheck,MessageCircle,Eye,Ban,Flag,SkipForward} from 'lucide-react'
+import {Users,Heart,Mic2,MapPin,Smile,Gamepad2,ShieldCheck,MessageCircle,Eye,Ban,Flag,SkipForward,Star,Bell,ChevronLeft} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
-import {PageHeader} from '@/components/page-header'
+import {BrandLogo} from '@/components/brand-logo'
 
 type Match={
-  session_id:string
-  matched_user_id:string
-  display_name:string
-  avatar_url:string|null
-  city_name:string|null
-  country_name:string|null
-  mood:string|null
-  age:number|null
-  user_a:string
-  user_b:string
-  user_a_accepted:boolean
-  user_b_accepted:boolean
+  session_id:string;matched_user_id:string;display_name:string;avatar_url:string|null;
+  city_name:string|null;country_name:string|null;mood:string|null;age:number|null;
+  user_a:string;user_b:string;user_a_accepted:boolean;user_b_accepted:boolean
 }
+const fallback=['/demo/face-2.jpg','/demo/face-1.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
 
 export default function Discover(){
- const s=useMemo(()=>createClient(),[])
- const r=useRouter()
- const [waiting,setWaiting]=useState(false)
- const [busy,setBusy]=useState(false)
- const [match,setMatch]=useState<Match|null>(null)
- const [userId,setUserId]=useState<string|null>(null)
- const [notice,setNotice]=useState('')
- const [advanced,setAdvanced]=useState<any[]>([])
- const [mode,setMode]=useState<'vibe'|'mystery'|'voice'>('mystery')
- const [advBusy,setAdvBusy]=useState(false)
+  const s=useMemo(()=>createClient(),[])
+  const r=useRouter()
+  const [waiting,setWaiting]=useState(false)
+  const [busy,setBusy]=useState(false)
+  const [match,setMatch]=useState<Match|null>(null)
+  const [userId,setUserId]=useState<string|null>(null)
+  const [notice,setNotice]=useState('')
+  const [advanced,setAdvanced]=useState<any[]>([])
+  const [mode,setMode]=useState<'vibe'|'mystery'|'voice'>('mystery')
+  const [advBusy,setAdvBusy]=useState(false)
+  const [stars,setStars]=useState(0)
 
- useEffect(()=>{s.auth.getUser().then(({data})=>setUserId(data.user?.id||null))},[s])
+  useEffect(()=>{(async()=>{
+    const {data:{user}}=await s.auth.getUser()
+    setUserId(user?.id||null)
+    if(user){
+      const {data:w}=await s.from('star_wallets').select('balance').eq('user_id',user.id).maybeSingle()
+      setStars(Number(w?.balance||0))
+    }
+    const {data}=await s.rpc('mystery_discovery_cards',{p_limit:20})
+    setAdvanced(data||[])
+  })()},[s])
 
- async function hydrate(row:any){
-  if(!userId)return
-  if(row.conversation_id){r.push(`/chats/${row.conversation_id}`);return}
-  if(row.status!=='active'){setMatch(null);setWaiting(false);return}
-  const other=row.user_a===userId?row.user_b:row.user_a
-  const {data:p}=await s.from('profiles').select('id,display_name,avatar_url,mood,birth_date,show_age,cities(name_ar),countries(name_ar)').eq('id',other).single()
-  if(!p)return
-  setMatch({
-   session_id:row.id,matched_user_id:other,display_name:p.display_name,avatar_url:p.avatar_url,
-   city_name:(p.cities as any)?.name_ar||null,country_name:(p.countries as any)?.name_ar||null,mood:p.mood,
-   age:p.show_age&&p.birth_date?Math.floor((Date.now()-new Date(p.birth_date).getTime())/31557600000):null,
-   user_a:row.user_a,user_b:row.user_b,user_a_accepted:!!row.user_a_accepted,user_b_accepted:!!row.user_b_accepted
-  })
-  setWaiting(false)
- }
-
- useEffect(()=>{
-  if(!userId)return
-  const c=s.channel(`random-consent-${userId}`)
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'random_chat_sessions'},(p:any)=>hydrate(p.new))
-   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'random_chat_sessions'},(p:any)=>hydrate(p.new))
-   .subscribe()
-  return()=>{s.removeChannel(c)}
- },[userId,s])
-
- async function load(m:'vibe'|'mystery'|'voice'){
-  setMode(m);setAdvBusy(true);setNotice('')
-  const fn=m==='vibe'?'people_on_my_vibe':m==='mystery'?'mystery_discovery_cards':'voice_first_discovery'
-  const {data,error}=await s.rpc(fn,{p_limit:20})
-  if(error){setNotice('تعذر تحميل الاقتراحات الآن.');setAdvanced([])}else setAdvanced(data||[])
-  setAdvBusy(false)
- }
-
- async function start(){
-  setBusy(true);setMatch(null);setNotice('')
-  const {data,error}=await s.rpc('random_chat_match')
-  const row=Array.isArray(data)?data[0]:data
-  if(error){setNotice('تعذر بدء البحث الآن.');setBusy(false);return}
-  if(row?.waiting){setWaiting(true);setBusy(false);return}
-  if(row?.session_id){
-   const {data:ses}=await s.from('random_chat_sessions').select('id,user_a,user_b,status,conversation_id,user_a_accepted,user_b_accepted').eq('id',row.session_id).single()
-   if(ses)await hydrate(ses)
+  async function hydrate(row:any){
+    if(!userId)return
+    if(row.conversation_id){r.push(`/chats/${row.conversation_id}`);return}
+    if(row.status!=='active'){setMatch(null);setWaiting(false);return}
+    const other=row.user_a===userId?row.user_b:row.user_a
+    const {data:p}=await s.from('profiles').select('id,display_name,avatar_url,mood,birth_date,show_age,cities(name_ar),countries(name_ar)').eq('id',other).single()
+    if(!p)return
+    setMatch({
+      session_id:row.id,matched_user_id:other,display_name:p.display_name,avatar_url:p.avatar_url,
+      city_name:(p.cities as any)?.name_ar||null,country_name:(p.countries as any)?.name_ar||null,mood:p.mood,
+      age:p.show_age&&p.birth_date?Math.floor((Date.now()-new Date(p.birth_date).getTime())/31557600000):null,
+      user_a:row.user_a,user_b:row.user_b,user_a_accepted:!!row.user_a_accepted,user_b_accepted:!!row.user_b_accepted
+    })
+    setWaiting(false)
   }
-  setBusy(false)
- }
 
- async function approve(){
-  if(!match||!userId)return
-  setBusy(true)
-  const {data,error}=await s.rpc('start_random_chat_conversation',{p_session:match.session_id})
-  if(error){setNotice('تعذر تسجيل الموافقة.');setBusy(false);return}
-  if(data){r.push(`/chats/${data}`);return}
-  setMatch(c=>c?(c.user_a===userId?{...c,user_a_accepted:true}:{...c,user_b_accepted:true}):c)
-  setBusy(false)
- }
+  useEffect(()=>{
+    if(!userId)return
+    const c=s.channel(`random-consent-${userId}`)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'random_chat_sessions'},(p:any)=>hydrate(p.new))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'random_chat_sessions'},(p:any)=>hydrate(p.new))
+      .subscribe()
+    return()=>{s.removeChannel(c)}
+  },[userId,s])
 
- async function skip(){
-  if(match)await s.rpc('decline_random_chat',{p_session:match.session_id})
-  setMatch(null)
-  await start()
- }
+  async function load(m:'vibe'|'mystery'|'voice'){
+    setMode(m);setAdvBusy(true);setNotice('')
+    const fn=m==='vibe'?'people_on_my_vibe':m==='mystery'?'mystery_discovery_cards':'voice_first_discovery'
+    const {data,error}=await s.rpc(fn,{p_limit:20})
+    if(error){setNotice('تعذر تحميل الاقتراحات الآن.');setAdvanced([])}else setAdvanced(data||[])
+    setAdvBusy(false)
+  }
 
- const first=advanced[0]
+  async function start(){
+    setBusy(true);setMatch(null);setNotice('')
+    const {data,error}=await s.rpc('random_chat_match')
+    const row=Array.isArray(data)?data[0]:data
+    if(error){setNotice('تعذر بدء البحث الآن.');setBusy(false);return}
+    if(row?.waiting){setWaiting(true);setBusy(false);return}
+    if(row?.session_id){
+      const {data:ses}=await s.from('random_chat_sessions').select('id,user_a,user_b,status,conversation_id,user_a_accepted,user_b_accepted').eq('id',row.session_id).single()
+      if(ses)await hydrate(ses)
+    }
+    setBusy(false)
+  }
 
- return <AppShell>
-  <PageHeader title="اكتشف"/>
-  <main className="px-4 pb-5 pt-4">
-   <div>
-    <h1 className="text-[30px] font-black">اكتشف ✨</h1>
-    <p className="text-sm font-bold text-[#707C94]">تعرّف على أشخاص جدد بطرق مختلفة وممتعة</p>
-   </div>
+  async function approve(){
+    if(!match||!userId)return
+    setBusy(true)
+    const {data,error}=await s.rpc('start_random_chat_conversation',{p_session:match.session_id})
+    if(error){setNotice('تعذر تسجيل الموافقة.');setBusy(false);return}
+    if(data){r.push(`/chats/${data}`);return}
+    setMatch(c=>c?(c.user_a===userId?{...c,user_a_accepted:true}:{...c,user_b_accepted:true}):c)
+    setBusy(false)
+  }
 
-   <div className="mt-4 grid grid-cols-4 gap-2">
-    {[
-     [Users,'وجوه جديدة','vibe'],
-     [Heart,'مين على مزاجي؟','vibe'],
-     [Eye,'اكتشاف غامض','mystery'],
-     [Mic2,'صوت أول','voice']
-    ].map(([I,t,m]:any)=>
-     <button key={t} onClick={()=>load(m)} className={`mobile-card rounded-[22px] p-3 text-center ${mode===m?'lammetna-gradient text-white':'text-[#13213E]'}`}>
-      <span className={`mx-auto grid h-12 w-12 place-items-center rounded-[17px] ${mode===m?'bg-white/18':'bg-gradient-to-br from-[#E8F6FF] to-[#F5E7FF]'}`}>
-       <I size={24}/>
-      </span>
-      <p className="mt-2 text-[11px] font-black">{t}</p>
-     </button>
-    )}
-   </div>
+  async function skip(){
+    if(match)await s.rpc('decline_random_chat',{p_session:match.session_id})
+    setMatch(null);await start()
+  }
 
-   {advBusy?<p className="mt-3 text-center text-sm font-bold text-[#738097]">جاري التحميل...</p>:null}
-   {notice?<p className="mt-3 rounded-2xl bg-[#EDF5FF] p-3 text-sm font-bold text-[#24528D]">{notice}</p>:null}
+  const first=advanced[0]
 
-   <section className="lammetna-gradient hero-shadow relative mt-4 overflow-hidden rounded-[30px] p-5 text-white">
-    <div className="absolute -left-16 -top-12 h-52 w-52 rounded-full bg-white/10 blur-2xl"/>
-    <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-[#5A23D8]">
-     {mode==='mystery'?'🎭 اكتشاف غامض':mode==='voice'?'🎙️ صوت أول':'✨ على مزاجي'}
-    </span>
-    <div className="mt-4 grid grid-cols-[150px_1fr] gap-4">
-     <div className="relative grid h-[200px] place-items-center overflow-hidden rounded-[42%] border-2 border-white/60 bg-white/15">
-      {mode==='mystery'?<>
-       <div className="absolute inset-0 backdrop-blur-xl"/>
-       <span className="relative text-7xl font-black">?</span>
-      </>:first?.avatar_url?<img src={first.avatar_url} alt="" className="h-full w-full object-cover"/>:<span className="text-6xl font-black">?</span>}
-      <span className="absolute bottom-3 rounded-full bg-white px-3 py-1 text-[10px] font-black text-[#16469F]">🔒 الصورة مكتشفة تدريجيًا</span>
-     </div>
-     <div>
-      <h2 className="text-[29px] font-black">{mode==='mystery'?'شخص جديد':first?.display_name||'اكتشف شخصًا جديدًا'}</h2>
-      <p className="mt-1 text-sm font-bold text-white/85">{first?.age?`${first.age} سنة`:''}</p>
-      <div className="mt-4 space-y-2 text-xs font-black">
-       <p className="rounded-full bg-white/13 px-3 py-2"><MapPin className="ml-1 inline" size={14}/>المدينة {first?.city_name||'غير محددة'}</p>
-       <p className="rounded-full bg-white/13 px-3 py-2"><Smile className="ml-1 inline" size={14}/>المزاج {first?.mood||'رايق'}</p>
-       <p className="rounded-full bg-white/13 px-3 py-2"><Gamepad2 className="ml-1 inline" size={14}/>اهتمامات مشتركة {first?.shared_interests||0}</p>
+  return <AppShell>
+    <main className="px-4 pb-5 pt-3">
+      <header className="safe-top flex items-center justify-between">
+        <div className="flex items-center gap-2.5"><BrandLogo size={50}/><div><h1 className="text-[30px] font-black leading-none">لمتنا</h1><p className="mt-1 text-[11px] font-bold text-[#68758e]">دائمًا مساحة أجمل مع أصدقاء جدد</p></div></div>
+        <div className="flex items-center gap-2"><span className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-black shadow-sm ring-1 ring-[#dfe9f5]"><Star size={19} fill="#ffc21d" className="text-[#ffc21d]"/>{stars.toLocaleString('en-US')}<ChevronLeft size={14} className="text-[#0e67f5]"/></span><button className="relative grid h-11 w-11 place-items-center rounded-full bg-white text-[#0e67f5] shadow-sm ring-1 ring-[#dfe9f5]"><Bell size={21}/><span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-[#ff1678] ring-2 ring-white"/></button></div>
+      </header>
+
+      <div className="mt-5"><h1 className="text-[31px] font-black">اكتشف ✨</h1><p className="text-[14px] font-bold text-[#6f7b94]">تعرّف على أشخاص جدد بطرق مختلفة وممتعة</p></div>
+
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        {[
+          [Users,'وجوه جديدة','تعرّف على أشخاص جدد بالقرب منك','vibe','#0e67f5'],
+          [Heart,'مين على مزاجي؟','اكتشف أشخاص بناءً على اهتماماتك','vibe','#f20aa0'],
+          [Eye,'اكتشاف غامض','دردش مع شخص مجهول واكتشفه تدريجيًا','mystery','#ffffff'],
+          [Mic2,'صوت أول','تعرّف على الصوت قبل الصورة','voice','#a92be5'],
+        ].map(([I,t,d,m,c]:any)=>{
+          const active=mode===m&&(m==='mystery'||m==='voice')
+          return <button key={t} onClick={()=>load(m)} className={`rounded-[23px] p-3 text-center shadow-sm ring-1 ring-[#e0e9f5] ${active?'lammetna-gradient text-white':'bg-white text-[#13213f]'}`}>
+            <span className={`mx-auto grid h-12 w-12 place-items-center rounded-[18px] ${active?'bg-white/16':'bg-gradient-to-br from-[#e9f6ff] to-[#f6e8ff]'}`} style={{color:active?'white':c}}><I size={25}/></span>
+            <p className="mt-2 text-[11px] font-black leading-4">{t}</p><p className={`mt-1 text-[9px] font-bold leading-4 ${active?'text-white/80':'text-[#79859b]'}`}>{d}</p><ChevronLeft size={14} className={`mx-auto mt-1 ${active?'text-white':'text-[#0e67f5]'}`}/>
+          </button>
+        })}
       </div>
-     </div>
-    </div>
-   </section>
 
-   <div className="mobile-card mt-4 rounded-[26px] p-4">
-    <div className="flex items-center justify-center gap-3">
-     <ShieldCheck className="text-[#10BFC9]" size={30}/>
-     <div>
-      <p className="font-black">محادثة عشوائية بموافقة الطرفين</p>
-      <p className="mt-1 text-xs font-bold text-[#77839A]">لن تبدأ المحادثة إلا بعد موافقة الشخص الآخر أيضًا</p>
-     </div>
-    </div>
-    <button onClick={start} disabled={busy||waiting} className="lammetna-gradient mt-4 w-full rounded-[22px] py-4 text-lg font-black text-white hero-shadow">
-     {waiting?'جاري انتظار شخص متاح...':busy?'جاري البحث...':'ابدأ محادثة عشوائية الآن'}
-    </button>
-   </div>
+      {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#24528d]">{notice}</p>:null}
+      {advBusy?<p className="mt-3 text-center text-xs font-bold text-[#738097]">جاري التحميل...</p>:null}
 
-   {match?<div className="mobile-card mt-4 rounded-[28px] p-5 text-center">
-    <div className="mx-auto h-28 w-28 overflow-hidden rounded-full bg-[#EAF3FC]">
-     {match.avatar_url?<img src={match.avatar_url} alt="" className="h-full w-full object-cover"/>:<div className="grid h-full w-full place-items-center text-4xl font-black">{match.display_name?.[0]}</div>}
-    </div>
-    <h3 className="mt-3 text-xl font-black">{match.display_name}{match.age?`، ${match.age}`:''}</h3>
-    <p className="text-sm font-bold text-[#738098]">{match.city_name||''} {match.mood?`· ${match.mood}`:''}</p>
-    <button onClick={approve} className="lammetna-gradient mt-4 h-12 w-full rounded-2xl font-black text-white">موافق أتكلم</button>
-    <div className="mt-3 grid grid-cols-4 gap-2">
-     <button onClick={skip} className="rounded-2xl bg-[#EEF4FA] p-3"><SkipForward/></button>
-     <button onClick={()=>s.rpc('toggle_interest',{p_target:match.matched_user_id})} className="rounded-2xl bg-[#EEF4FA] p-3"><Heart/></button>
-     <button onClick={()=>s.rpc('block_user',{p_target:match.matched_user_id})} className="rounded-2xl bg-[#EEF4FA] p-3"><Ban/></button>
-     <button onClick={()=>s.rpc('report_user',{p_target:match.matched_user_id,p_reason:'other',p_description:'بلاغ من الدردشة العشوائية'})} className="rounded-2xl bg-[#EEF4FA] p-3"><Flag/></button>
-    </div>
-   </div>:null}
+      <section className="lammetna-gradient hero-shadow relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+        <div className="absolute -left-20 -top-12 h-60 w-60 rounded-full bg-[#16d7e4]/50 blur-2xl"/>
+        <div className="absolute left-2 top-8 h-52 w-52 rounded-[44%] border-[18px] border-white/10"/>
+        <span className="relative inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-[#5a23d8]">{mode==='mystery'?'🎭 اكتشاف غامض':mode==='voice'?'🎙️ صوت أول':'✨ على مزاجي'}</span>
+        <div className="relative mt-3 grid grid-cols-[165px_1fr] items-center gap-4">
+          <div className="relative grid h-[225px] place-items-center overflow-hidden rounded-[43%] border-2 border-white/60 bg-white/14">
+            {mode==='mystery'?<>
+              <img src={first?.avatar_url||fallback[0]} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover blur-[17px]"/>
+              <div className="absolute inset-0 bg-[#203e87]/25"/>
+              <span className="relative text-7xl font-black">?</span>
+            </>:<img src={first?.avatar_url||fallback[0]} alt="" className="h-full w-full object-cover"/>}
+            <span className="absolute bottom-3 rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-[#16469f]">🔒 الصورة مكتشفة تدريجيًا</span>
+          </div>
+          <div>
+            <h2 className="text-[31px] font-black">{first?.display_name||'لينا'}</h2>
+            <p className="mt-1 flex items-center gap-2 text-[15px] font-black">{first?.age||25} سنة <span className="h-2.5 w-2.5 rounded-full bg-[#11d096]"/></p>
+            <div className="mt-4 space-y-2 text-[12px] font-black">
+              <p className="flex items-center justify-between rounded-full bg-white/13 px-3 py-2"><span>المدينة</span><span className="flex items-center gap-1"><MapPin size={15}/>{first?.city_name||'الدمام'}</span></p>
+              <p className="flex items-center justify-between rounded-full bg-white/13 px-3 py-2"><span>المزاج</span><span className="flex items-center gap-1"><Smile size={15}/>{first?.mood||'مبتسمة ومتفائلة'}</span></p>
+              <p className="flex items-center justify-between rounded-full bg-white/13 px-3 py-2"><span>الاهتمامات</span><span className="flex items-center gap-1"><Gamepad2 size={15}/>{first?.shared_interests||0} مشتركة</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-   <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-black text-[#354967]">
-    <div className="mobile-card rounded-[20px] p-3"><Users className="mx-auto mb-1 text-[#10C9BC]"/>موافقة متبادلة</div>
-    <div className="mobile-card rounded-[20px] p-3"><MessageCircle className="mx-auto mb-1 text-[#1768F4]"/>تعرّف من خلال الحديث</div>
-    <div className="mobile-card rounded-[20px] p-3"><Eye className="mx-auto mb-1 text-[#7744FF]"/>اكتشف تدريجيًا</div>
-   </div>
-  </main>
- </AppShell>
+      <section className="pixel-card mt-4 rounded-[27px] p-4">
+        <div className="flex items-center justify-center gap-3"><ShieldCheck className="text-[#13bfc8]" size={32}/><div><p className="text-[17px] font-black">محادثة عشوائية بموافقة الطرفين</p><p className="mt-1 text-[11px] font-bold text-[#76839a]">لن تبدأ المحادثة إلا بعد موافقة الشخص الآخر أيضًا</p></div></div>
+        <button onClick={start} disabled={busy||waiting} className="lammetna-gradient hero-shadow mt-4 w-full rounded-[23px] py-4 text-[19px] font-black text-white">{waiting?'جاري انتظار شخص متاح...':busy?'جاري البحث...':'ابدأ محادثة عشوائية الآن'}</button>
+      </section>
+
+      {match?<section className="pixel-card mt-4 rounded-[28px] p-5 text-center">
+        <div className="mx-auto h-28 w-28 overflow-hidden rounded-full bg-[#eaf3fc] ring-4 ring-[#32d9e5]">{match.avatar_url?<img src={match.avatar_url} alt="" className="h-full w-full object-cover"/>:<img src={fallback[1]} alt="" className="h-full w-full object-cover"/>}</div>
+        <h3 className="mt-3 text-xl font-black">{match.display_name}{match.age?`، ${match.age}`:''}</h3>
+        <p className="text-sm font-bold text-[#738098]">{match.city_name||''} {match.mood?`· ${match.mood}`:''}</p>
+        <button onClick={approve} className="lammetna-gradient mt-4 h-12 w-full rounded-2xl font-black text-white">موافق أتكلم</button>
+        <div className="mt-3 grid grid-cols-4 gap-2"><button onClick={skip} className="rounded-2xl bg-[#eef4fa] p-3"><SkipForward/></button><button onClick={()=>s.rpc('toggle_interest',{p_target:match.matched_user_id})} className="rounded-2xl bg-[#eef4fa] p-3"><Heart/></button><button onClick={()=>s.rpc('block_user',{p_target:match.matched_user_id})} className="rounded-2xl bg-[#eef4fa] p-3"><Ban/></button><button onClick={()=>s.rpc('report_user',{p_target:match.matched_user_id,p_reason:'other',p_description:'بلاغ من الدردشة العشوائية'})} className="rounded-2xl bg-[#eef4fa] p-3"><Flag/></button></div>
+      </section>:null}
+
+      <section className="mt-4"><p className="mb-2 text-sm font-black">ماذا يحدث بعد ذلك؟ ⓘ</p><div className="grid grid-cols-3 gap-2 text-center">
+        <div className="pixel-card rounded-[21px] p-3"><Users className="mx-auto mb-1 text-[#13c9bd]"/><p className="text-[11px] font-black">موافقة متبادلة</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">لبدء المحادثة</p></div>
+        <div className="pixel-card rounded-[21px] p-3"><MessageCircle className="mx-auto mb-1 text-[#1768f4]"/><p className="text-[11px] font-black">تعرّف من خلال الحديث</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">محادثة آمنة وممتعة</p></div>
+        <div className="pixel-card rounded-[21px] p-3"><Eye className="mx-auto mb-1 text-[#7744ff]"/><p className="text-[11px] font-black">اكتشف تدريجيًا</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">قد تظهر الصورة لاحقًا</p></div>
+      </div></section>
+    </main>
+  </AppShell>
 }

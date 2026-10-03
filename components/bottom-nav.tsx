@@ -2,12 +2,44 @@
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {Home,Compass,Mic2,MessageSquareMore,UserRound} from 'lucide-react'
-const items=[['/home','الرئيسية',Home],['/discover','اكتشف',Compass],['/spaces','اللَمّة',Mic2],['/social-hub','سوالف',MessageSquareMore],['/me','أنا',UserRound]] as const
+import {BrandLogo} from './brand-logo'
+
+type Item={href:string;label:string;icon:any;brand?:boolean}
 export function BottomNav(){
- const p=usePathname()
- return <nav className="fixed bottom-0 left-1/2 z-50 flex w-full max-w-md -translate-x-1/2 items-center gap-1 rounded-t-[30px] border border-[#E0EBF8] bg-white/94 px-3 pt-2 shadow-[0_-12px_40px_rgba(40,89,160,.12)] backdrop-blur-xl safe-bottom">
-   {items.map(([href,label,Icon])=>{const active=p.startsWith(href);return <Link key={href} href={href} className={`relative flex flex-1 flex-col items-center gap-1 rounded-[20px] py-2 text-[11px] font-black ${active?'bg-gradient-to-b from-[#E8F5FF] to-[#F2EFFF] text-[#115DF4]':'text-[#2B3B5A]'}`}>
-     <Icon size={active?23:21} strokeWidth={active?2.7:2.1}/><span>{label}</span>
-   </Link>})}
- </nav>
+  const p=usePathname()
+  let items:Item[]
+  if(p.startsWith('/social-hub')){
+    items=[
+      {href:'/home',label:'الرئيسية',icon:Home},
+      {href:'/discover',label:'اكتشف',icon:Compass},
+      {href:'/social-hub',label:'سوالف',icon:MessageSquareMore,brand:true},
+      {href:'/chats',label:'كلامنا',icon:MessageSquareMore},
+      {href:'/me',label:'أنا',icon:UserRound},
+    ]
+  }else if(p.startsWith('/home')){
+    items=[
+      {href:'/home',label:'الرئيسية',icon:Home},
+      {href:'/discover',label:'اكتشف',icon:Compass},
+      {href:'/spaces',label:'اللَمّة',icon:Mic2},
+      {href:'/social-hub',label:'سوالف',icon:MessageSquareMore},
+      {href:'/me',label:'أنا',icon:UserRound},
+    ]
+  }else{
+    items=[
+      {href:'/home',label:'الرئيسية',icon:Home},
+      {href:'/discover',label:'اكتشف',icon:Compass},
+      {href:'/spaces',label:'اللَمّة',icon:Mic2},
+      {href:'/chats',label:'كلامنا',icon:MessageSquareMore},
+      {href:'/me',label:'أنا',icon:UserRound},
+    ]
+  }
+  return <nav className="safe-bottom fixed bottom-0 left-1/2 z-50 flex w-full max-w-[432px] -translate-x-1/2 items-center rounded-t-[30px] border border-[#dce8f5] bg-white/95 px-2 pt-2 shadow-[0_-12px_34px_rgba(43,83,145,.11)] backdrop-blur-xl">
+    {items.map(({href,label,icon:Icon,brand})=>{
+      const active=p.startsWith(href)
+      return <Link key={href} href={href} className={`relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-2 text-[11px] font-black transition ${active?'bg-[linear-gradient(180deg,#eff9ff,#f2edff)] text-[#0f5ef4]':'text-[#283a5b]'}`}>
+        {brand&&active?<BrandLogo size={35}/>:<Icon size={active?23:21} strokeWidth={active?2.7:2.2}/>}
+        <span>{label}</span>
+      </Link>
+    })}
+  </nav>
 }

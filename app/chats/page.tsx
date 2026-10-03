@@ -57,7 +57,7 @@ export default async function Chats() {
           <Link key={x.id} href={`/chats/${x.id}`} className="block">
             <Card>
               <CardContent className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-[#E7F5F1] font-black text-[#006B57]">
+                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-[#EAF2FC] font-black text-[#1560BD]">
                   {x.other?.profiles?.avatar_url ? (
                     <img
                       src={x.other.profiles.avatar_url}

@@ -1,0 +1,38 @@
+const fs=require('fs'),path=require('path');const f=path.join(process.cwd(),'app','spaces','[id]','page.tsx');if(!fs.existsSync(f))throw Error('space page not found');let s=fs.readFileSync(f,'utf8');
+s=s.replace("  X,\n} from 'lucide-react'","  X,\n  Crown,\n  Armchair,\n  Sparkles,\n  UserRoundPlus,\n  Shield,\n} from 'lucide-react'");
+s=s.replace("const [micEnabled, setMicEnabled] = useState(true)",`const [micEnabled, setMicEnabled] = useState(true)
+  const [seats,setSeats]=useState<any[]>([])
+  const [queue,setQueue]=useState<any[]>([])
+  const [starRequests,setStarRequests]=useState<any[]>([])
+  const [spotlight,setSpotlight]=useState<any>(null)
+  const [isHost,setIsHost]=useState(false)`);
+s=s.replace("    setInVoice(!!voiceRows?.some((x: any) => x.user_id === user.id))",`    setInVoice(!!voiceRows?.some((x: any) => x.user_id === user.id))
+    setIsHost(sp?.owner_id===user.id)
+    const [{data:seatRows},{data:queueRows},{data:reqRows},{data:spotRows}]=await Promise.all([
+      s.from('space_seats').select('space_id,seat_no,user_id,seat_type,profiles(display_name,avatar_url)').eq('space_id',id).order('seat_no'),
+      s.from('space_mic_queue').select('space_id,user_id,joined_at,profiles(display_name,avatar_url)').eq('space_id',id).order('joined_at'),
+      s.from('space_star_seat_requests').select('id,requester_id,cost_stars,status,profiles!space_star_seat_requests_requester_id_fkey(display_name,avatar_url)').eq('space_id',id).eq('status','pending').order('created_at'),
+      s.from('space_pair_spotlights').select('*').eq('space_id',id).eq('status','active').order('started_at',{ascending:false}).limit(1).maybeSingle()
+    ]);setSeats(seatRows||[]);setQueue(queueRows||[]);setStarRequests(reqRows||[]);setSpotlight(spotRows||null)`);
+s=s.replace("  async function send() {",`  async function joinQueue(){const {error}=await s.rpc('join_mic_queue',{p_space:id});setNotice(error?'تعذر دخول قائمة الميكروفون.':'تمت إضافتك لقائمة انتظار الميكروفون.');await load()}
+  async function leaveSeat(){const {error}=await s.rpc('leave_lamma_seat',{p_space:id});setNotice(error?'تعذر مغادرة المقعد.':'غادرت المقعد.');await load()}
+  async function starSeat(){const {error}=await s.rpc('request_star_seat',{p_space:id});setNotice(error?(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر طلب المقعد الملكي.'):'تم إرسال طلب المقعد الملكي للمضيف 👑');await load()}
+  async function seatNext(n:number){const {error}=await s.rpc('host_seat_next_from_queue',{p_space:id,p_seat_no:n});setNotice(error?'تعذر إجلاس العضو.':'تم نقل العضو التالي للمقعد.');await load()}
+  async function starDecision(req:string,ok:boolean){const {error}=await s.rpc('respond_star_seat_request',{p_request:req,p_accept:ok});setNotice(error?'تعذر تنفيذ القرار.':ok?'تم قبول المقعد الملكي.':'تم رفض الطلب.');await load()}
+  async function mystery(enabled:boolean){const {error}=await s.rpc('set_mystery_guest',{p_space:id,p_enabled:enabled});setNotice(error?'تعذر تغيير وضع الضيف الغامض.':enabled?'تم تفعيل الضيف الغامض.':'تم إيقاف الضيف الغامض.')}
+  async function revealMystery(){const {error}=await s.rpc('reveal_mystery_guest',{p_space:id});setNotice(error?'تعذر كشف الضيف الآن.':'تم كشف الضيف الغامض 🎭')}
+  async function startSpot(){const picks=members.filter(x=>x.user_id!==uid).slice(0,2);if(picks.length<2){setNotice('يلزم عضوان على الأقل.');return}const {error}=await s.rpc('start_lamma_pair_spotlight',{p_space:id,p_user_a:picks[0].user_id,p_user_b:picks[1].user_id});setNotice(error?'تعذر بدء Pair Spotlight.':'بدأ Pair Spotlight لمدة محدودة ✨');await load()}
+  async function endSpot(){const {error}=await s.rpc('end_lamma_pair_spotlight',{p_space:id});setNotice(error?'تعذر إنهاء Spotlight.':'تم إنهاء Spotlight.');await load()}
+  async function moderate(target:string,action:string){const {error}=await s.rpc('host_moderate_lamma_member',{p_space:id,p_target:target,p_action:action,p_duration_minutes:action==='mute'?10:null,p_reason:'إجراء إدارة من المضيف'});setNotice(error?'تعذر تنفيذ إجراء الإدارة.':'تم تنفيذ إجراء المضيف.');await load()}
+  async function send() {`);
+s=s.replace('<section className="mb-4">',`<section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4">
+          <div className="flex items-center justify-between"><div><p className="font-extrabold">مقاعد اللَمّة</p><p className="text-xs text-slate-500">Stage حتى {space?.seat_count||8} مقاعد</p></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={joinQueue}><Mic size={14}/> اطلب المايك</Button><Button size="sm" variant="outline" onClick={starSeat}><Crown size={14}/> المقعد الملكي</Button></div></div>
+          <div className="mt-3 grid grid-cols-4 gap-2">{Array.from({length:Math.min(Number(space?.seat_count||8),8)},(_,i)=>i+1).map(n=>{const seat=seats.find(x=>x.seat_no===n);return <button key={n} onClick={()=>isHost&&!seat&&seatNext(n)} className={seat?.seat_type==='star'?'rounded-2xl border border-amber-300 bg-amber-50 p-3 text-center':'rounded-2xl bg-[#F4F8FD] p-3 text-center'}><div className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white">{seat?.seat_type==='star'?<Crown size={17} className="text-amber-700"/>:<Armchair size={17} className="text-[#1560BD]"/>}</div><p className="mt-1 truncate text-[10px] font-bold">{seat?.profiles?.display_name||('مقعد '+n)}</p></button>})}</div>
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>قائمة الانتظار: {queue.length}</span>{seats.some(x=>x.user_id===uid)?<Button size="sm" variant="outline" onClick={leaveSeat}>مغادرة المقعد</Button>:null}</div>
+        </section>
+        {spotlight?<section className="mb-4 rounded-3xl bg-gradient-to-l from-[#EAF2FC] to-white p-4"><p className="font-extrabold text-[#1560BD]">Pair Spotlight ✨ نشط الآن</p><p className="mt-1 text-xs text-slate-500">تركيز مؤقت على شخصين داخل اللَمّة.</p>{isHost?<Button className="mt-2" size="sm" variant="outline" onClick={endSpot}>إنهاء Spotlight</Button>:null}</section>:null}
+        {isHost?<section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4"><div className="flex items-center gap-2"><Shield size={17} className="text-[#1560BD]"/><p className="font-extrabold">تحكم المضيف</p></div><div className="mt-3 grid grid-cols-3 gap-2"><Button size="sm" variant="secondary" onClick={startSpot}><Sparkles size={14}/> Spotlight</Button><Button size="sm" variant="outline" onClick={()=>mystery(true)}>🎭 ضيف غامض</Button><Button size="sm" variant="outline" onClick={revealMystery}>كشف الضيف</Button></div>{starRequests.length?<div className="mt-3 space-y-2">{starRequests.map((q:any)=><div key={q.id} className="flex items-center gap-2 rounded-2xl bg-[#F4F8FD] p-2"><UserRoundPlus size={16}/><span className="flex-1 text-xs font-bold">{q.profiles?.display_name||'عضو'} · {q.cost_stars} ⭐</span><Button size="sm" onClick={()=>starDecision(q.id,true)}>قبول</Button><Button size="sm" variant="outline" onClick={()=>starDecision(q.id,false)}>رفض</Button></div>)}</div>:null}</section>:null}
+        <section className="mb-4">`);
+s=s.replace("select('id,name,emoji,is_public,owner_id')","select('id,name,emoji,is_public,owner_id,seat_count')");
+s=s.replaceAll('#006B57','#1560BD').replaceAll('#004D40','#0D3D78').replaceAll('#CDECE3','#D7E7FB').replaceAll('#E7F5F1','#EAF2FC');
+fs.writeFileSync(f,s,'utf8');console.log('Phase 5 Lamma parity applied.');console.log('Run: npm run build');

@@ -11,6 +11,11 @@ import {
   Star,
   Users,
   X,
+  Crown,
+  Armchair,
+  Sparkles,
+  UserRoundPlus,
+  Shield,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AppShell } from '@/components/app-shell'
@@ -66,6 +71,11 @@ export default function SpaceChat({
   const [notice, setNotice] = useState('')
   const [inVoice, setInVoice] = useState(false)
   const [micEnabled, setMicEnabled] = useState(true)
+  const [seats,setSeats]=useState<any[]>([])
+  const [queue,setQueue]=useState<any[]>([])
+  const [starRequests,setStarRequests]=useState<any[]>([])
+  const [spotlight,setSpotlight]=useState<any>(null)
+  const [isHost,setIsHost]=useState(false)
 
   const localStreamRef = useRef<MediaStream | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
@@ -104,7 +114,7 @@ export default function SpaceChat({
       { data: priceRow },
     ] = await Promise.all([
       s.from('spaces')
-        .select('id,name,emoji,is_public,owner_id')
+        .select('id,name,emoji,is_public,owner_id,seat_count')
         .eq('id', id)
         .single(),
 
@@ -143,6 +153,13 @@ export default function SpaceChat({
     }
 
     setInVoice(!!voiceRows?.some((x: any) => x.user_id === user.id))
+    setIsHost(sp?.owner_id===user.id)
+    const [{data:seatRows},{data:queueRows},{data:reqRows},{data:spotRows}]=await Promise.all([
+      s.from('space_seats').select('space_id,seat_no,user_id,seat_type,profiles(display_name,avatar_url)').eq('space_id',id).order('seat_no'),
+      s.from('space_mic_queue').select('space_id,user_id,joined_at,profiles(display_name,avatar_url)').eq('space_id',id).order('joined_at'),
+      s.from('space_star_seat_requests').select('id,requester_id,cost_stars,status,profiles!space_star_seat_requests_requester_id_fkey(display_name,avatar_url)').eq('space_id',id).eq('status','pending').order('created_at'),
+      s.from('space_pair_spotlights').select('*').eq('space_id',id).eq('status','active').order('started_at',{ascending:false}).limit(1).maybeSingle()
+    ]);setSeats(seatRows||[]);setQueue(queueRows||[]);setStarRequests(reqRows||[]);setSpotlight(spotRows||null)
   }
 
   useEffect(() => {
@@ -168,6 +185,16 @@ export default function SpaceChat({
     }
   }, [id])
 
+  async function joinQueue(){const {error}=await s.rpc('join_mic_queue',{p_space:id});setNotice(error?'تعذر دخول قائمة الميكروفون.':'تمت إضافتك لقائمة انتظار الميكروفون.');await load()}
+  async function leaveSeat(){const {error}=await s.rpc('leave_lamma_seat',{p_space:id});setNotice(error?'تعذر مغادرة المقعد.':'غادرت المقعد.');await load()}
+  async function starSeat(){const {error}=await s.rpc('request_star_seat',{p_space:id});setNotice(error?(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر طلب المقعد الملكي.'):'تم إرسال طلب المقعد الملكي للمضيف 👑');await load()}
+  async function seatNext(n:number){const {error}=await s.rpc('host_seat_next_from_queue',{p_space:id,p_seat_no:n});setNotice(error?'تعذر إجلاس العضو.':'تم نقل العضو التالي للمقعد.');await load()}
+  async function starDecision(req:string,ok:boolean){const {error}=await s.rpc('respond_star_seat_request',{p_request:req,p_accept:ok});setNotice(error?'تعذر تنفيذ القرار.':ok?'تم قبول المقعد الملكي.':'تم رفض الطلب.');await load()}
+  async function mystery(enabled:boolean){const {error}=await s.rpc('set_mystery_guest',{p_space:id,p_enabled:enabled});setNotice(error?'تعذر تغيير وضع الضيف الغامض.':enabled?'تم تفعيل الضيف الغامض.':'تم إيقاف الضيف الغامض.')}
+  async function revealMystery(){const {error}=await s.rpc('reveal_mystery_guest',{p_space:id});setNotice(error?'تعذر كشف الضيف الآن.':'تم كشف الضيف الغامض 🎭')}
+  async function startSpot(){const picks=members.filter(x=>x.user_id!==uid).slice(0,2);if(picks.length<2){setNotice('يلزم عضوان على الأقل.');return}const {error}=await s.rpc('start_lamma_pair_spotlight',{p_space:id,p_user_a:picks[0].user_id,p_user_b:picks[1].user_id});setNotice(error?'تعذر بدء Pair Spotlight.':'بدأ Pair Spotlight لمدة محدودة ✨');await load()}
+  async function endSpot(){const {error}=await s.rpc('end_lamma_pair_spotlight',{p_space:id});setNotice(error?'تعذر إنهاء Spotlight.':'تم إنهاء Spotlight.');await load()}
+  async function moderate(target:string,action:string){const {error}=await s.rpc('host_moderate_lamma_member',{p_space:id,p_target:target,p_action:action,p_duration_minutes:action==='mute'?10:null,p_reason:'إجراء إدارة من المضيف'});setNotice(error?'تعذر تنفيذ إجراء الإدارة.':'تم تنفيذ إجراء المضيف.');await load()}
   async function send() {
     const text = body.trim()
     if (!text) return
@@ -496,15 +523,15 @@ export default function SpaceChat({
 
       <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
         {notice ? (
-          <p className="mb-3 rounded-2xl bg-[#E7F5F1] p-3 text-xs font-bold text-[#006B57]">
+          <p className="mb-3 rounded-2xl bg-[#EAF2FC] p-3 text-xs font-bold text-[#1560BD]">
             {notice}
           </p>
         ) : null}
 
-        <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#006B57] to-[#004D40] p-4 text-white">
+        <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#1560BD] to-[#0D3D78] p-4 text-white">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-[#CDECE3]">الصوت الجماعي</p>
+              <p className="text-xs text-[#D7E7FB]">الصوت الجماعي</p>
               <p className="mt-1 font-extrabold">
                 {voiceMembers.length} متواجد بالصوت
               </p>
@@ -512,7 +539,7 @@ export default function SpaceChat({
 
             {!inVoice ? (
               <Button
-                className="bg-white text-[#006B57] hover:bg-[#E7F5F1]"
+                className="bg-white text-[#1560BD] hover:bg-[#EAF2FC]"
                 onClick={joinVoice}
               >
                 <PhoneCall size={16} />
@@ -559,9 +586,16 @@ export default function SpaceChat({
           ) : null}
         </section>
 
+        <section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4">
+          <div className="flex items-center justify-between"><div><p className="font-extrabold">مقاعد اللَمّة</p><p className="text-xs text-slate-500">Stage حتى {space?.seat_count||8} مقاعد</p></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={joinQueue}><Mic size={14}/> اطلب المايك</Button><Button size="sm" variant="outline" onClick={starSeat}><Crown size={14}/> المقعد الملكي</Button></div></div>
+          <div className="mt-3 grid grid-cols-4 gap-2">{Array.from({length:Math.min(Number(space?.seat_count||8),8)},(_,i)=>i+1).map(n=>{const seat=seats.find(x=>x.seat_no===n);return <button key={n} onClick={()=>isHost&&!seat&&seatNext(n)} className={seat?.seat_type==='star'?'rounded-2xl border border-amber-300 bg-amber-50 p-3 text-center':'rounded-2xl bg-[#F4F8FD] p-3 text-center'}><div className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white">{seat?.seat_type==='star'?<Crown size={17} className="text-amber-700"/>:<Armchair size={17} className="text-[#1560BD]"/>}</div><p className="mt-1 truncate text-[10px] font-bold">{seat?.profiles?.display_name||('مقعد '+n)}</p></button>})}</div>
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>قائمة الانتظار: {queue.length}</span>{seats.some(x=>x.user_id===uid)?<Button size="sm" variant="outline" onClick={leaveSeat}>مغادرة المقعد</Button>:null}</div>
+        </section>
+        {spotlight?<section className="mb-4 rounded-3xl bg-gradient-to-l from-[#EAF2FC] to-white p-4"><p className="font-extrabold text-[#1560BD]">Pair Spotlight ✨ نشط الآن</p><p className="mt-1 text-xs text-slate-500">تركيز مؤقت على شخصين داخل اللَمّة.</p>{isHost?<Button className="mt-2" size="sm" variant="outline" onClick={endSpot}>إنهاء Spotlight</Button>:null}</section>:null}
+        {isHost?<section className="mb-4 rounded-3xl border border-[#DCE8F7] bg-white p-4"><div className="flex items-center gap-2"><Shield size={17} className="text-[#1560BD]"/><p className="font-extrabold">تحكم المضيف</p></div><div className="mt-3 grid grid-cols-3 gap-2"><Button size="sm" variant="secondary" onClick={startSpot}><Sparkles size={14}/> Spotlight</Button><Button size="sm" variant="outline" onClick={()=>mystery(true)}>🎭 ضيف غامض</Button><Button size="sm" variant="outline" onClick={revealMystery}>كشف الضيف</Button></div>{starRequests.length?<div className="mt-3 space-y-2">{starRequests.map((q:any)=><div key={q.id} className="flex items-center gap-2 rounded-2xl bg-[#F4F8FD] p-2"><UserRoundPlus size={16}/><span className="flex-1 text-xs font-bold">{q.profiles?.display_name||'عضو'} · {q.cost_stars} ⭐</span><Button size="sm" onClick={()=>starDecision(q.id,true)}>قبول</Button><Button size="sm" variant="outline" onClick={()=>starDecision(q.id,false)}>رفض</Button></div>)}</div>:null}</section>:null}
         <section className="mb-4">
           <div className="mb-2 flex items-center gap-2">
-            <Users size={17} className="text-[#006B57]" />
+            <Users size={17} className="text-[#1560BD]" />
             <h2 className="font-extrabold">أعضاء اللَمّة</h2>
           </div>
 
@@ -574,7 +608,7 @@ export default function SpaceChat({
                 onClick={() => setSelectedMember(m)}
                 className="min-w-[96px] rounded-2xl border border-slate-200 bg-white p-3 text-center disabled:opacity-60"
               >
-                <div className="mx-auto grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-[#E7F5F1] font-black text-[#006B57]">
+                <div className="mx-auto grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-[#EAF2FC] font-black text-[#1560BD]">
                   {m.profiles?.avatar_url ? (
                     <img
                       src={m.profiles.avatar_url}
@@ -661,7 +695,7 @@ export default function SpaceChat({
               key={m.id}
               className={
                 m.sender_id === uid
-                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#006B57] p-3 text-white'
+                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] p-3 text-white'
                   : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white p-3 shadow-sm'
               }
             >
@@ -674,8 +708,8 @@ export default function SpaceChat({
                 }}
                 className={
                   m.sender_id === uid
-                    ? 'text-[11px] font-bold text-[#CDECE3]'
-                    : 'text-[11px] font-bold text-[#006B57]'
+                    ? 'text-[11px] font-bold text-[#D7E7FB]'
+                    : 'text-[11px] font-bold text-[#1560BD]'
                 }
               >
                 {(m.profiles as any)?.display_name || 'عضو'}

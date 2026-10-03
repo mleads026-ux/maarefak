@@ -158,7 +158,7 @@ export default function Spaces() {
         </div>
 
         {notice ? (
-          <p className="rounded-2xl bg-[#E7F5F1] p-3 text-sm font-bold text-[#006B57]">
+          <p className="rounded-2xl bg-[#EAF2FC] p-3 text-sm font-bold text-[#1560BD]">
             {notice}
           </p>
         ) : null}
@@ -196,7 +196,7 @@ export default function Spaces() {
                   onClick={() => setIsPublic(true)}
                   className={
                     isPublic
-                      ? 'rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-[#006B57] shadow-sm'
+                      ? 'rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-[#1560BD] shadow-sm'
                       : 'rounded-xl px-3 py-2 text-sm font-bold text-slate-500'
                   }
                 >
@@ -208,7 +208,7 @@ export default function Spaces() {
                   onClick={() => setIsPublic(false)}
                   className={
                     !isPublic
-                      ? 'rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-[#006B57] shadow-sm'
+                      ? 'rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-[#1560BD] shadow-sm'
                       : 'rounded-xl px-3 py-2 text-sm font-bold text-slate-500'
                   }
                 >
@@ -238,7 +238,7 @@ export default function Spaces() {
               !!x.pinned_until && new Date(x.pinned_until).getTime() > Date.now()
 
             return (
-              <Card key={x.id} className={pinned ? 'border-[#006B57]/30' : ''}>
+              <Card key={x.id} className={pinned ? 'border-[#1560BD]/30' : ''}>
                 <CardContent>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">

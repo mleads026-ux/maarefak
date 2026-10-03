@@ -38,6 +38,7 @@ export default function LoginPage() {
   }, [resendSeconds])
 
   async function submit() {
+    if(mode==='signup' && !(password.length>=8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password))){setMsg('كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز.');return}
     setBusy(true)
     setMsg('')
 
@@ -162,7 +163,7 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-md items-center p-5">
       <div className="w-full">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 -translate-y-1 grid h-20 w-20 place-items-center rounded-[28px] bg-[#006B57] text-white shadow-sm">
+          <div className="mx-auto mb-3 -translate-y-1 grid h-20 w-20 place-items-center rounded-[28px] bg-[#1560BD] text-white shadow-sm">
             <CrowdMark size={54} />
           </div>
 
@@ -181,7 +182,7 @@ export default function LoginPage() {
                   <p className="mt-1 text-sm leading-6 text-slate-500">
                     أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى
                   </p>
-                  <p className="mt-1 text-sm font-bold text-[#006B57]">
+                  <p className="mt-1 text-sm font-bold text-[#1560BD]">
                     {email}
                   </p>
                 </div>
@@ -197,6 +198,8 @@ export default function LoginPage() {
                   }
                   className="h-14 text-center text-2xl font-black tracking-[0.35em]"
                 />
+
+                {mode === 'signup' ? <p className="text-xs leading-5 text-slate-500">كلمة المرور: 8 أحرف على الأقل + حرف كبير + حرف صغير + رقم + رمز.</p> : null}
 
                 {msg ? (
                   <p className="rounded-2xl bg-slate-50 p-3 text-center text-sm text-slate-600">
@@ -270,7 +273,7 @@ export default function LoginPage() {
                   disabled={
                     busy ||
                     !email.trim() ||
-                    password.length < 6 ||
+                    (mode === 'login' ? password.length < 6 : !(password.length>=8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password))) ||
                     (mode === 'signup' && !name.trim())
                   }
                   onClick={submit}

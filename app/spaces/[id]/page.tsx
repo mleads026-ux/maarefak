@@ -625,7 +625,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                 className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#5e25d8] shadow-lg disabled:opacity-65"
               >
                 <Headphones size={16}/>
-                {isHost?'تشغيل صوت الـHost':voiceRequestStatus==='accepted'?'تمت الموافقة · دخول الصوت':voiceRequestStatus==='pending'?'في انتظار موافقة الـHost':'طلب الانضمام للصوت'}
+                {isHost?'تشغيل صوت الـHost':voiceRequestStatus==='accepted'?'تمت الموافقة · انضم للصوت':voiceRequestStatus==='pending'?'بانتظار موافقة الـHost':'انضم للصوت'}
               </button>
             : <>
                 <button onClick={toggleMic} className={`tap-action grid h-9 w-9 place-items-center rounded-full ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}>{micEnabled?<Mic size={17}/>:<MicOff size={17}/>}</button>

@@ -271,7 +271,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     let cancelled = false
     const callId = activeCall.id
-    const callKind = callKind
+    const callKind:CallRow['call_kind'] = activeCall.call_kind
     const isCaller = activeCall.caller_id === uid
 
     async function processSignal(signal: any) {

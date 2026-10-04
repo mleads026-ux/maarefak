@@ -26,18 +26,28 @@ export default function Person({params}:{params:Promise<{id:string}>}){
   const [directCost,setDirectCost]=useState(20)
   const [interested,setInterested]=useState(false)
   const [profileAge,setProfileAge]=useState<number|null>(null)
+  const [isOnline,setIsOnline]=useState(false)
 
   useEffect(()=>{(async()=>{
     await s.rpc('record_profile_view',{p_target:id})
-    const [{data:profile},{data:interests},{data:price},{data:ageValue}]=await Promise.all([
+    const [{data:profile},{data:interests},{data:price},{data:ageValue},{data:onlineValue}]=await Promise.all([
       s.from('profiles').select('id,display_name,avatar_url,bio,mood,show_age,countries(name_ar),cities(name_ar)').eq('id',id).single(),
       s.from('profile_interests').select('interests(name_ar)').eq('profile_id',id),
       s.from('feature_prices').select('price_stars').eq('key','direct_message').eq('enabled',true).maybeSingle(),
       s.rpc('public_profile_age',{p_target:id}),
+      s.rpc('public_profile_presence',{p_target:id}),
     ])
-    setP(profile);setTags(interests||[]);setProfileAge(ageValue==null?null:Number(ageValue))
+    setP(profile);setTags(interests||[]);setProfileAge(ageValue==null?null:Number(ageValue));setIsOnline(Boolean(onlineValue))
     if(price?.price_stars!=null)setDirectCost(Number(price.price_stars))
   })()},[id,s])
+
+  useEffect(()=>{
+    const presenceTimer=window.setInterval(async()=>{
+      const {data}=await s.rpc('public_profile_presence',{p_target:id})
+      setIsOnline(Boolean(data))
+    },30000)
+    return()=>window.clearInterval(presenceTimer)
+  },[id,s])
 
   if(!p)return <AppShell><PageHeader title="الملف"/><div className="p-6 text-center text-sm text-slate-500">جاري التحميل...</div></AppShell>
 
@@ -129,7 +139,7 @@ export default function Person({params}:{params:Promise<{id:string}>}){
       <button onClick={()=>p.avatar_url&&setPhotoOpen(true)} className="tap-action mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full bg-[#EAF2FC] text-4xl font-black text-[#1560BD]">
         {p.avatar_url?<img src={p.avatar_url} alt="" className="h-full w-full object-cover"/>:p.display_name?.[0]}
       </button>
-      <h1 className="mt-3 text-2xl font-extrabold">{p.display_name}{age?`، ${age}`:''}</h1>
+      <div className="mt-3 flex items-center justify-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${isOnline?'bg-[#12d79d] shadow-[0_0_10px_rgba(18,215,157,.65)]':'bg-slate-400'}`}/><span className={`text-xs font-black ${isOnline?'text-[#159a70]':'text-slate-500'}`}>{isOnline?'متصل':'غير متصل'}</span></div><h1 className="mt-2 text-2xl font-extrabold">{p.display_name}{age?`، ${age}`:''}</h1>
       <p className="mt-1 text-sm text-slate-500">{[(p.cities as any)?.name_ar,(p.countries as any)?.name_ar].filter(Boolean).join('، ')} {p.mood?`· ${p.mood}`:''}</p>
       <p className="mt-4 text-sm leading-6 text-slate-600">{p.bio||'لا توجد نبذة بعد.'}</p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">{tags.map((x:any)=><span key={x.interests?.name_ar} className="rounded-full bg-[#EAF2FC] px-3 py-1.5 text-xs font-bold text-[#1560BD]">{x.interests?.name_ar}</span>)}</div>

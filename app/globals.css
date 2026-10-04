@@ -253,24 +253,25 @@ input,textarea,select{min-width:0;max-width:100%}
 }
 
 
-/* LAMMETNA_AUTH_LIVE_HERO_V9 */
+/* LAMMETNA_AUTH_LIVE_HERO_V10 */
 .auth-live-hero{
   --auth-orbit-x:50%;
   --auth-orbit-y:36.2%;
-  --auth-orbit-size:22.8%;
+  --auth-ring-radius:13.4%;
   isolation:isolate;
 }
 .auth-live-hero[data-auth-hero="signup"]{
   --auth-orbit-y:29.2%;
-  --auth-orbit-size:22.2%;
+  --auth-ring-radius:13.0%;
 }
-.auth-live-hero>img{
+.auth-live-hero>img:first-child{
   position:relative;
   z-index:0;
 }
 .auth-live-hero__glow,
 .auth-live-hero__sheen,
-.auth-icon-orbit-motion{
+.auth-icon-ring-eraser,
+.auth-icon-ring-live{
   position:absolute;
   pointer-events:none;
 }
@@ -285,7 +286,7 @@ input,textarea,select{min-width:0;max-width:100%}
     radial-gradient(circle at 83% 72%,rgba(203,69,255,.28),transparent 22%),
     radial-gradient(circle at 42% 62%,rgba(255,255,255,.20),transparent 18%);
   filter:blur(18px);
-  animation:authLiveInsideDriftV9 7.6s ease-in-out infinite alternate;
+  animation:authLiveInsideDriftV10 7.6s ease-in-out infinite alternate;
 }
 .auth-live-hero__sheen{
   z-index:4;
@@ -305,105 +306,116 @@ input,textarea,select{min-width:0;max-width:100%}
     transparent 100%
   );
   filter:blur(2px);
-  animation:authLiveSheenV9 5.8s ease-in-out infinite;
+  animation:authLiveSheenV10 5.8s ease-in-out infinite;
 }
-.auth-icon-orbit-motion{
-  z-index:6;
-  left:var(--auth-orbit-x);
-  top:var(--auth-orbit-y);
-  width:var(--auth-orbit-size);
-  aspect-ratio:1;
-  border-radius:999px;
-  transform-origin:50% 50%;
-  filter:
-    drop-shadow(0 0 5px rgba(255,255,255,.95))
-    drop-shadow(0 0 11px rgba(67,236,255,.58))
-    drop-shadow(0 0 16px rgba(186,71,255,.28));
-  animation:authIconOrbitTensionV9 7.4s cubic-bezier(.42,0,.18,1) infinite;
-}
-.auth-icon-orbit-motion::before{
-  content:"";
-  position:absolute;
-  inset:5%;
-  border-radius:999px;
-  background:
-    conic-gradient(
-      from -10deg,
-      rgba(255,255,255,.98) 0deg 30deg,
-      transparent 30deg 53deg,
-      rgba(255,255,255,.96) 53deg 89deg,
-      transparent 89deg 114deg,
-      rgba(255,255,255,.98) 114deg 150deg,
-      transparent 150deg 177deg,
-      rgba(255,255,255,.94) 177deg 214deg,
-      transparent 214deg 240deg,
-      rgba(255,255,255,.98) 240deg 275deg,
-      transparent 275deg 300deg,
-      rgba(255,255,255,.96) 300deg 336deg,
-      transparent 336deg 360deg
-    );
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));
-  mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));
-  opacity:.46;
-}
-.auth-icon-orbit-motion::after{
-  content:"";
-  position:absolute;
+
+/* Softly erase only the static decorative ring from the raster source.
+   The phone mark and the card remain untouched. */
+.auth-icon-ring-eraser{
+  z-index:5;
   inset:0;
-  border-radius:999px;
-  opacity:.58;
-  background:
-    radial-gradient(circle at 50% 2%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 82% 13%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 98% 50%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 83% 84%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 50% 98%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 17% 84%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 2% 50%,#fff 0 2.2%,transparent 2.8%),
-    radial-gradient(circle at 17% 15%,#fff 0 2.2%,transparent 2.8%);
+  -webkit-mask:radial-gradient(
+    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
+    transparent 0 54%,
+    #000 60% 100%,
+    transparent 100%
+  );
+  mask:radial-gradient(
+    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
+    transparent 0 54%,
+    #000 60% 100%,
+    transparent 100%
+  );
+  backdrop-filter:blur(9px) saturate(1.2);
+  -webkit-backdrop-filter:blur(9px) saturate(1.2);
+  background:rgba(255,255,255,.035);
 }
-@keyframes authLiveInsideDriftV9{
+
+/* This is the original hero image, clipped to the actual ring.
+   Rotating this layer rotates the real ring artwork, not a synthetic ring. */
+.auth-icon-ring-live{
+  z-index:6;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:fill;
+  transform-origin:var(--auth-orbit-x) var(--auth-orbit-y);
+  -webkit-mask:radial-gradient(
+    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
+    transparent 0 54%,
+    #000 60% 100%,
+    transparent 100%
+  );
+  mask:radial-gradient(
+    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
+    transparent 0 54%,
+    #000 60% 100%,
+    transparent 100%
+  );
+  filter:
+    drop-shadow(0 0 5px rgba(255,255,255,.90))
+    drop-shadow(0 0 10px rgba(71,232,255,.42))
+    drop-shadow(0 0 15px rgba(191,71,255,.22));
+  animation:authOriginalRingBrakeV10 8.2s linear infinite;
+  will-change:transform;
+}
+
+@keyframes authLiveInsideDriftV10{
   0%{transform:translate3d(-3%,-2%,0) scale(1);opacity:.54}
   48%{transform:translate3d(4%,3%,0) scale(1.05);opacity:.78}
   100%{transform:translate3d(-1%,5%,0) scale(1.02);opacity:.63}
 }
-@keyframes authLiveSheenV9{
+@keyframes authLiveSheenV10{
   0%,55%{left:-46%;opacity:0}
   63%{opacity:.54}
   82%{left:118%;opacity:.34}
   100%{left:118%;opacity:0}
 }
-@keyframes authIconOrbitTensionV9{
+
+/* 360° clockwise -> small tension overshoot -> ~quarter-turn rebound ->
+   long, progressively slower braking -> quiet stop/pause. */
+@keyframes authOriginalRingBrakeV10{
   0%{
-    transform:translate(-50%,-50%) rotate(0deg) scale(1);
+    transform:rotate(0deg);
+    animation-timing-function:cubic-bezier(.28,.02,.22,1);
   }
-  52%{
-    transform:translate(-50%,-50%) rotate(360deg) scale(1);
-    animation-timing-function:cubic-bezier(.22,.72,.19,1);
+  48%{
+    transform:rotate(360deg);
+    animation-timing-function:cubic-bezier(.16,.84,.20,1);
   }
-  61%{
-    transform:translate(-50%,-50%) rotate(394deg) scale(1.035);
-    animation-timing-function:cubic-bezier(.18,.82,.25,1);
+  56%{
+    transform:rotate(392deg);
+    animation-timing-function:cubic-bezier(.24,.72,.22,1);
   }
-  73%{
-    transform:translate(-50%,-50%) rotate(304deg) scale(.985);
-    animation-timing-function:cubic-bezier(.2,.9,.28,1.18);
+  70%{
+    transform:rotate(302deg);
+    animation-timing-function:cubic-bezier(.18,.76,.18,1);
   }
-  82%{
-    transform:translate(-50%,-50%) rotate(345deg) scale(1.012);
+  79%{
+    transform:rotate(334deg);
+    animation-timing-function:cubic-bezier(.12,.70,.16,1);
+  }
+  86%{
+    transform:rotate(349deg);
+    animation-timing-function:cubic-bezier(.10,.66,.14,1);
+  }
+  91%{
+    transform:rotate(356deg);
+    animation-timing-function:cubic-bezier(.08,.60,.12,1);
+  }
+  95%{
+    transform:rotate(359deg);
     animation-timing-function:ease-out;
   }
-  89%{
-    transform:translate(-50%,-50%) rotate(356deg) scale(.998);
-  }
-  94%,100%{
-    transform:translate(-50%,-50%) rotate(360deg) scale(1);
+  97%,100%{
+    transform:rotate(360deg);
   }
 }
 @media (prefers-reduced-motion:reduce){
   .auth-live-hero__glow,
   .auth-live-hero__sheen,
-  .auth-icon-orbit-motion{
+  .auth-icon-ring-live{
     animation:none!important;
   }
 }
+

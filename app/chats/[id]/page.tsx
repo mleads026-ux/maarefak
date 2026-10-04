@@ -236,7 +236,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         setIncomingCall(row)
       } else {
         setActiveCall(row)
-        setCallLabel(kind==='video'?'جارٍ انتظار موافقة الطرف الآخر على الفيديو...':'جارٍ انتظار موافقة الطرف الآخر على المكالمة الصوتية...')
+        setCallLabel(row.call_kind==='video'?'جارٍ انتظار موافقة الطرف الآخر على الفيديو...':'جارٍ انتظار موافقة الطرف الآخر على المكالمة الصوتية...')
       }
       return
     }
@@ -244,7 +244,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     if (row.status === 'accepted') {
       setIncomingCall(null)
       setActiveCall(row)
-      setCallLabel('المكالمة متصلة')
+      setCallLabel(row.call_kind==='video'?'مكالمة الفيديو متصلة':'المكالمة الصوتية متصلة')
       return
     }
 
@@ -561,7 +561,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     if (row) {
       setActiveCall(row as CallRow)
-      setCallLabel('جارٍ انتظار موافقة الطرف الآخر...')
+      setCallLabel(kind==='video'?'جارٍ انتظار موافقة الطرف الآخر على الفيديو...':'جارٍ انتظار موافقة الطرف الآخر على المكالمة الصوتية...')
     }
   }
 
@@ -587,7 +587,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     if (row) {
       setIncomingCall(null)
       setActiveCall(row as CallRow)
-      setCallLabel('المكالمة متصلة')
+      setCallLabel((row as CallRow).call_kind==='video'?'مكالمة الفيديو متصلة':'المكالمة الصوتية متصلة')
     }
   }
 

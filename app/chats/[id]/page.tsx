@@ -223,7 +223,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         setIncomingCall(row)
       } else {
         setActiveCall(row)
-        setCallLabel('جارٍ انتظار موافقة الطرف الآخر...')
+        setCallLabel(kind==='video'?'جارٍ انتظار موافقة الطرف الآخر على الفيديو...':'جارٍ انتظار موافقة الطرف الآخر على المكالمة الصوتية...')
       }
       return
     }
@@ -313,9 +313,10 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
       pendingIceRef.current = []
 
       try {
+        const isVideo=activeCall.call_kind==='video'
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
-          video: false,
+          video: isVideo,
         })
 
         if (cancelled) {
@@ -324,6 +325,11 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         }
 
         localStreamRef.current = stream
+        if(activeCall.call_kind==='video'&&localVideoRef.current){
+          localVideoRef.current.srcObject=stream
+          localVideoRef.current.muted=true
+          localVideoRef.current.play().catch(()=>{})
+        }
 
         const pc = new RTCPeerConnection({
           iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -336,9 +342,13 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         })
 
         pc.ontrack = (event) => {
-          if (remoteAudioRef.current) {
-            remoteAudioRef.current.srcObject = event.streams[0]
-            remoteAudioRef.current.play().catch(() => {})
+          const incoming=event.streams[0]
+          if(activeCall.call_kind==='video'&&remoteVideoRef.current){
+            remoteVideoRef.current.srcObject=incoming
+            remoteVideoRef.current.play().catch(()=>{})
+          }else if(remoteAudioRef.current){
+            remoteAudioRef.current.srcObject=incoming
+            remoteAudioRef.current.play().catch(()=>{})
           }
         }
 
@@ -393,7 +403,9 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           })
         }
       } catch {
-        setNotice('تعذر تشغيل الميكروفون. اسمح للموقع باستخدام الميكروفون وحاول مرة أخرى.')
+        setNotice(activeCall.call_kind==='video'
+          ? 'تعذر تشغيل الكاميرا أو الميكروفون. اسمح بالوصول ثم حاول مرة أخرى.'
+          : 'تعذر تشغيل الميكروفون. اسمح للموقع باستخدام الميكروفون وحاول مرة أخرى.')
       }
     }
 
@@ -420,6 +432,8 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null
     }
+    if(localVideoRef.current)localVideoRef.current.srcObject=null
+    if(remoteVideoRef.current)remoteVideoRef.current.srcObject=null
   }
 
   async function loadSocialTools(){
@@ -475,15 +489,16 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     setShowGifts(false)
   }
 
-  async function startCall() {
+  async function startCall(kind:'voice'|'video') {
     setNotice('')
 
-    const { data, error } = await s.rpc('request_voice_call', {
+    const { data, error } = await s.rpc('request_chat_call', {
       p_conversation: id,
+      p_kind: kind,
     })
 
     if (error) {
-      setNotice('تعذر بدء المكالمة الآن.')
+      setNotice(kind==='video'?'تعذر بدء مكالمة الفيديو الآن.':'تعذر بدء المكالمة الصوتية الآن.')
       return
     }
 

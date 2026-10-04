@@ -26,6 +26,7 @@ body{
 }
 button,input,textarea,select{font:inherit}
 button,a{-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:not-allowed}
 img{max-width:100%}
 .hide-scrollbar::-webkit-scrollbar{display:none}
 .hide-scrollbar{scrollbar-width:none}
@@ -42,4 +43,26 @@ input,textarea,select{min-width:0;max-width:100%}
 .safe-top{padding-top:max(12px,env(safe-area-inset-top))}
 .safe-bottom{padding-bottom:max(10px,env(safe-area-inset-bottom))}
 .reference-status{display:flex}
+.tap-action{
+  transition:transform .14s ease,filter .14s ease,opacity .14s ease,box-shadow .14s ease;
+  touch-action:manipulation;
+}
+.tap-action:active:not(:disabled){
+  transform:scale(.975);
+  filter:brightness(.98);
+}
+.tap-action:focus-visible{
+  outline:3px solid rgba(18,103,245,.22);
+  outline-offset:2px;
+}
+.tap-action:disabled{
+  opacity:.55;
+}
+@media (hover:hover){
+  .tap-action:hover:not(:disabled){filter:brightness(.99)}
+}
+@media (prefers-reduced-motion:reduce){
+  .tap-action{transition:none}
+  .tap-action:active:not(:disabled){transform:none}
+}
 @media (display-mode:standalone){.reference-status{display:none}}

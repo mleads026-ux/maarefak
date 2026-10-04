@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import {useEffect,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {Mail,Lock,Eye,EyeOff,CheckCircle2,Circle,ChevronLeft} from 'lucide-react'
+import {Mail,Lock,Eye,EyeOff,CheckCircle2,Circle,ChevronLeft,X} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {friendlyError} from '@/lib/utils'
 import {PixelHeroImage} from '@/components/pixel-hero-image'
@@ -15,6 +15,8 @@ const rules=(v:string)=>[
   ['رمز خاص واحد على الأقل (!@#...)',/[^A-Za-z0-9]/.test(v)],
 ] as const
 
+type LegalKind='terms'|'privacy'|'community'
+
 export default function Signup(){
   const r=useRouter()
   const [email,setEmail]=useState('')
@@ -26,8 +28,15 @@ export default function Signup(){
   const [busy,setBusy]=useState(false)
   const [msg,setMsg]=useState('')
   const [resend,setResend]=useState(0)
+  const [docs,setDocs]=useState<Record<string,any>>({})
+  const [openDoc,setOpenDoc]=useState<LegalKind|null>(null)
 
   useEffect(()=>{if(resend<=0)return;const t=setInterval(()=>setResend(x=>Math.max(0,x-1)),1000);return()=>clearInterval(t)},[resend])
+  useEffect(()=>{(async()=>{
+    const s=createClient()
+    const {data}=await s.from('legal_documents').select('kind,title_ar,content_ar,version').eq('active',true).in('kind',['terms','privacy','community'])
+    setDocs(Object.fromEntries((data||[]).map((x:any)=>[x.kind,x])))
+  })()},[])
   const ok=rules(password).every(([,v])=>v)&&checks.every(Boolean)
 
   async function accept(){
@@ -64,6 +73,12 @@ export default function Signup(){
     setBusy(false)
   }
 
+  const legalRows=[
+    ['أوافق على الشروط والأحكام الخاصة بلمتنا','terms'],
+    ['أوافق على سياسة الخصوصية','privacy'],
+    ['أوافق على إرشادات المجتمع','community'],
+  ] as const
+
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
     <PixelHeroImage src="/pixel/signup-hero.jpg" alt="لمتنا" className="w-full"/>
     <section className="pixel-card relative -mt-4 mx-4 min-h-[760px] rounded-[38px] px-5 pb-7 pt-7">
@@ -72,8 +87,8 @@ export default function Signup(){
         <p className="mt-2 text-center text-sm font-bold text-[#68758e]">أدخل الرمز المرسل إلى<br/><b className="text-[#125ff5]">{email}</b></p>
         <input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} inputMode="numeric" className="mt-7 h-16 w-full rounded-[22px] bg-[#f1f5fb] text-center text-3xl font-black tracking-[.35em] outline-none ring-1 ring-[#e0e9f5]" placeholder="000000"/>
         {msg?<p className="mt-3 rounded-2xl bg-[#eef5ff] p-3 text-sm font-bold text-[#2a4c80]">{msg}</p>:null}
-        <button onClick={verify} disabled={busy||otp.length!==6} className="lammetna-gradient hero-shadow mt-5 h-16 w-full rounded-[24px] text-xl font-black text-white">تأكيد الحساب</button>
-        <button onClick={resendOtp} disabled={busy||resend>0} className="mt-3 w-full py-3 text-sm font-black text-[#1745d6]">{resend>0?`إعادة الإرسال بعد ${resend} ثانية`:'إعادة إرسال الرمز'}</button>
+        <button onClick={verify} disabled={busy||otp.length!==6} className="tap-action lammetna-gradient hero-shadow mt-5 h-16 w-full rounded-[24px] text-xl font-black text-white">تأكيد الحساب</button>
+        <button onClick={resendOtp} disabled={busy||resend>0} className="tap-action mt-3 w-full py-3 text-sm font-black text-[#1745d6]">{resend>0?`إعادة الإرسال بعد ${resend} ثانية`:'إعادة إرسال الرمز'}</button>
       </>:<>
         <h2 className="text-center text-[34px] font-black">إنشاء حساب</h2>
         <p className="mt-2 text-center text-[15px] font-bold text-[#6b7891]">انضم إلى لمتنا وابدأ رحلتك مع أصدقاء جدد</p>
@@ -83,7 +98,7 @@ export default function Signup(){
             <Mail size={22}/><input className="min-w-0 flex-1 bg-transparent text-right outline-none" type="email" placeholder="البريد الإلكتروني" value={email} onChange={e=>setEmail(e.target.value)}/>
           </div>
           <div className="flex h-14 items-center gap-3 rounded-[20px] bg-[#f1f5fb] px-4 ring-1 ring-[#e0e9f5]">
-            <Lock size={22}/><input className="min-w-0 flex-1 bg-transparent text-right outline-none" type={show?'text':'password'} placeholder="كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)}/><button type="button" onClick={()=>setShow(!show)}>{show?<EyeOff size={22}/>:<Eye size={22}/>}</button>
+            <Lock size={22}/><input className="min-w-0 flex-1 bg-transparent text-right outline-none" type={show?'text':'password'} placeholder="كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)}/><button type="button" className="tap-action" onClick={()=>setShow(!show)}>{show?<EyeOff size={22}/>:<Eye size={22}/>}</button>
           </div>
         </div>
 
@@ -96,21 +111,32 @@ export default function Signup(){
         </div>
 
         <div className="mt-4 rounded-[24px] border border-[#e0e9f4] bg-white p-4 shadow-sm">
-          {['أوافق على الشروط والأحكام الخاصة بلمتنا','أوافق على سياسة الخصوصية','أوافق على إرشادات المجتمع','أؤكد أن عمري 18 عامًا أو أكثر'].map((label,i)=><label key={label} className="mb-3 flex cursor-pointer items-center justify-between gap-3 text-sm font-bold last:mb-0">
-            <span className={i<3?'text-[#163fbd]':'text-[#17223f]'}>{label}{i===3?<span className="mr-2 rounded-full border border-red-500 px-1 py-[1px] text-[10px] font-black text-red-500">18+</span>:null}</span>
+          {legalRows.map(([label,kind],i)=><div key={kind} className="mb-3 flex items-center justify-between gap-3 text-sm font-bold last:mb-0">
+            <button type="button" onClick={()=>setOpenDoc(kind)} className="tap-action text-right text-[#163fbd] underline decoration-[#b7c8ff] underline-offset-4">{label}</button>
             <input type="checkbox" checked={checks[i]} onChange={e=>setChecks(c=>c.map((v,n)=>n===i?e.target.checked:v))} className="h-5 w-5 accent-[#155ff6]"/>
-          </label>)}
+          </div>)}
+          <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-bold">
+            <span className="text-[#17223f]">أؤكد أن عمري 18 عامًا أو أكثر <span className="mr-2 rounded-full border border-red-500 px-1 py-[1px] text-[10px] font-black text-red-500">18+</span></span>
+            <input type="checkbox" checked={checks[3]} onChange={e=>setChecks(c=>c.map((v,n)=>n===3?e.target.checked:v))} className="h-5 w-5 accent-[#155ff6]"/>
+          </label>
         </div>
 
         {msg?<p className="mt-3 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{msg}</p>:null}
 
-        <button onClick={signup} disabled={busy||!ok||!email.trim()} className="lammetna-gradient hero-shadow mt-5 flex h-16 w-full items-center justify-between rounded-[25px] px-5 text-[22px] font-black text-white disabled:opacity-50">
+        <button onClick={signup} disabled={busy||!ok||!email.trim()} className="tap-action lammetna-gradient hero-shadow mt-5 flex h-16 w-full items-center justify-between rounded-[25px] px-5 text-[22px] font-black text-white disabled:opacity-50">
           <span>{busy?'جاري الإنشاء...':'إنشاء حساب'}</span>
           <span className="grid h-11 w-11 place-items-center rounded-[16px] bg-white/25"><ChevronLeft size={27}/></span>
         </button>
-        <p className="mt-5 text-center text-sm font-bold text-[#66738c]">لديك حساب بالفعل؟ <Link href="/login" className="font-black text-[#173fc8]">تسجيل الدخول</Link></p>
+        <p className="mt-5 text-center text-sm font-bold text-[#66738c]">لديك حساب بالفعل؟ <Link href="/login" className="tap-action font-black text-[#173fc8]">تسجيل الدخول</Link></p>
       </>}
     </section>
+
+    {openDoc?<div className="fixed inset-0 z-[100] flex items-end bg-black/45" onClick={()=>setOpenDoc(null)}>
+      <section onClick={e=>e.stopPropagation()} className="mx-auto max-h-[82vh] w-full max-w-[432px] overflow-y-auto rounded-t-[34px] bg-white p-5 pb-[max(24px,env(safe-area-inset-bottom))]">
+        <div className="sticky top-0 flex items-center justify-between bg-white pb-3"><div><h3 className="text-lg font-black">{docs[openDoc]?.title_ar||'المستند القانوني'}</h3><p className="text-[10px] font-bold text-[#7a869b]">الإصدار {docs[openDoc]?.version||'الحالي'}</p></div><button onClick={()=>setOpenDoc(null)} className="tap-action grid h-10 w-10 place-items-center rounded-full bg-[#eef3f8]"><X size={20}/></button></div>
+        <div className="whitespace-pre-wrap text-sm font-medium leading-7 text-[#35435e]">{docs[openDoc]?.content_ar||'جاري تحميل المستند...'}</div>
+      </section>
+    </div>:null}
 
     <div className="h-7"/>
   </main>

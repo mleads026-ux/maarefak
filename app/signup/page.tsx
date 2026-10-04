@@ -80,8 +80,8 @@ export default function Signup(){
   ] as const
 
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
-    <PixelHeroImage src="/pixel/signup-hero.jpg" alt="لمتنا" className="w-full"/>
-    <section className="pixel-card auth-glow-card relative -mt-4 mx-4 min-h-[760px] rounded-[38px] px-5 pb-7 pt-7">
+    <PixelHeroImage src="/pixel/signup-hero.jpg" alt="لمتنا" className="auth-reference-hero w-full"/>
+    <section className="auth-sheet-reference relative -mt-[18px] mx-0 min-h-[760px] rounded-t-[38px] bg-white px-5 pb-7 pt-7">
       {step==='otp'?<>
         <h2 className="text-center text-[32px] font-black">تأكيد البريد</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#68758e]">أدخل الرمز المرسل إلى<br/><b className="text-[#125ff5]">{email}</b></p>

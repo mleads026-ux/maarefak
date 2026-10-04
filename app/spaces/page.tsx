@@ -2,14 +2,15 @@
 import Link from 'next/link'
 import {useEffect,useMemo,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {Bell,Plus,Users,Mic2,Lock,Globe2,Flame,Headphones,Eye,ChevronLeft,Swords} from 'lucide-react'
+import {Bell,Plus,Users,Mic2,Lock,Globe2,Flame,Headphones,Eye,ChevronLeft,Swords,Trash2,Hash} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
 import {VoiceGlowBar} from '@/components/voice-glow-bar'
+import {appConfirm} from '@/components/interaction-dialog'
 
 type Space={
-  id:string;owner_id:string;name:string;description:string|null;emoji:string|null;category:string|null;
+  id:string;owner_id:string;public_lamma_id:string;name:string;description:string|null;emoji:string|null;category:string|null;
   image_url:string|null;is_public:boolean;pinned_until:string|null;created_at:string;space_members:{count:number}[]
 }
 type Filter='active'|'private'|'public'|'all'
@@ -32,11 +33,17 @@ export default function Spaces(){
   const [spot,setSpot]=useState<any>(null)
   const [profiles,setProfiles]=useState<Record<string,any>>({})
   const [filter,setFilter]=useState<Filter>('active')
+  const [myRooms,setMyRooms]=useState<Space[]>([])
 
   async function load(){
-    const {data}=await s.from('spaces').select('id,owner_id,name,description,emoji,category,image_url,is_public,pinned_until,created_at,space_members(count)').limit(100)
+    const {data:{user}}=await s.auth.getUser()
+    const [{data},{data:mine}]=await Promise.all([
+      s.from('spaces').select('id,owner_id,public_lamma_id,name,description,emoji,category,image_url,is_public,pinned_until,created_at,space_members(count)').limit(100),
+      user?s.from('spaces').select('id,owner_id,public_lamma_id,name,description,emoji,category,image_url,is_public,pinned_until,created_at,space_members(count)').eq('owner_id',user.id).order('created_at',{ascending:false}):Promise.resolve({data:[]} as any)
+    ])
     const sorted=((data||[]) as any).sort((a:Space,b:Space)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime())
     setItems(sorted)
+    setMyRooms((mine||[]) as any)
     if(sorted[0]){
       const [{data:sr},{data:sp}]=await Promise.all([
         s.from('space_seats').select('seat_no,user_id,seat_type').eq('space_id',sorted[0].id),
@@ -65,6 +72,19 @@ export default function Spaces(){
     const {error}=await s.rpc('join_lamma',{p_space:x.id,p_password:x.is_public?null:joinPw[x.id]||null})
     if(error){setNotice(error.message.includes('wrong_password')?'كلمة المرور غير صحيحة.':'تعذر دخول اللَمّة.');return}
     r.push(`/spaces/${x.id}`)
+  }
+
+  async function removeMyRoom(x:Space){
+    const ok=await appConfirm({
+      title:'حذف اللَمّة',
+      message:`سيتم حذف "${x.name}" نهائيًا مع رسائلها وأعضائها. هل تريد المتابعة؟`,
+      confirmLabel:'حذف اللَمّة',
+      danger:true
+    })
+    if(!ok)return
+    const {error}=await s.rpc('delete_my_lamma',{p_space:x.id})
+    setNotice(error?'تعذر حذف اللَمّة.':'تم حذف اللَمّة.')
+    await load()
   }
 
   const featured=items[0]
@@ -145,6 +165,21 @@ export default function Spaces(){
         {!isPublic?<input type="password" className="mt-2 h-12 w-full rounded-2xl bg-[#f2f6fb] px-3" placeholder="كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)}/>:null}
         <button onClick={create} className="tap-action lammetna-gradient mt-3 h-12 w-full rounded-2xl font-black text-white">إنشاء اللَمّة</button>
       </section>:null}
+
+      <section className="mt-5">
+        <div className="mb-3 flex items-center justify-between"><div><h2 className="text-[22px] font-black">لمّاتي السابقة</h2><p className="text-[11px] font-bold text-[#7a869b]">كل لَمّة أنشأتها لها ID ثابت ويمكنك حذفها في أي وقت.</p></div><Hash size={22} className="text-[#1768f4]"/></div>
+        <div className="space-y-2">
+          {myRooms.map(room=><div key={room.id} className="pixel-card flex items-center gap-3 rounded-[22px] p-3">
+            <Link href={`/spaces/${room.id}`} className="min-w-0 flex-1">
+              <p className="truncate font-black">{room.emoji||'🎙️'} {room.name}</p>
+              <p dir="ltr" className="mt-1 text-left text-[11px] font-black tracking-wider text-[#1768f4]">ID: {room.public_lamma_id}</p>
+              <p className="mt-1 text-[10px] font-bold text-[#7a869b]">{new Date(room.created_at).toLocaleDateString('ar-EG')} · {room.is_public?'عامة':'خاصة'}</p>
+            </Link>
+            <button onClick={()=>removeMyRoom(room)} className="tap-action grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#fff0f3] text-[#d9244e]" aria-label="حذف اللَمّة"><Trash2 size={18}/></button>
+          </div>)}
+          {!myRooms.length?<div className="rounded-[20px] border border-dashed border-[#cfdceb] bg-white/70 p-4 text-center text-xs font-bold text-[#7a869b]">لم تنشئ أي لَمّة حتى الآن.</div>:null}
+        </div>
+      </section>
 
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-[23px] font-black">اللَمّات النشطة الآن 🎙️</h2><button onClick={()=>setShow(true)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eaf4ff] text-[#0e67f5]"><Plus size={18}/></button></div>

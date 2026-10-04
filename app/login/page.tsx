@@ -52,8 +52,8 @@ export default function Login(){
   }
 
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
-    <PixelHeroImage src="/pixel/login-hero.jpg" alt="لمتنا" className="w-full"/>
-    <section className="pixel-card auth-glow-card relative -mt-3 mx-4 rounded-[38px] px-5 pb-7 pt-7">
+    <PixelHeroImage src="/pixel/login-hero.jpg" alt="لمتنا" className="auth-reference-hero w-full"/>
+    <section className="auth-sheet-reference relative -mt-[18px] mx-0 rounded-t-[38px] bg-white px-5 pb-7 pt-7">
       {isReset?<>
         <h2 className="text-center text-[30px] font-black">كلمة مرور جديدة</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#6f7b95]">اختر كلمة مرور قوية لحسابك</p>

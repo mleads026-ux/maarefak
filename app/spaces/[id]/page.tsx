@@ -97,7 +97,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       {data:reqRows},
       {data:spotRow},
     ]=await Promise.all([
-      s.from('spaces').select('id,name,emoji,is_public,owner_id,seat_count,description').eq('id',id).single(),
+      s.from('spaces').select('id,name,emoji,is_public,owner_id,seat_count,description,public_lamma_id').eq('id',id).single(),
       s.from('space_messages')
         .select('id,body,created_at,sender_id,profiles!space_messages_sender_id_fkey(display_name,avatar_url)')
         .eq('space_id',id).order('created_at',{ascending:true}).limit(200),
@@ -492,11 +492,11 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     <main className="p-2">
       {notice?<div className="mb-2 rounded-2xl bg-[#edf5ff] px-3 py-2 text-center text-xs font-black text-[#24528d]">{notice}</div>:null}
 
-      <section className="lammetna-gradient animated-gradient-card lamma-room-card relative flex h-[calc(100dvh-118px)] min-h-[700px] flex-col overflow-hidden rounded-[32px] p-3 text-white shadow-[0_24px_60px_rgba(43,72,216,.30)]">
+      <section className="lammetna-gradient animated-gradient-card lamma-room-card relative flex h-[calc(100dvh-144px)] min-h-[650px] flex-col overflow-hidden rounded-[32px] p-3 text-white shadow-[0_24px_60px_rgba(43,72,216,.30)]">
         <div className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full border-[34px] border-white/10"/>
         <div className="pointer-events-none absolute -right-20 top-[28%] h-64 w-64 rounded-full bg-fuchsia-400/20 blur-3xl"/>
 
-        <div className="relative z-10 flex min-h-0 basis-[48%] flex-col">
+        <div className="relative z-10 flex h-[55%] shrink-0 flex-col">
           <div className="relative flex items-center justify-center pt-1">
             <button onClick={()=>setShowGuests(true)} className="tap-action absolute right-0 top-0 flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-2 text-xs font-black backdrop-blur">
               <Users size={17}/> الضيوف <span className="rounded-full bg-white/20 px-2 py-0.5">{members.length}</span>
@@ -506,7 +506,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
             </button>
             <div className="max-w-[210px] text-center">
               <p className="truncate text-[18px] font-black">{space?.emoji||'🎙️'} {space?.name||'اللَمّة'}</p>
-              <p className="mt-0.5 text-[10px] font-bold text-white/75">اللَمّة شغالة · {voiceMembers.length} بالصوت</p>
+              <p className="mt-0.5 text-[10px] font-bold text-white/75">اللَمّة شغالة · {voiceMembers.length} بالصوت {space?.public_lamma_id?` · ${space.public_lamma_id}`:""}</p>
             </div>
           </div>
 
@@ -552,11 +552,11 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                 key={member?.user_id||`empty-${index}`}
                 disabled={!member}
                 onClick={()=>member&&member.user_id!==uid&&setSelectedMember(member)}
-                className="tap-action silver-guest-frame min-w-0 rounded-[14px] p-[2px] disabled:opacity-45"
+                className="tap-action min-w-0 disabled:opacity-45"
               >
-                <span className="block rounded-[12px] bg-[#173f86]/50 px-1 py-1.5 backdrop-blur">
-                  <span className="relative mx-auto block h-9 w-9">
-                    {member?renderAvatar(member,'h-9 w-9'):<span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-[10px]">فارغ</span>}
+                <span className="block px-0.5 py-1 text-center">
+                  <span className="ornate-silver-ring relative mx-auto block h-[54px] w-[54px] rounded-full p-[4px]">
+                    {member?renderAvatar(member,'h-full w-full'):<span className="grid h-full w-full place-items-center rounded-full bg-white/12 text-[9px]">فارغ</span>}
                     {member&&voice?<span className={`absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full ring-1 ring-white ${voice.mic_enabled?'bg-[#12d79d]':'bg-[#5e7193]'}`}>{voice.mic_enabled?<Mic size={9}/>:<MicOff size={9}/>}</span>:null}
                   </span>
                   <span className="mt-1 block truncate text-[8px] font-black">{member?.profiles?.display_name||`ضيف ${index+1}`}</span>
@@ -577,7 +577,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           </div>
         </div>
 
-        <div className="relative z-10 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur">
+        <div className="relative z-10 mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur">
           <div className="flex items-center justify-between border-b border-[#dce8f5] px-4 py-3">
             <div><p className="text-sm font-black">شات اللَمّة</p><p className="text-[9px] font-bold text-[#77849b]">كل رسالة باسم صاحبها</p></div>
             <span className="flex items-center gap-1 rounded-full bg-[#eaf4ff] px-3 py-1.5 text-[10px] font-black text-[#1768f4]"><MessageSquare size={13}/>{messages.length}</span>
@@ -648,7 +648,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
               return <div key={member.user_id} className={`rounded-[20px] p-3 ring-1 ${isRoyalRow?'bg-[#fff8dc] ring-[#edd57e]':isChallenge?'bg-[#f4edff] ring-[#cdb8ff]':'bg-[#f7f9fc] ring-[#e3eaf3]'}`}>
                 <div className="flex items-center gap-3">
-                  <span className={`shrink-0 rounded-full p-[2px] ${isRoyalRow?'royal-avatar-frame':isChallenge?'challenge-avatar-frame':'silver-guest-frame'}`}>
+                  <span className={`shrink-0 rounded-full p-[2px] ${isRoyalRow?'royal-avatar-frame':isChallenge?'challenge-avatar-frame':'ornate-silver-ring'}`}>
                     {member.profiles?.avatar_url?<img src={member.profiles.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover"/>:<span className="grid h-11 w-11 place-items-center rounded-full bg-[#dfeaf7] font-black text-[#1768f4]">{(member.profiles?.display_name||'ض')[0]}</span>}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -690,7 +690,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       <section onClick={e=>e.stopPropagation()} className="mx-auto w-full max-w-[432px] rounded-t-[30px] bg-white p-4 pb-[max(24px,env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="silver-guest-frame rounded-full p-[2px]">{selectedMember.profiles?.avatar_url?<img src={selectedMember.profiles.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover"/>:<span className="grid h-12 w-12 place-items-center rounded-full bg-[#eaf3fb] font-black text-[#1768f4]">{(selectedMember.profiles?.display_name||'ض')[0]}</span>}</span>
+            <span className="ornate-silver-ring rounded-full p-[4px]">{selectedMember.profiles?.avatar_url?<img src={selectedMember.profiles.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover"/>:<span className="grid h-12 w-12 place-items-center rounded-full bg-[#eaf3fb] font-black text-[#1768f4]">{(selectedMember.profiles?.display_name||'ض')[0]}</span>}</span>
             <div><p className="font-black">{selectedMember.profiles?.display_name||'ضيف'}</p><p className="text-[10px] font-bold text-[#7b879b]">{selectedMember.profiles?.mood||'ضيف في اللَمّة'}</p></div>
           </div>
           <button onClick={()=>setSelectedMember(null)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>

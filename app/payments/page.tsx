@@ -36,23 +36,24 @@ export default function Payments(){
    const {data:{user}}=await s.auth.getUser()
    if(!user){setBusy(false);return}
    setUid(user.id)
-   const [w,p,e,r,pr,m,wr,fs,is]=await Promise.all([
+   const [w,p,e,r,pr,m,wr,fs,is,pid]=await Promise.all([
      s.from('star_wallets').select('balance').eq('user_id',user.id).maybeSingle(),
      s.rpc('get_my_star_packs'),
      s.rpc('my_lamma_earnings_summary'),
      s.from('financial_risk_state').select('iap_debt_stars,manual_payout_hold,manual_hold_reason').eq('user_id',user.id).maybeSingle(),
-     s.from('profiles').select('verification_status,verified_at,public_user_id').eq('id',user.id).single(),
+     s.from('profiles').select('verification_status,verified_at').eq('id',user.id).single(),
      s.from('payout_methods').select('id,route,country_code,wallet_issuer,label,destination_masked,bank_name_masked,is_default,active').eq('user_id',user.id).eq('active',true),
      s.from('withdrawal_requests').select('id,requested_stars,cash_amount_egp,payout_method,payout_provider,destination_masked,status,requested_at,paid_at,provider_status,provider_currency,provider_amount,bank_name_masked').eq('user_id',user.id).order('requested_at',{ascending:false}).limit(10),
      s.from('app_financial_settings').select('payouts_enabled,min_withdrawal_stars,require_verified_payouts').eq('id',1).single(),
-     s.from('app_identity_settings').select('provider,enabled,liveness_required').eq('id',1).single()
+     s.from('app_identity_settings').select('provider,enabled,liveness_required').eq('id',1).single(),
+     s.rpc('my_public_user_id')
    ])
    setWallet(Number(w.data?.balance||0))
    setPacks(p.data||[])
    setEarn(Array.isArray(e.data)?e.data[0]||{}:e.data||{})
    setRisk(r.data||{})
    setProfile(pr.data||{})
-   setPublicId(pr.data?.public_user_id||'')
+   setPublicId((pid.data as string)||'')
    setMethods(m.data||[])
    setWithdrawals(wr.data||[])
    setSettings(fs.data||{})
@@ -169,12 +170,12 @@ export default function Payments(){
  <Card><CardContent>
    <div className="flex items-center gap-2"><Send className="text-[#1560BD]"/><h2 className="font-extrabold">تحويل النجوم</h2></div>
    <div className="mt-3 rounded-2xl bg-[#F4F8FD] p-3">
-     <p className="text-xs text-slate-500">User ID الخاص بك</p>
+     <p className="text-xs font-bold text-slate-500">User ID الخاص بك — ID الراسل</p>
      <div className="mt-1 flex items-center gap-2" dir="ltr"><b className="flex-1 text-left tracking-wider">{publicId||'—'}</b><Button size="icon" variant="outline" onClick={copyId} disabled={!publicId}>{copied?<Check size={15}/>:<Copy size={15}/>}</Button></div>
    </div>
    <p className="mt-3 text-xs text-slate-500">أدخل User ID للمستلم. سيظهر اسمه للتأكد قبل التحويل.</p>
    <div className="mt-2 flex gap-2" dir="ltr"><Input className="text-left uppercase" value={recipientId} onChange={e=>{setRecipientId(e.target.value.toUpperCase());setRecipient(null)}} placeholder="LM0000000000"/><Button variant="secondary" onClick={lookupRecipient} disabled={busy||!recipientId.trim()}>تحقق</Button></div>
-   {recipient?<div className="mt-3 rounded-2xl border border-[#DCE8F7] p-3"><p className="font-extrabold">{recipient.display_name}</p><p className="text-xs text-slate-500" dir="ltr">{recipient.public_user_id}</p><Input className="mt-3" type="number" min="1" inputMode="numeric" value={transferStars} onChange={e=>setTransferStars(e.target.value)} placeholder="عدد النجوم"/><Button className="mt-2 w-full" onClick={transferStarsToUser} disabled={busy||!transferStars}>تأكيد تحويل النجوم ⭐</Button><p className="mt-2 text-[11px] text-slate-500">التحويل نهائي بعد التأكيد. النجوم المحولة لا تتحول إلى أرباح قابلة للسحب.</p></div>:null}
+   {recipient?<div className="mt-3 rounded-2xl border border-[#BFD6F3] bg-[#F8FBFF] p-3"><div className="flex items-center justify-between gap-3"><div><p className="font-extrabold">{recipient.display_name}</p><p className="text-xs text-slate-500" dir="ltr">{recipient.public_user_id}</p></div><span className="rounded-full bg-[#E4F8F0] px-3 py-1 text-[11px] font-black text-[#12845E]">تم التحقق ✓</span></div><Input className="mt-3" type="number" min="1" inputMode="numeric" value={transferStars} onChange={e=>setTransferStars(e.target.value)} placeholder="عدد النجوم"/><Button className="mt-2 w-full" onClick={transferStarsToUser} disabled={busy||!transferStars}>إرسال النجوم ⭐</Button><p className="mt-2 text-[11px] text-slate-500">لن يتم الإرسال إلا إلى الـUser ID الذي تم التحقق منه أعلاه.</p></div>:null}
  </CardContent></Card>
 
  <Card><CardContent>

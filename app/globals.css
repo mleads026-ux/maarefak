@@ -184,3 +184,70 @@ input,textarea,select{min-width:0;max-width:100%}
 @keyframes authReferenceGlowV6{0%{transform:translate3d(-5%,-2%,0) scale(1)}50%{transform:translate3d(5%,4%,0) scale(1.05)}100%{transform:translate3d(-1%,6%,0) scale(1.02)}}
 @keyframes authReferenceSweepV6{0%,58%{left:-48%;opacity:0}66%{opacity:.62}86%{left:116%;opacity:.38}100%{left:116%;opacity:0}}
 @media (prefers-reduced-motion:reduce){.auth-reference-hero::before,.auth-reference-hero::after{animation:none!important}}
+
+
+/* LAMMETNA_GIFTS_V7 */
+.gift-card-tier{
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(206,221,239,.9);
+  background:linear-gradient(145deg,#fff,#f4f8fd);
+  box-shadow:0 6px 16px rgba(38,75,125,.08);
+}
+.gift-card-tier::after{
+  content:"";
+  position:absolute;
+  inset:-55% -85%;
+  pointer-events:none;
+  transform:rotate(18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.78),transparent);
+  animation:giftCardSweepV7 4.8s ease-in-out infinite;
+}
+.gift-spark{
+  background:linear-gradient(145deg,#f5fbff,#fff,#f4f0ff);
+}
+.gift-premium{
+  background:linear-gradient(145deg,#fff9df,#fff,#f3edff);
+  border-color:#ead783;
+}
+.gift-legendary{
+  background:linear-gradient(145deg,#fff3c0,#f6edff,#e9fbff);
+  border-color:#d8b85a;
+  box-shadow:0 8px 24px rgba(140,82,220,.18);
+}
+.gift-spark .gift-emoji,
+.gift-premium .gift-emoji,
+.gift-legendary .gift-emoji{
+  animation:giftEmojiFloatV7 2.2s ease-in-out infinite;
+}
+.gift-legendary .gift-emoji{
+  filter:drop-shadow(0 0 12px rgba(255,190,48,.65));
+  transform-origin:center;
+}
+.gift-burst-pop{
+  animation:giftBurstV7 1.45s cubic-bezier(.2,.9,.25,1) both;
+  filter:drop-shadow(0 16px 34px rgba(46,34,124,.35));
+}
+@keyframes giftCardSweepV7{
+  0%,62%{transform:translateX(-45%) rotate(18deg);opacity:0}
+  72%{opacity:.55}
+  92%{transform:translateX(45%) rotate(18deg);opacity:.2}
+  100%{opacity:0}
+}
+@keyframes giftEmojiFloatV7{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-4px) scale(1.06)}
+}
+@keyframes giftBurstV7{
+  0%{opacity:0;transform:scale(.35) rotate(-10deg)}
+  35%{opacity:1;transform:scale(1.18) rotate(4deg)}
+  68%{transform:scale(.98)}
+  100%{opacity:0;transform:scale(1.08) translateY(-18px)}
+}
+@media (prefers-reduced-motion:reduce){
+  .gift-card-tier::after,
+  .gift-spark .gift-emoji,
+  .gift-premium .gift-emoji,
+  .gift-legendary .gift-emoji,
+  .gift-burst-pop{animation:none!important}
+}

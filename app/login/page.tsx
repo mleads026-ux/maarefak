@@ -52,7 +52,7 @@ export default function Login(){
   }
 
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
-    <PixelHeroImage src="/pixel/login-hero.jpg" alt="لمتنا" className="auth-reference-hero w-full"/>
+    <PixelHeroImage src="/pixel/login-hero.jpg" alt="لمتنا" className="auth-reference-hero w-full" liveIcon="login"/>
     <section className="auth-sheet-reference relative -mt-[18px] mx-0 rounded-t-[38px] bg-white px-5 pb-7 pt-7">
       {isReset?<>
         <h2 className="text-center text-[30px] font-black">كلمة مرور جديدة</h2>

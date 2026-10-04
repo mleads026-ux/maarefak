@@ -119,7 +119,7 @@ export default function Payments(){
    if(!recipient||!Number.isInteger(n)||n<1)return
    if(!await appConfirm({
      title:'تأكيد تحويل النجوم',
-     message:`إلى: ${recipient.display_name}\nUser ID: ${recipient.public_user_id}\nالعدد: ${n.toLocaleString('ar-EG')} ⭐\n\nالتحويل نهائي بعد التأكيد.`,
+     message:`إلى: ${recipient.display_name}\nUser ID: ${recipient.public_user_id}\nالمرسل: ${n.toLocaleString('ar-EG')} ⭐\nعمولة التطبيق 15%: ${Math.ceil(n*0.15).toLocaleString('ar-EG')} ⭐\nسيصل للمستلم: ${(n-Math.ceil(n*0.15)).toLocaleString('ar-EG')} ⭐\n\nالتحويل نهائي بعد التأكيد.`,
      confirmLabel:'تحويل النجوم',
      danger:true
    }))return
@@ -129,7 +129,7 @@ export default function Payments(){
      const m=error.message||''
      setNotice(m.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':m.includes('financial')||m.includes('iap_refund')?'التحويل متوقف بسبب قيد مالي على الحساب.':'تعذر تحويل النجوم.')
    }else{
-     setNotice('تم تحويل '+n+' ⭐ إلى '+recipient.display_name+' بنجاح.')
+     setNotice('تم إرسال '+n+' ⭐. وصل للمستلم '+(n-Math.ceil(n*0.15))+' ⭐ بعد عمولة التطبيق 15%.')
      setTransferStars('');setRecipient(null);setRecipientId('');setTransferRef(crypto.randomUUID())
      await load()
    }
@@ -156,6 +156,9 @@ export default function Payments(){
  }
 
  const blocked=Number(risk.iap_debt_stars||0)>0||!!risk.manual_payout_hold
+ const transferGross=Math.max(0,Number(transferStars)||0)
+ const transferFee=transferGross?Math.ceil(transferGross*0.15):0
+ const transferNet=Math.max(0,transferGross-transferFee)
 
  return <AppShell><PageHeader title="المدفوعات"/><main className="space-y-4 p-4">
  {notice&&<p className="rounded-2xl bg-[#EAF2FC] p-3 text-sm font-bold text-[#1560BD]">{notice}</p>}
@@ -175,7 +178,7 @@ export default function Payments(){
    </div>
    <p className="mt-3 text-xs text-slate-500">أدخل User ID للمستلم. سيظهر اسمه للتأكد قبل التحويل.</p>
    <div className="mt-2 flex gap-2" dir="ltr"><Input className="text-left uppercase" value={recipientId} onChange={e=>{setRecipientId(e.target.value.toUpperCase());setRecipient(null)}} placeholder="LM0000000000"/><Button variant="secondary" onClick={lookupRecipient} disabled={busy||!recipientId.trim()}>تحقق</Button></div>
-   {recipient?<div className="mt-3 rounded-2xl border border-[#BFD6F3] bg-[#F8FBFF] p-3"><div className="flex items-center justify-between gap-3"><div><p className="font-extrabold">{recipient.display_name}</p><p className="text-xs text-slate-500" dir="ltr">{recipient.public_user_id}</p></div><span className="rounded-full bg-[#E4F8F0] px-3 py-1 text-[11px] font-black text-[#12845E]">تم التحقق ✓</span></div><Input className="mt-3" type="number" min="1" inputMode="numeric" value={transferStars} onChange={e=>setTransferStars(e.target.value)} placeholder="عدد النجوم"/><Button className="mt-2 w-full" onClick={transferStarsToUser} disabled={busy||!transferStars}>إرسال النجوم ⭐</Button><p className="mt-2 text-[11px] text-slate-500">لن يتم الإرسال إلا إلى الـUser ID الذي تم التحقق منه أعلاه.</p></div>:null}
+   {recipient?<div className="mt-3 rounded-2xl border border-[#BFD6F3] bg-[#F8FBFF] p-3"><div className="flex items-center justify-between gap-3"><div><p className="font-extrabold">{recipient.display_name}</p><p className="text-xs text-slate-500" dir="ltr">{recipient.public_user_id}</p></div><span className="rounded-full bg-[#E4F8F0] px-3 py-1 text-[11px] font-black text-[#12845E]">تم التحقق ✓</span></div><Input className="mt-3" type="number" min="1" inputMode="numeric" value={transferStars} onChange={e=>setTransferStars(e.target.value)} placeholder="عدد النجوم"/>{transferGross>0?<div className="mt-2 grid grid-cols-2 gap-2 text-center text-[11px] font-black"><div className="rounded-xl bg-white p-2"><p className="text-slate-500">عمولة التطبيق 15%</p><p className="text-[#d16a00]">{transferFee.toLocaleString()} ⭐</p></div><div className="rounded-xl bg-white p-2"><p className="text-slate-500">سيصل للمستلم</p><p className="text-[#12845E]">{transferNet.toLocaleString()} ⭐</p></div></div>:null}<Button className="mt-2 w-full" onClick={transferStarsToUser} disabled={busy||!transferStars}>إرسال النجوم ⭐</Button><p className="mt-2 text-[11px] text-slate-500">يُخصم 15% للتطبيق، وتُقرب عمولة التطبيق لأعلى إلى نجمة صحيحة.</p></div>:null}
  </CardContent></Card>
 
  <Card><CardContent>

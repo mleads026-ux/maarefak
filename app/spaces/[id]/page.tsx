@@ -37,6 +37,7 @@ type GiftItem={
   name_ar:string
   emoji:string
   price_stars:number
+  animation_tier:string
 }
 
 const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
@@ -56,6 +57,11 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const [body,setBody]=useState('')
   const [selectedMember,setSelectedMember]=useState<Member|null>(null)
   const [showGifts,setShowGifts]=useState(false)
+  const [giftRecipient,setGiftRecipient]=useState<Member|null>(null)
+  const [giftMode,setGiftMode]=useState<'profile'|'chat'>('profile')
+  const [giftBurst,setGiftBurst]=useState<{emoji:string;name:string}|null>(null)
+  const [voiceRequestStatus,setVoiceRequestStatus]=useState<'none'|'pending'|'accepted'|'rejected'|'host'>('none')
+  const [voiceRequests,setVoiceRequests]=useState<any[]>([])
   const [notice,setNotice]=useState('')
   const [inVoice,setInVoice]=useState(false)
   const [micEnabled,setMicEnabled]=useState(false)
@@ -103,7 +109,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
         .eq('space_id',id).order('created_at',{ascending:true}).limit(200),
       s.from('space_members').select('user_id,role,profiles(display_name,avatar_url,mood)').eq('space_id',id),
       s.from('space_voice_participants').select('user_id,mic_enabled,profiles(display_name,avatar_url)').eq('space_id',id),
-      s.from('gift_catalog').select('id,name_ar,emoji,price_stars').eq('active',true).order('sort_order'),
+      s.from('gift_catalog').select('id,name_ar,emoji,price_stars,animation_tier').eq('active',true).order('price_stars'),
       s.from('feature_prices').select('price_stars').eq('key','private_contact_from_lamma').maybeSingle(),
       s.from('space_seats').select('space_id,seat_no,user_id,seat_type,profiles(display_name,avatar_url)').eq('space_id',id).order('seat_no'),
       s.from('space_star_seat_requests')
@@ -121,8 +127,18 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     setSeats(seatRows||[])
     setStarRequests(reqRows||[])
     setSpotlight(spotRow||null)
-    setIsHost(sp?.owner_id===user.id)
+    const hostNow=sp?.owner_id===user.id
+    setIsHost(hostNow)
     if(priceRow?.price_stars!=null)setPrivateContactPrice(Number(priceRow.price_stars))
+
+    const {data:voiceStatus}=await s.rpc('my_lamma_voice_request_status',{p_space:id})
+    setVoiceRequestStatus(((voiceStatus as any)||'none') as any)
+    if(hostNow){
+      const {data:pendingVoice}=await s.rpc('host_lamma_voice_requests',{p_space:id})
+      setVoiceRequests((pendingVoice||[]) as any[])
+    }else{
+      setVoiceRequests([])
+    }
 
     const ownVoice=voices.find((x:any)=>x.user_id===user.id)
     setInVoice(Boolean(ownVoice))
@@ -141,6 +157,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       .on('postgres_changes',{event:'*',schema:'public',table:'space_seats',filter:`space_id=eq.${id}`},()=>load())
       .on('postgres_changes',{event:'*',schema:'public',table:'space_pair_spotlights',filter:`space_id=eq.${id}`},()=>load())
       .on('postgres_changes',{event:'*',schema:'public',table:'space_star_seat_requests',filter:`space_id=eq.${id}`},()=>load())
+      .on('postgres_changes',{event:'*',schema:'public',table:'space_mic_queue',filter:`space_id=eq.${id}`},()=>load())
       .subscribe()
 
     return()=>{
@@ -164,6 +181,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   }
 
   const royalMember=memberById(royalId)
+  const hostMember=memberById(space?.owner_id)
   const challengeA=memberById(spotlight?.user_a)
   const challengeB=memberById(spotlight?.user_b)
   const reserved=new Set([royalId,spotlight?.user_a,spotlight?.user_b].filter(Boolean))
@@ -189,6 +207,21 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     }
   }
 
+  async function requestVoiceApproval(){
+    if(isHost){await joinVoice();return}
+    if(voiceRequestStatus==='accepted'){await joinVoice();return}
+    const {error}=await s.rpc('request_lamma_voice_join',{p_space:id})
+    if(error){setNotice('تعذر إرسال طلب الانضمام للصوت.');return}
+    setVoiceRequestStatus('pending')
+    setNotice('تم إرسال طلب الانضمام للصوت إلى الـHost.')
+  }
+
+  async function hostVoiceDecision(userId:string,accept:boolean){
+    const {error}=await s.rpc('host_respond_lamma_voice_request',{p_space:id,p_user:userId,p_accept:accept})
+    setNotice(error?'تعذر تنفيذ القرار.':accept?'تمت الموافقة على دخول الصوت.':'تم رفض طلب الصوت.')
+    await load()
+  }
+
   async function joinVoice(){
     if(inVoice)return
     setNotice('')
@@ -202,7 +235,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
         stream.getTracks().forEach(t=>t.stop())
         localStreamRef.current=null
         setVoiceStreams([])
-        setNotice('تعذر دخول الصوت.')
+        setNotice(error.message.includes('voice_requires_host_approval')?'لازم موافقة الـHost أولًا.':'تعذر دخول الصوت.')
         return
       }
 
@@ -399,12 +432,29 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   }
 
   async function sendGift(gift:GiftItem){
-    if(!selectedMember)return
-    const {error}=await s.rpc('send_gift',{
-      p_target:selectedMember.user_id,p_gift:gift.id,p_space:id
-    })
-    setNotice(error?'تعذر إرسال الهدية.':`تم إرسال ${gift.emoji} ${gift.name_ar}.`)
-    if(!error){setShowGifts(false);setSelectedMember(null)}
+    if(!giftRecipient)return
+    const {error}=giftMode==='chat'
+      ? await s.rpc('send_lamma_chat_gift',{p_space:id,p_gift:gift.id})
+      : await s.rpc('send_gift',{p_target:giftRecipient.user_id,p_gift:gift.id,p_space:id})
+    if(error){
+      setNotice(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال الهدية.')
+      return
+    }
+    setGiftBurst({emoji:gift.emoji,name:gift.name_ar})
+    setTimeout(()=>setGiftBurst(null),1500)
+    setNotice(`تم إرسال ${gift.emoji} ${gift.name_ar}.`)
+    setShowGifts(false)
+    setSelectedMember(null)
+    setGiftRecipient(null)
+  }
+
+  async function assignRoyal(member:Member){
+    if(!isHost||member.user_id===uid)return
+    const {error}=await s.rpc('host_assign_royal',{p_space:id,p_target:member.user_id})
+    setNotice(error
+      ? error.message.includes('insufficient_stars')?'رصيدك لا يكفي لتعيين ضيف ملكي بـ150 ⭐.':'تعذر تعيين الضيف الملكي.'
+      :`تم تعيين ${member.profiles?.display_name||'الضيف'} كضيف ملكي مقابل 150 ⭐.`)
+    await load()
   }
 
   async function requestRoyalSeat(){

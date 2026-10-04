@@ -703,44 +703,37 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
       <audio ref={remoteAudioRef} autoPlay />
 
+      {activeCall?.status==='accepted'&&activeCall.call_kind==='video'?<div className="fixed inset-0 z-[160] bg-[#07111f]">
+        <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover"/>
+        <video ref={localVideoRef} autoPlay playsInline muted className="absolute right-4 top-[max(24px,env(safe-area-inset-top))] h-40 w-28 rounded-[22px] border-2 border-white/70 bg-black object-cover shadow-2xl"/>
+        <div className="absolute bottom-[max(38px,env(safe-area-inset-bottom))] left-0 right-0 flex justify-center">
+          <button onClick={endCall} className="tap-action flex items-center gap-2 rounded-full bg-[#ef3356] px-6 py-3 text-sm font-black text-white"><PhoneOff size={19}/> إنهاء الفيديو</button>
+        </div>
+      </div>:null}
+
       <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="truncate text-xs font-bold text-[#1560BD]">
-            {callLabel || 'مكالمات صوتية بموافقة الطرفين'}
-          </p>
+        <button onClick={()=>setShowPartner(true)} className="tap-action mb-3 flex items-center gap-3 rounded-[24px] bg-white p-3 text-right shadow-sm ring-1 ring-[#dfe9f5]">
+          <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-[#eaf3fb]">
+            {partner?.avatar_url||other?.profiles?.avatar_url?<img src={partner?.avatar_url||other?.profiles?.avatar_url} alt="" className="h-full w-full object-cover"/>:<span className="grid h-full w-full place-items-center font-black text-[#1768f4]">{(partner?.display_name||other?.profiles?.display_name||'م')[0]}</span>}
+            <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full ring-2 ring-white ${partner?.is_online?'bg-[#12d79d]':'bg-slate-400'}`}/>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[16px] font-black">{partner?.display_name||other?.profiles?.display_name||'المستخدم'}</span>
+            <span className={`mt-0.5 block text-[10px] font-black ${partner?.is_online?'text-[#159a70]':'text-[#7d8798]'}`}>{partner?.is_online?'متصل':'غير متصل'}</span>
+          </span>
+          <UserRound size={20} className="text-[#1768f4]"/>
+        </button>
 
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
-              onClick={() => setShowGifts(!showGifts)}
-            >
-              <Gift size={16} />
-              هدية
-            </Button>
-
-            {activeCall ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-2 text-red-600"
-                onClick={endCall}
-              >
-                <PhoneOff size={16} />
-                إنهاء
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-2"
-                onClick={startCall}
-              >
-                <Phone size={16} />
-                اتصال صوتي
-              </Button>
-            )}
+        <div className="mb-3">
+          <p className="mb-2 truncate text-center text-xs font-bold text-[#1560BD]">{callLabel || 'المكالمات تبدأ فقط بعد قبول الطرف الآخر'}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <Button size="sm" variant="outline" className="gap-1" onClick={()=>setShowGifts(true)}><Gift size={15}/> هدية</Button>
+            {activeCall
+              ? <Button size="sm" variant="outline" className="gap-1 text-red-600" onClick={endCall}><PhoneOff size={15}/> إنهاء</Button>
+              : <Button size="sm" variant="outline" className="gap-1" onClick={()=>startCall('voice')}><Phone size={15}/> صوتي</Button>}
+            {!activeCall
+              ? <Button size="sm" variant="outline" className="gap-1" onClick={()=>startCall('video')}><Video size={15}/> فيديو</Button>
+              : <Button size="sm" variant="outline" disabled className="gap-1"><Video size={15}/> فيديو</Button>}
           </div>
         </div>
 

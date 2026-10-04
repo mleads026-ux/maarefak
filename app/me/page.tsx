@@ -73,11 +73,11 @@ export default async function Me(){
 
     <section className="lammetna-gradient hero-shadow animated-gradient-card relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
       <div className="grid grid-cols-[1fr_155px] items-center gap-4"><div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-black">{p.is_online?<span className="h-2.5 w-2.5 rounded-full bg-[#17e3a2] shadow-[0_0_12px_rgba(23,227,162,.85)]"/>:null}{p.is_online?'متصل الآن':'غير متصل'}</span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-black"><span className="h-2.5 w-2.5 rounded-full bg-[#17e3a2] shadow-[0_0_12px_rgba(23,227,162,.85)]"/>متصل الآن</span>
         <h2 className="mt-3 text-[34px] font-black">{p.display_name||'حسابي'}</h2>
         <p className="mt-1 flex items-center gap-1 text-[16px] font-bold"><MapPin size={18}/>{city}<ChevronLeft size={17}/></p>
         <p className="mt-4 text-[15px] font-bold leading-7 text-white/90">{p.bio||'أضف نبذة عنك من الإعدادات.'}</p>
-      </div><ProfileAvatarEditor userId={user.id} avatar={avatar} isOnline={p.is_online===true}/></div>
+      </div><ProfileAvatarEditor userId={user.id} avatar={avatar} isOnline={true}/></div>
 
       <div className="mt-5 flex flex-wrap gap-2">
         {interests.length?interests.slice(0,4).map((x:string,i:number)=><span key={x} className="rounded-full border border-white/35 bg-white/12 px-3 py-2 text-xs font-black">{i===0?<Plane className="ml-1 inline" size={14}/>:i===1?<Music className="ml-1 inline" size={14}/>:i===2?<ImageIcon className="ml-1 inline" size={14}/>:null}{x}</span>):<span className="rounded-full border border-white/35 bg-white/12 px-3 py-2 text-xs font-black text-white/90">لم تضف اهتمامات بعد</span>}

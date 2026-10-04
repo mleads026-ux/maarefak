@@ -271,6 +271,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     let cancelled = false
     const callId = activeCall.id
+    const callKind = callKind
     const isCaller = activeCall.caller_id === uid
 
     async function processSignal(signal: any) {
@@ -326,7 +327,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
       pendingIceRef.current = []
 
       try {
-        const isVideo=activeCall.call_kind==='video'
+        const isVideo=callKind==='video'
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: isVideo,
@@ -338,7 +339,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         }
 
         localStreamRef.current = stream
-        if(activeCall.call_kind==='video'&&localVideoRef.current){
+        if(callKind==='video'&&localVideoRef.current){
           localVideoRef.current.srcObject=stream
           localVideoRef.current.muted=true
           localVideoRef.current.play().catch(()=>{})
@@ -356,7 +357,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
         pc.ontrack = (event) => {
           const incoming=event.streams[0]
-          if(activeCall.call_kind==='video'&&remoteVideoRef.current){
+          if(callKind==='video'&&remoteVideoRef.current){
             remoteVideoRef.current.srcObject=incoming
             remoteVideoRef.current.play().catch(()=>{})
           }else if(remoteAudioRef.current){
@@ -416,7 +417,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           })
         }
       } catch {
-        setNotice(activeCall.call_kind==='video'
+        setNotice(callKind==='video'
           ? 'تعذر تشغيل الكاميرا أو الميكروفون. اسمح بالوصول ثم حاول مرة أخرى.'
           : 'تعذر تشغيل الميكروفون. اسمح للموقع باستخدام الميكروفون وحاول مرة أخرى.')
       }

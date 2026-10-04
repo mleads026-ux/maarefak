@@ -66,3 +66,23 @@ input,textarea,select{min-width:0;max-width:100%}
   .tap-action:active:not(:disabled){transform:none}
 }
 @media (display-mode:standalone){.reference-status{display:none}}
+
+/* LAMMETNA_GLOW_V2 */
+.glow-card-surface,.glow-character-card,.glow-lamma-card{position:relative;isolation:isolate;overflow:hidden}
+.glow-card-surface::before{content:"";position:absolute;inset:-55%;pointer-events:none;background:radial-gradient(circle at 24% 32%,rgba(86,245,255,.42),transparent 22%),radial-gradient(circle at 72% 68%,rgba(197,91,255,.34),transparent 24%),conic-gradient(from 0deg,transparent 0 22%,rgba(255,255,255,.13) 30%,transparent 39% 72%,rgba(102,243,255,.11) 82%,transparent 92%);filter:blur(18px);opacity:.72;animation:lammetnaGlowDrift 9s ease-in-out infinite alternate}
+.glow-card-surface::after{content:"";position:absolute;inset:-20% -55%;pointer-events:none;background:linear-gradient(108deg,transparent 38%,rgba(255,255,255,.28) 49%,rgba(155,244,255,.22) 52%,transparent 63%);transform:translateX(58%);opacity:.6;animation:lammetnaCardSheen 6.8s ease-in-out infinite}
+.glow-character-card::before,.glow-lamma-card::before{content:"";position:absolute;inset:-45%;pointer-events:none;background:radial-gradient(circle at 20% 35%,rgba(43,211,255,.20),transparent 23%),radial-gradient(circle at 78% 65%,rgba(158,77,255,.17),transparent 25%);filter:blur(22px);animation:lammetnaGlowDrift 8s ease-in-out infinite alternate}
+.glow-character-card::after,.glow-lamma-card::after{content:"";position:absolute;top:-30%;bottom:-30%;width:42%;left:-52%;pointer-events:none;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.58),transparent);opacity:.32;animation:lammetnaCardSweep 5.6s ease-in-out infinite}
+.glow-lamma-card::before{opacity:.7}.glow-character-card::before{opacity:.82}
+.voice-glow-bar{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;height:54px;margin-top:12px;padding:8px 12px;overflow:hidden;border:1px solid rgba(190,248,255,.34);border-radius:18px;background:radial-gradient(circle at 50% 130%,rgba(110,71,255,.40),transparent 55%),linear-gradient(90deg,rgba(5,36,98,.24),rgba(23,174,244,.14),rgba(124,54,240,.18));box-shadow:inset 0 0 22px rgba(42,227,255,.16),0 0 18px rgba(58,208,255,.16)}
+.voice-glow-bar::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 30%,rgba(119,244,255,.20) 48%,rgba(212,144,255,.16) 54%,transparent 70%);transform:translateX(-75%);animation:voiceGlowSweep 3.8s linear infinite}
+.voice-glow-bar__bar{position:relative;z-index:1;width:4px;height:31px;border-radius:999px;transform-origin:center;background:linear-gradient(180deg,#e8feff 0%,#56f5ff 38%,#69a7ff 67%,#c778ff 100%);box-shadow:0 0 7px rgba(86,245,255,.95),0 0 13px rgba(112,120,255,.56);transition:transform 70ms linear,opacity 120ms ease;will-change:transform}
+.voice-glow-bar[data-active="true"][data-live="false"] .voice-glow-bar__bar{animation:voiceAmbient 1.22s ease-in-out infinite;animation-delay:calc(var(--bar-i) * -65ms)}
+.voice-glow-bar[data-active="false"] .voice-glow-bar__bar{transform:scaleY(.12)!important;opacity:.3!important}
+.voice-glow-bar--compact{height:38px;margin-top:10px;border-radius:14px;padding:6px 10px;gap:3px}.voice-glow-bar--compact .voice-glow-bar__bar{width:3px;height:20px}
+@keyframes lammetnaGlowDrift{0%{transform:translate3d(-4%,-3%,0) rotate(0deg) scale(1)}50%{transform:translate3d(5%,3%,0) rotate(8deg) scale(1.05)}100%{transform:translate3d(-1%,6%,0) rotate(-5deg) scale(1.02)}}
+@keyframes lammetnaCardSheen{0%,55%{transform:translateX(58%);opacity:0}64%{opacity:.62}82%{transform:translateX(-58%);opacity:.54}100%{transform:translateX(-58%);opacity:0}}
+@keyframes lammetnaCardSweep{0%,58%{left:-52%;opacity:0}66%{opacity:.34}86%{left:118%;opacity:.28}100%{left:118%;opacity:0}}
+@keyframes voiceGlowSweep{0%{transform:translateX(-78%)}100%{transform:translateX(78%)}}
+@keyframes voiceAmbient{0%,100%{transform:scaleY(.22);opacity:.55}45%{transform:scaleY(.92);opacity:1}70%{transform:scaleY(.48);opacity:.78}}
+@media (prefers-reduced-motion:reduce){.glow-card-surface::before,.glow-card-surface::after,.glow-character-card::before,.glow-character-card::after,.glow-lamma-card::before,.glow-lamma-card::after,.voice-glow-bar::before,.voice-glow-bar__bar{animation:none!important}}

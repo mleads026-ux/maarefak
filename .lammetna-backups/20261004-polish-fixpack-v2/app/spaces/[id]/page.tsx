@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -22,7 +22,6 @@ import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { VoiceGlowBar } from '@/components/voice-glow-bar'
 
 type Member = {
   user_id: string
@@ -77,12 +76,10 @@ export default function SpaceChat({
   const [starRequests,setStarRequests]=useState<any[]>([])
   const [spotlight,setSpotlight]=useState<any>(null)
   const [isHost,setIsHost]=useState(false)
-  const [voiceStreams,setVoiceStreams]=useState<MediaStream[]>([])
 
   const localStreamRef = useRef<MediaStream | null>(null)
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
   const audiosRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const peerStreamsRef = useRef<Map<string, MediaStream>>(new Map())
   const pendingIceRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
   const voiceChannelRef = useRef<any>(null)
 
@@ -278,7 +275,6 @@ export default function SpaceChat({
       })
 
       localStreamRef.current = stream
-      setVoiceStreams([stream])
 
       const { error } = await s.rpc('enter_lamma_voice', {
         p_space: id,
@@ -287,7 +283,6 @@ export default function SpaceChat({
       if (error) {
         stream.getTracks().forEach((t) => t.stop())
         localStreamRef.current = null
-        setVoiceStreams([])
         setNotice('ØªØ¹Ø°Ø± Ø¯Ø®ÙˆÙ„ Ø§Ù„ØµÙˆØª.')
         return
       }
@@ -304,7 +299,6 @@ export default function SpaceChat({
   async function leaveVoice() {
     await s.rpc('leave_lamma_voice', { p_space: id })
     cleanupVoice()
-    setVoiceStreams([])
     setInVoice(false)
     setVoiceMembers((current) => current.filter((x) => x.user_id !== uid))
   }
@@ -418,10 +412,7 @@ export default function SpaceChat({
         audiosRef.current.set(peerId, audio)
       }
 
-      const incoming=event.streams[0]
-      peerStreamsRef.current.set(peerId,incoming)
-      setVoiceStreams((current)=>current.some((x)=>x.id===incoming.id)?current:[...current,incoming])
-      audio.srcObject = incoming
+      audio.srcObject = event.streams[0]
       audio.play().catch(() => {})
     }
 
@@ -501,13 +492,6 @@ export default function SpaceChat({
       audio.srcObject = null
     }
     audiosRef.current.delete(peerId)
-
-    const stream=peerStreamsRef.current.get(peerId)
-    if(stream){
-      peerStreamsRef.current.delete(peerId)
-      setVoiceStreams((current)=>current.filter((x)=>x.id!==stream.id))
-    }
-
     pendingIceRef.current.delete(peerId)
   }
 
@@ -525,7 +509,6 @@ export default function SpaceChat({
       audio.srcObject = null
     })
     audiosRef.current.clear()
-    peerStreamsRef.current.clear()
 
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current = null
@@ -545,7 +528,7 @@ export default function SpaceChat({
           </p>
         ) : null}
 
-        <section className="glow-card-surface mb-4 rounded-3xl bg-gradient-to-br from-[#1560BD] to-[#0D3D78] p-4 text-white">
+        <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#1560BD] to-[#0D3D78] p-4 text-white">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs text-[#D7E7FB]">Ø§Ù„ØµÙˆØª Ø§Ù„Ø¬Ù…Ø§Ø¹ÙŠ</p>
@@ -582,8 +565,6 @@ export default function SpaceChat({
               </div>
             )}
           </div>
-
-          <VoiceGlowBar streams={voiceStreams} active={inVoice||voiceMembers.length>0}/>
 
           {voiceMembers.length ? (
             <div className="mt-4 flex flex-wrap gap-2">

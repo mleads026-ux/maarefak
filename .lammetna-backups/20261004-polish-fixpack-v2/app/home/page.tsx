@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {redirect} from 'next/navigation'
-import {Bell,Star,Users,Shuffle,Mic2,MessagesSquare,ChevronLeft,MapPin} from 'lucide-react'
+import {Bell,Star,Users,Shuffle,Mic2,MessagesSquare,ChevronLeft,MapPin,Plus} from 'lucide-react'
 import {createClient} from '@/lib/supabase/server'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
@@ -83,23 +83,20 @@ export default async function Home(){
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-[25px] font-black">وجوه جديدة ✨</h2><Link href="/discover" className="tap-action flex items-center gap-1 text-sm font-black text-[#0e67f5]"><ChevronLeft size={16}/>عرض الكل</Link></div>
         <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-2">
-          {faces.slice(0,6).map((x,i)=>{
-            const src=x.avatar_url||null
-            const name=x.display_name||'مستخدم لمتنا'
-            const age=x.show_age?ageOf(x.birth_date):null
-            const city=(x.cities as any)?.name_ar||'غير محدد'
-            return <article key={x.id} className="pixel-card glow-character-card min-w-[145px] overflow-hidden rounded-[22px]">
-              <Link href={`/people/${x.id}`} className="tap-action block">
-                <div className="relative h-[150px] bg-[#eaf3fb]">
-                  {src?<img src={src} alt="" className="h-full w-full object-cover"/>:<span className="grid h-full w-full place-items-center bg-[linear-gradient(145deg,#e9f8ff,#f1eaff)] text-[#0e67f5]"><Users size={42}/></span>}
-                  {x.is_online===true?<span className="absolute left-2 top-2 h-3 w-3 rounded-full bg-[#11cf90] shadow-[0_0_10px_rgba(17,207,144,.8)] ring-2 ring-white"/>:null}
-                </div>
+          {Array.from({length:Math.max(4,faces.length)}).slice(0,6).map((_,i)=>{
+            const x=faces[i]
+            const src=x?.avatar_url||fallback[i%4]
+            const name=x?.display_name||['سارة','أحمد','لينا','خالد'][i%4]
+            const age=x?.show_age?ageOf(x.birth_date):[24,27,25,26][i%4]
+            const city=(x?.cities as any)?.name_ar||['الرياض','جدة','الدمام','الرياض'][i%4]
+            return <article key={x?.id||i} className="pixel-card min-w-[145px] overflow-hidden rounded-[22px]">
+              <Link href={x?.id?`/people/${x.id}`:'/discover'} className="tap-action block">
+                <div className="relative h-[150px] bg-[#eaf3fb]"><img src={src} alt="" className="h-full w-full object-cover"/><span className={`absolute left-2 top-2 h-3 w-3 rounded-full ${x?.is_online===false?'bg-slate-400':'bg-[#11cf90]'} ring-2 ring-white`}/></div>
                 <div className="px-3 pt-3"><div className="flex items-center justify-between gap-2"><p className="truncate font-black">{name}</p><span className="text-[11px] font-bold text-[#70809a]">{age||''}</span></div><p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[#75839a]"><MapPin size={12}/>{city}</p></div>
               </Link>
-              <div className="p-3 pt-2"><AddInterestButton userId={x.id}/></div>
+              <div className="p-3 pt-2">{x?.id?<AddInterestButton userId={x.id}/>:<Link href="/discover" className="tap-action flex items-center justify-center gap-1 rounded-[14px] bg-[#e9f4ff] py-2 text-[11px] font-black text-[#0e67f5]"><Plus size={15}/> إضافة</Link>}</div>
             </article>
           })}
-          {!faces.length?<div className="pixel-card min-w-full rounded-[22px] p-5 text-center text-sm font-bold text-[#76839a]">لا توجد وجوه جديدة متاحة الآن.</div>:null}
         </div>
       </section>
     </main>

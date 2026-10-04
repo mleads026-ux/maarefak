@@ -4,7 +4,7 @@ import {ChevronLeft,Plus} from 'lucide-react'
 const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg']
 
 export function MeetNewHero({people}:{people:any[]}){
-  return <section className="lammetna-gradient hero-shadow glow-card-surface relative mt-4 min-h-[170px] overflow-hidden rounded-[30px] p-5 text-white">
+  return <section className="lammetna-gradient hero-shadow relative mt-4 min-h-[170px] overflow-hidden rounded-[30px] p-5 text-white">
     <div className="pointer-events-none absolute -left-12 -top-20 h-64 w-64 rounded-full border-[28px] border-white/10"/>
     <div className="grid grid-cols-[1fr_1fr] items-center gap-3">
       <div>

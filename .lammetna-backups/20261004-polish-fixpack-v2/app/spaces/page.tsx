@@ -6,7 +6,6 @@ import {Bell,Plus,Users,Mic2,Lock,Globe2,Flame,Headphones,Eye,ChevronLeft,Swords
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
-import {VoiceGlowBar} from '@/components/voice-glow-bar'
 
 type Space={
   id:string;owner_id:string;name:string;description:string|null;emoji:string|null;category:string|null;
@@ -54,7 +53,7 @@ export default function Spaces(){
 
   async function create(){
     if(!name.trim())return
-    if(!isPublic&&password.trim().length<8){setNotice('كلمة مرور اللَمّة الخاصة لازم تكون 8 أحرف على الأقل.');return}
+    if(!isPublic&&password.trim().length<4){setNotice('كلمة مرور اللَمّة الخاصة لازم تكون 4 أحرف على الأقل.');return}
     const {data,error}=await s.rpc('create_lamma',{p_name:name.trim(),p_description:desc||null,p_emoji:emoji,p_category:category,p_is_public:isPublic,p_password:isPublic?null:password.trim()})
     if(error){setNotice('تعذر إنشاء اللَمّة.');return}
     setShow(false)
@@ -94,7 +93,7 @@ export default function Spaces(){
 
       {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#244e87]">{notice}</p>:null}
 
-      {featured?<section className="lammetna-gradient hero-shadow glow-card-surface relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+      {featured?<section className="lammetna-gradient hero-shadow relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
         <div className="pointer-events-none absolute -left-16 -top-12 h-72 w-72 rounded-full border-[34px] border-white/10"/>
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-white/20 px-3 py-2 text-xs font-black">⭐ اللَّمّة الجديدة</span>
@@ -104,7 +103,6 @@ export default function Spaces(){
           <div>
             <h2 className="text-[29px] font-black">{featured.emoji||'🎙️'} {featured.name}</h2>
             <p className="mt-1 text-sm font-bold leading-6 text-white/88">{featured.description||'لَمّة صوتية مباشرة مع أصدقاء لمتنا'}</p>
-            <VoiceGlowBar streams={[]} active={members>0} compact/>
             <div className="mt-3 rounded-[22px] border border-white/30 bg-white/10 p-3">
               <p className="text-center text-sm font-black">⚔️ تحدي الآن</p>
               <div className="mt-2 flex items-center justify-center gap-3">
@@ -149,7 +147,7 @@ export default function Spaces(){
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-[23px] font-black">اللَمّات النشطة الآن 🎙️</h2><button onClick={()=>setShow(true)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eaf4ff] text-[#0e67f5]"><Plus size={18}/></button></div>
         <div className="space-y-2">
-          {shown.map((x,i)=><div key={x.id} className="pixel-card glow-lamma-card flex items-center gap-3 rounded-[22px] p-3">
+          {shown.map((x,i)=><div key={x.id} className="pixel-card flex items-center gap-3 rounded-[22px] p-3">
             <Link href={`/spaces/${x.id}`} className="tap-action relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full bg-[#eaf3fb]"><img src={x.image_url||fallback[i%4]} alt="" className="h-[52px] w-[52px] object-cover"/><span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#11d091] ring-2 ring-white"/></Link>
             <div className="min-w-0 flex-1"><Link href={`/spaces/${x.id}`} className="tap-action block"><p className="truncate font-black">{x.name}</p><p className="truncate text-[11px] font-bold text-[#738097]">{x.description||'لَمّة صوتية'}</p></Link><div className="mt-1 flex gap-2 text-[10px] font-black"><span className={`rounded-full px-2 py-1 ${x.is_public?'bg-[#dff8ee] text-[#11946a]':'bg-[#f1e4ff] text-[#8e31d8]'}`}>{x.is_public?'عام 🌐':'خاص 🔒'}</span><span className="text-[#748198]">{x.space_members?.[0]?.count||0} 👥</span></div>{!x.is_public?<input type="password" className="mt-2 h-9 w-full rounded-xl bg-[#f2f6fa] px-3 text-xs" placeholder="كلمة المرور" value={joinPw[x.id]||''} onChange={e=>setJoinPw(v=>({...v,[x.id]:e.target.value}))}/>:null}</div>
             <button onClick={()=>join(x)} className="tap-action lammetna-gradient rounded-[18px] px-4 py-2 text-sm font-black text-white">دخول 🎧</button>

@@ -49,7 +49,7 @@ export default function SocialHub(){
       s.from('daily_answers').select('question_id,answer,highlighted_until').eq('user_id',user.id),
       s.from('daily_mission_definitions').select('code,title_ar,description_ar,reward_stars').eq('active',true),
       s.from('daily_mission_claims').select('mission_code,reward_stars').eq('user_id',user.id).eq('claim_date',today),
-      s.from('profiles').select('id,display_name,avatar_url,cities(name_ar),birth_date,show_age,is_online').eq('id',user.id).single(),
+      s.from('profiles').select('id,display_name,avatar_url,cities(name_ar),birth_date,show_age').eq('id',user.id).single(),
       s.from('social_posts').select('id,user_id,body,media_url,media_type,topic,created_at').order('created_at',{ascending:false}).limit(40),
       s.from('feature_prices').select('price_stars').eq('key','profile_visitors_24h').eq('enabled',true).maybeSingle(),
       s.from('feature_prices').select('price_stars').eq('key','attention_ping').eq('enabled',true).maybeSingle(),
@@ -97,22 +97,11 @@ export default function SocialHub(){
   },[media])
 
   async function saveAnswer(){
-    const text=answer.trim()
-    if(!q||!text||!uid)return
-    setBusy(true);setNotice('')
-    const {error:answerError}=await s.rpc('answer_daily_question',{p_question:q.id,p_answer:text})
-    if(answerError){setNotice('تعذر حفظ الإجابة.');setBusy(false);return}
-    const {error:postError}=await s.from('social_posts').upsert({
-      user_id:uid,
-      daily_question_id:q.id,
-      body:`${q.question_ar}\n\n${text}`,
-      media_url:null,
-      media_type:null,
-      topic:'👥 تعارف'
-    },{onConflict:'user_id,daily_question_id'})
-    if(postError){setNotice('تم حفظ الإجابة لكن تعذر نشرها كسالفة.');setBusy(false);return}
-    setNotice('تم نشر إجابتك كسالفة ✨')
-    await load()
+    if(!q||!answer.trim())return
+    setBusy(true)
+    const {error}=await s.rpc('answer_daily_question',{p_question:q.id,p_answer:answer.trim()})
+    setNotice(error?'تعذر الحفظ.':'تم نشر إجابتك اليومية.')
+    setBusy(false)
   }
 
   async function claim(code:string){
@@ -135,14 +124,12 @@ export default function SocialHub(){
     setBusy(true);setNotice('')
     let mediaUrl:string|null=null,mediaType:string|null=null
     if(media){
-      const allowed=['image/jpeg','image/png','image/webp']
-      if(!allowed.includes(media.type)){setNotice('السوالف تقبل صور JPG أو PNG أو WebP فقط.');setBusy(false);return}
-      const ext=(media.name.split('.').pop()||'jpg').toLowerCase()
+      const ext=(media.name.split('.').pop()||'bin').toLowerCase()
       const path=`${uid}/${crypto.randomUUID()}.${ext}`
       const up=await s.storage.from('social-media').upload(path,media,{contentType:media.type,upsert:false})
-      if(up.error){setNotice('تعذر رفع الصورة.');setBusy(false);return}
+      if(up.error){setNotice('تعذر رفع الصورة أو الفيديو.');setBusy(false);return}
       mediaUrl=s.storage.from('social-media').getPublicUrl(path).data.publicUrl
-      mediaType='image'
+      mediaType=media.type.startsWith('video/')?'video':'image'
     }
     const {error}=await s.from('social_posts').insert({user_id:uid,body:postBody.trim()||null,media_url:mediaUrl,media_type:mediaType,topic:postTopic})
     if(error){setNotice('تعذر نشر السالفة الآن.');setBusy(false);return}
@@ -241,8 +228,8 @@ export default function SocialHub(){
     if(!error)await load()
   }
 
-  const city=(profile?.cities as any)?.name_ar||'غير محدد'
-  const avatar=profile?.avatar_url||''
+  const city=(profile?.cities as any)?.name_ar||'القاهرة'
+  const avatar=profile?.avatar_url||'/demo/face-1.jpg'
   const filteredPosts=topic==='الكل'?posts:posts.filter(p=>(p.topic||'').includes(topic.replace(/^.\s?/,'').replace('# ',''))||p.topic===topic)
 
   return <AppShell>
@@ -262,7 +249,7 @@ export default function SocialHub(){
       {filteredPosts.map((post:any)=>{const liked=post.likes.some((x:any)=>x.user_id===uid);return <article key={post.id} className="pixel-card mt-4 rounded-[27px] p-4">
         <div className="flex items-start justify-between gap-2">
           <Link href={`/people/${post.user_id}`} className="tap-action flex items-center gap-3">
-            <div className="relative">{post.profile?.avatar_url?<img src={post.profile.avatar_url} alt="" className="h-14 w-14 rounded-full object-cover"/>:<span className="grid h-14 w-14 place-items-center rounded-full bg-[#eaf4ff] text-[#0e67f5]"><UserRound size={24}/></span>}{post.profile?.is_online===true?<span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#11d092] shadow-[0_0_9px_rgba(17,208,146,.75)] ring-2 ring-white"/>:null}</div>
+            <div className="relative"><img src={post.profile?.avatar_url||'/demo/face-2.jpg'} alt="" className="h-14 w-14 rounded-full object-cover"/><span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${post.profile?.is_online===false?'bg-slate-400':'bg-[#11d092]'} ring-2 ring-white`}/></div>
             <div><p className="font-black">{post.profile?.display_name||'صديق لمتنا'}</p><p className="mt-1 flex items-center gap-2 text-[11px] font-bold text-[#7a869b]"><MapPin className="inline" size={12}/>{(post.profile?.cities as any)?.name_ar||'لمتنا'}</p></div>
           </Link>
           <div className="flex items-center gap-2">{post.user_id!==uid?<button onClick={()=>greet(post.user_id)} className="tap-action rounded-full bg-[#ffe9f7] px-3 py-2 text-xs font-black text-[#ec2aa1]">💗 أرسل تحية</button>:null}<button onClick={()=>setMenuPost(post)} className="tap-action p-2"><MoreHorizontal size={20}/></button></div>
@@ -284,7 +271,7 @@ export default function SocialHub(){
 
       <article className="pixel-card mt-4 rounded-[27px] p-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3"><div className="relative">{avatar?<img src={avatar} alt="" className="h-14 w-14 rounded-full object-cover"/>:<span className="grid h-14 w-14 place-items-center rounded-full bg-[#eaf4ff] text-[#0e67f5]"><UserRound size={24}/></span>}{profile?.is_online===true?<span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#11d092] shadow-[0_0_9px_rgba(17,208,146,.75)] ring-2 ring-white"/>:null}</div><div><p className="font-black">{profile?.display_name||'حسابي'}</p><p className="mt-1 flex items-center gap-2 text-[11px] font-bold text-[#7a869b]"><span><MapPin className="inline" size={12}/> {city}</span></p></div></div>
+          <div className="flex items-center gap-3"><div className="relative"><img src={avatar} alt="" className="h-14 w-14 rounded-full object-cover"/><span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#11d092] ring-2 ring-white"/></div><div><p className="font-black">{profile?.display_name||'صديق لمتنا'}</p><p className="mt-1 flex items-center gap-2 text-[11px] font-bold text-[#7a869b]"><span><MapPin className="inline" size={12}/> {city}</span></p></div></div>
           <span className="rounded-full bg-[#eaf4ff] px-3 py-2 text-xs font-black text-[#0e67f5]">سؤال اليوم</span>
         </div>
         <p className="mt-4 text-[16px] font-bold leading-7">{q?.question_ar||'ما هي السالفة التي تحب تشاركها اليوم؟'}</p>
@@ -308,11 +295,11 @@ export default function SocialHub(){
       <section onClick={e=>e.stopPropagation()} className="mx-auto w-full max-w-[432px] rounded-t-[34px] bg-white p-5 pb-[max(24px,env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between"><h3 className="text-xl font-black">سالفة جديدة</h3><button onClick={()=>setShowComposer(false)} className="tap-action grid h-10 w-10 place-items-center rounded-full bg-[#eef3f8]"><X size={20}/></button></div>
         <textarea value={postBody} onChange={e=>setPostBody(e.target.value)} maxLength={1000} className="mt-4 min-h-28 w-full rounded-[22px] bg-[#f3f7fb] p-4 outline-none" placeholder="شارك لحظتك أو سالفتك..."/>
-        {mediaPreview?<div className="relative mt-3 overflow-hidden rounded-[20px] bg-[#eef3f8]"><img src={mediaPreview} alt="" className="max-h-64 w-full object-cover"/><button onClick={()=>setMedia(null)} className="absolute left-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/55 text-white"><X size={18}/></button></div>:null}
+        {mediaPreview?<div className="relative mt-3 overflow-hidden rounded-[20px] bg-[#eef3f8]">{media?.type.startsWith('video/')?<video src={mediaPreview} controls className="max-h-64 w-full"/>:<img src={mediaPreview} alt="" className="max-h-64 w-full object-cover"/>}<button onClick={()=>setMedia(null)} className="absolute left-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/55 text-white"><X size={18}/></button></div>:null}
         <div className="mt-3 flex items-center gap-2">
-          <button onClick={()=>picker.current?.click()} className="tap-action flex items-center gap-2 rounded-full bg-[#eaf4ff] px-4 py-2 text-xs font-black text-[#0e67f5]"><ImagePlus size={18}/> صورة</button>
+          <button onClick={()=>picker.current?.click()} className="tap-action flex items-center gap-2 rounded-full bg-[#eaf4ff] px-4 py-2 text-xs font-black text-[#0e67f5]"><ImagePlus size={18}/> صورة أو فيديو</button>
           <select value={postTopic} onChange={e=>setPostTopic(e.target.value)} className="h-10 flex-1 rounded-full bg-[#f3f7fb] px-3 text-xs font-black outline-none">{TOPICS.slice(1).map(x=><option key={x}>{x}</option>)}</select>
-          <input ref={picker} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setMedia(e.target.files?.[0]||null)}/>
+          <input ref={picker} hidden type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" onChange={e=>setMedia(e.target.files?.[0]||null)}/>
         </div>
         <button onClick={publishPost} disabled={busy||(!postBody.trim()&&!media)} className="tap-action lammetna-gradient mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-[18px] font-black text-white"><Send size={18}/> نشر السالفة</button>
       </section>

@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import {useEffect,useMemo,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {Users,Heart,Mic2,MapPin,ShieldCheck,MessageCircle,Eye,Ban,Flag,SkipForward,Star,Bell,ChevronLeft,LockKeyhole,Play} from 'lucide-react'
+import {Users,Heart,Mic2,MapPin,ShieldCheck,MessageCircle,Eye,Ban,Flag,SkipForward,Star,Bell,ChevronLeft,LockKeyhole,Play,UserPlus} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
@@ -70,7 +70,7 @@ export default function Discover(){
     setMode(m);setAdvBusy(true);setNotice('')
     if(m==='new'){
       let q=s.from('profiles')
-        .select('id,display_name,avatar_url,mood,birth_date,show_age,is_online,created_at,cities(name_ar)')
+        .select('id,display_name,avatar_url,mood,birth_date,show_age,created_at,cities(name_ar)')
         .eq('profile_complete',true)
         .eq('discoverable',true)
         .order('created_at',{ascending:false})
@@ -187,7 +187,7 @@ export default function Discover(){
       {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#24528d]">{notice}</p>:null}
       {advBusy?<p className="mt-3 text-center text-xs font-bold text-[#738097]">جاري التحميل...</p>:null}
 
-      <section className="lammetna-gradient hero-shadow glow-card-surface relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+      <section className="lammetna-gradient hero-shadow relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
         <div className="pointer-events-none absolute -left-12 top-8 h-52 w-52 rounded-full border-[26px] border-white/10"/>
         <div className="grid min-h-[270px] grid-cols-[1fr_1fr] items-center gap-3">
           <div className="relative flex h-[225px] items-center justify-center">
@@ -201,13 +201,14 @@ export default function Discover(){
           <div>
             <span className="inline-flex rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-black text-[#6c25d9]">{mode==='mystery'?'🎭 اكتشاف غامض':mode==='voice'?'🎙️ صوت أول':'✨ اقتراح لك'}</span>
             <h2 className="mt-3 text-[29px] font-black">{cardName}</h2>
-            {first?.age?<p className="mt-1 text-sm font-black">{first.age} سنة {first?.is_online===true?<span className="text-[#19e3a1] drop-shadow-[0_0_6px_rgba(25,227,161,.75)]">●</span>:null}</p>:null}
+            {first?.age?<p className="mt-1 text-sm font-black">{first.age} سنة <span className="text-[#19e3a1]">●</span></p>:null}
             <div className="mt-4 space-y-2 text-[12px] font-black">
               <div className="rounded-full bg-white/14 px-3 py-2"><MapPin className="ml-2 inline" size={16}/> المدينة <span className="float-left">{cardCity}</span></div>
               <div className="rounded-full bg-white/14 px-3 py-2">😊 المزاج <span className="float-left">{cardMood}</span></div>
               <div className="rounded-full bg-white/14 px-3 py-2">🎮 اهتمامات مشتركة <span className="float-left">{Number(first?.shared_interests||0)}</span></div>
             </div>
             {mode==='voice'?<button onClick={playVoice} disabled={!first?.voice_intro_path||voicePlaying} className="tap-action mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#6c25d9]"><Play size={17} fill="currentColor"/>{voicePlaying?'جاري التشغيل...':'تشغيل المقدمة الصوتية'}</button>:null}
+            {isKnown&&target?<Link href={`/people/${target}`} className="tap-action mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#6c25d9]"><UserPlus size={17}/> فتح الملف</Link>:null}
           </div>
         </div>
         {target?<div className="mt-2 grid grid-cols-2 gap-2">

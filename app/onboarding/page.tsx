@@ -64,13 +64,30 @@ export default function Onboarding(){
   }
 
   if(welcome)return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[#eef8ff]">
-    <div className="relative">
-      <img src="/reference/onboarding.jpg" alt="لمتنا" className="block h-auto w-full select-none" draggable={false}/>
-      <button aria-label="ابدأ الآن" onClick={()=>setWelcome(false)} className="absolute left-[9.5%] top-[84.5%] h-[7.7%] w-[81%] rounded-[26px] bg-transparent"/>
-      <button aria-label="تخطي" onClick={()=>setWelcome(false)} className="absolute left-[9.5%] top-[93%] h-[5%] w-[81%] rounded-[24px] bg-transparent"/>
+    <div className="relative overflow-hidden">
+      <img
+        src="/reference/onboarding.jpg"
+        alt="Ù„Ù…ØªÙ†Ø§"
+        className="-mt-[10%] block h-auto w-full select-none"
+        draggable={false}
+      />
+
+      {/* Remove the embedded arrows from the three feature bars. */}
+      <span className="pointer-events-none absolute left-[7%] top-[54.3%] h-[5.8%] w-[13%] rounded-full bg-white"/>
+      <span className="pointer-events-none absolute left-[7%] top-[61.3%] h-[5.8%] w-[13%] rounded-full bg-white"/>
+      <span className="pointer-events-none absolute left-[7%] top-[68.2%] h-[5.8%] w-[13%] rounded-full bg-white"/>
+
+      {/* Remove the embedded Skip button completely. */}
+      <span className="pointer-events-none absolute left-[8%] top-[88%] h-[7.5%] w-[84%] rounded-[30px] bg-[#eaf6ff]"/>
+
+      {/* Keep only the real Start action. */}
+      <button
+        aria-label="Ø§Ø¨Ø¯Ø£ Ø§Ù„Ø¢Ù†"
+        onClick={()=>setWelcome(false)}
+        className="absolute left-[9.5%] top-[79.2%] h-[7.5%] w-[81%] rounded-[26px] bg-transparent"
+      />
     </div>
   </main>
-
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] bg-[linear-gradient(180deg,#f7fdff,#eef8ff)] p-5">
     <div className="flex items-center gap-3"><BrandLogo size={54}/><div><p className="text-xs font-black text-[#1268f5]">استكمال الملف</p><h1 className="text-2xl font-black">عرّفنا بنفسك</h1></div></div>
     <div className="mt-5 flex gap-2">{[1,2,3,4].map(n=><span key={n} className={`h-2 flex-1 rounded-full ${n<=step?'lammetna-gradient':'bg-[#dce7f2]'}`}/>)}</div>

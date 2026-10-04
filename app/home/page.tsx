@@ -4,6 +4,7 @@ import {Bell,Star,Users,Shuffle,Mic2,MessagesSquare,ChevronLeft,MapPin,Plus} fro
 import {createClient} from '@/lib/supabase/server'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
+import {PixelHeroImage} from '@/components/pixel-hero-image'
 import {AddInterestButton} from '@/components/add-interest-button'
 
 function ageOf(d:string|null|undefined){
@@ -49,27 +50,13 @@ export default async function Home(){
         </div>
       </header>
 
-      <section className="lammetna-gradient hero-shadow relative mt-4 overflow-hidden rounded-[30px] p-5 text-white">
-        <div className="absolute -left-10 -top-12 h-44 w-44 rounded-full bg-white/10 blur-2xl"/>
-        <div className="absolute left-[30%] top-0 h-36 w-36 rounded-full border-[18px] border-white/8"/>
-        <div className="grid min-h-[250px] grid-cols-[1fr_145px] items-center gap-1">
-          <div className="relative z-10">
-            <h2 className="text-[31px] font-black leading-[1.22]">اكتشف عالمًا<br/>من الأصدقاء الجدد</h2>
-            <p className="mt-3 text-[14px] font-bold leading-6 text-white/88">تواصل، دردش، وانضم إلى اللَمّات الصوتية<br/>مع أشخاص حقيقيين مثلك</p>
-            <Link href="/discover" className="mt-5 inline-flex items-center gap-2 rounded-[19px] bg-white px-4 py-3 text-[14px] font-black text-[#6025db]">ابدأ الاستكشاف الآن <ChevronLeft size={18}/></Link>
-          </div>
-          <div className="relative h-[205px]">
-            {[0,1,2].map(i=>{
-              const x=faces[i]
-              const src=x?.avatar_url||fallback[i]
-              const cls=i===0?'left-0 top-12 h-24 w-24':i===1?'right-0 top-0 h-24 w-24':'right-9 bottom-0 h-20 w-20'
-              return <div key={i} className={`absolute ${cls} overflow-hidden rounded-full border-[4px] border-white shadow-[0_10px_26px_rgba(0,0,0,.18)]`}><img src={src} alt="" className="h-full w-full object-cover"/></div>
-            })}
-            <span className="absolute bottom-0 left-2 grid h-14 w-14 place-items-center rounded-full border-2 border-white bg-[#159cf4] shadow-lg"><Plus size={30}/></span>
-          </div>
-        </div>
-      </section>
-
+      <PixelHeroImage src="/pixel/home-discover-exact.jpg" alt="Ø§ÙƒØªØ´Ù Ø¹Ø§Ù„Ù…Ù‹Ø§ Ù…Ù† Ø§Ù„Ø£ØµØ¯Ù‚Ø§Ø¡ Ø§Ù„Ø¬Ø¯Ø¯" className="hero-shadow mt-4 rounded-[30px]">
+        <Link
+          href="/discover"
+          aria-label="Ø§Ø¨Ø¯Ø£ Ø§Ù„Ø§Ø³ØªÙƒØ´Ø§Ù Ø§Ù„Ø¢Ù†"
+          className="absolute bottom-[11%] right-[57%] h-[31%] w-[37%] rounded-[22px] bg-transparent"
+        />
+      </PixelHeroImage>
       <section className="mt-3 grid grid-cols-5 gap-2">
         {[
           [Users,'اكتشف','أصدقاء جدد بانتظارك','/discover','#11c899'],

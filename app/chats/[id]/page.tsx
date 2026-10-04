@@ -747,32 +747,11 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         {socialOpen?<div className="mb-3 rounded-3xl border border-[#DCE8F7] bg-white p-3"><div className="flex items-center justify-between"><div><p className="font-extrabold">الصور الخاصة</p><p className="text-xs text-slate-500">لا تظهر إلا بعد موافقة الطرفين.</p></div><Button size="sm" onClick={privateConsent} disabled={privateStatus?.mutual}>{privateStatus?.mutual?'الموافقة متبادلة ✓':privateStatus?.my_consented?'في انتظار الطرف الآخر':'أوافق على المشاركة'}</Button></div>{privatePhotos.length?<div className="mt-3 grid grid-cols-3 gap-2">{privatePhotos.map((p:any)=><div key={p.photo_id} className="grid aspect-square place-items-center rounded-2xl bg-[#EAF2FC] text-xs font-bold text-[#1560BD]">صورة خاصة ✓</div>)}</div>:<p className="mt-3 text-xs text-slate-500">{privateStatus?.target_has_photos?'لديه صور خاصة؛ ستظهر بعد اكتمال الموافقة.':'لا توجد صور خاصة متاحة حاليًا.'}</p>}</div>:null}
         {duo?<div className="mb-3 rounded-2xl bg-[#F4F8FD] p-3 text-sm font-bold">تحدي الثنائي نشط 🎮 — أجبوا عن 5 أسئلة للتعارف، بدون تقييم أو نسبة توافق.</div>:null}
         {speedSession?<div className="mb-3 rounded-2xl bg-[#F4F8FD] p-3 text-sm font-bold">طلب دقيقة التعارف مرسل ⏱️ — يبدأ فقط بعد موافقة الطرف الآخر.</div>:null}
-        {showGifts ? (
-          <div className="mb-4 rounded-3xl border border-slate-200 bg-white p-3">
-            <p className="mb-2 text-sm font-extrabold">اختار هدية</p>
-            <div className="grid grid-cols-3 gap-2">
-              {giftItems.map((gift) => (
-                <button
-                  key={gift.id}
-                  type="button"
-                  onClick={() => sendGift(gift)}
-                  className="rounded-2xl bg-slate-50 p-3 text-center"
-                >
-                  <div className="text-2xl">{gift.emoji}</div>
-                  <p className="mt-1 text-xs font-bold">{gift.name_ar}</p>
-                  <p className="text-[11px] text-amber-700">
-                    {gift.price_stars} ⭐
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
         {incomingCall ? (
           <div className="mb-4 rounded-3xl border border-[#D7E7FB] bg-[#EAF2FC] p-4">
-            <p className="font-extrabold">
-              {other?.profiles?.display_name || 'الطرف الآخر'} يتصل بك صوتيًا
+            <p className="flex items-center gap-2 font-extrabold">
+              {incomingCall.call_kind==='video'?<Video size={18}/>:<Phone size={18}/>}
+              {other?.profiles?.display_name || 'الطرف الآخر'} يتصل بك {incomingCall.call_kind==='video'?'بالفيديو':'صوتيًا'}
             </p>
             <p className="mt-1 text-xs text-slate-500">
               لن تبدأ المكالمة إلا بعد موافقتك.
@@ -806,9 +785,11 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
             <div
               key={m.id}
               className={
-                m.sender_id === uid
-                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] px-4 py-3 text-white'
-                  : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white px-4 py-3 shadow-sm'
+                m.message_type==='gift'
+                  ? 'mx-auto max-w-[92%] rounded-3xl bg-[linear-gradient(135deg,#fff0a8,#fff8df)] px-4 py-3 text-[#6f4c00] shadow-sm ring-1 ring-[#efd36f]'
+                  : m.sender_id === uid
+                    ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] px-4 py-3 text-white'
+                    : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white px-4 py-3 shadow-sm'
               }
             >
               {m.message_type === 'image' ? (
@@ -855,6 +836,14 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
                 ) : (
                   <p className="text-sm">تعذر تحميل الصورة.</p>
                 )
+              ) : m.message_type === 'video' ? (
+                m.signedUrl ? (
+                  <video src={m.signedUrl} controls playsInline preload="metadata" className="max-h-80 w-full rounded-2xl bg-black object-contain"/>
+                ) : (
+                  <p className="text-sm">تعذر تحميل الفيديو.</p>
+                )
+              ) : m.message_type === 'gift' ? (
+                <div className="text-center"><Gift className="mx-auto mb-1 text-[#b77900]" size={22}/><p className="text-sm font-black leading-6">{m.body}</p></div>
               ) : (
                 <p className="text-sm leading-6">{m.body}</p>
               )}
@@ -878,11 +867,11 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
-            if (file) uploadImage(file)
+            if (file) uploadMedia(file)
             e.currentTarget.value = ''
           }}
         />
@@ -891,7 +880,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           <Button
             size="icon"
             variant="ghost"
-            aria-label="إرسال صورة"
+            aria-label="إرسال صورة أو فيديو حتى 10 ثواني"
             onClick={() => fileInputRef.current?.click()}
           >
             <ImagePlus size={19} />

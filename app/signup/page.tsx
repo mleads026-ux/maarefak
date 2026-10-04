@@ -5,8 +5,7 @@ import {useRouter} from 'next/navigation'
 import {Mail,Lock,Eye,EyeOff,CheckCircle2,Circle,ChevronLeft} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {friendlyError} from '@/lib/utils'
-import {BrandLogo} from '@/components/brand-logo'
-import {StatusBarMock} from '@/components/status-bar-mock'
+import {PixelHeroImage} from '@/components/pixel-hero-image'
 
 const rules=(v:string)=>[
   ['8 أحرف على الأقل',v.length>=8],
@@ -65,19 +64,9 @@ export default function Signup(){
     setBusy(false)
   }
 
-  return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#09d9e5_0%,#0678f3_25%,#6f3dff_45%,#f6faff_45.2%,#eef8ff_100%)]">
-    <div className="px-5">
-      <StatusBarMock light/>
-      <div className="relative pb-11 pt-5 text-center text-white">
-        <div className="pointer-events-none absolute -left-16 top-8 h-44 w-44 rounded-full border-[20px] border-white/13"/>
-        <div className="pointer-events-none absolute -right-16 top-12 h-44 w-44 rounded-full border-[20px] border-white/12"/>
-        <BrandLogo size={104} className="mx-auto shadow-[0_20px_42px_rgba(25,37,180,.22)]"/>
-        <h1 className="mt-2 text-[46px] font-black leading-none">لمتنا</h1>
-        <p className="mt-3 text-[16px] font-bold text-white/95">دائمًا مساحة أجمل مع أصدقاء جدد</p>
-      </div>
-    </div>
-
-    <section className="pixel-card relative -mt-3 min-h-[760px] rounded-t-[38px] px-5 pb-7 pt-7">
+  return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
+    <PixelHeroImage src="/pixel/signup-hero.jpg" alt="لمتنا" className="w-full"/>
+    <section className="pixel-card relative -mt-4 mx-4 min-h-[760px] rounded-[38px] px-5 pb-7 pt-7">
       {step==='otp'?<>
         <h2 className="text-center text-[32px] font-black">تأكيد البريد</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#68758e]">أدخل الرمز المرسل إلى<br/><b className="text-[#125ff5]">{email}</b></p>
@@ -122,5 +111,7 @@ export default function Signup(){
         <p className="mt-5 text-center text-sm font-bold text-[#66738c]">لديك حساب بالفعل؟ <Link href="/login" className="font-black text-[#173fc8]">تسجيل الدخول</Link></p>
       </>}
     </section>
+
+    <div className="h-7"/>
   </main>
 }

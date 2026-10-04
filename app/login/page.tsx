@@ -5,8 +5,7 @@ import {useRouter} from 'next/navigation'
 import {Mail,Lock,Eye,EyeOff,Users,ChevronLeft} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {friendlyError} from '@/lib/utils'
-import {BrandLogo} from '@/components/brand-logo'
-import {StatusBarMock} from '@/components/status-bar-mock'
+import {PixelHeroImage} from '@/components/pixel-hero-image'
 
 const strong=(v:string)=>v.length>=8&&/[a-z]/.test(v)&&/[A-Z]/.test(v)&&/[0-9]/.test(v)&&/[^A-Za-z0-9]/.test(v)
 
@@ -52,17 +51,9 @@ export default function Login(){
     location.replace('/login')
   }
 
-  return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[radial-gradient(circle_at_8%_10%,rgba(23,224,233,.20),transparent_26%),radial-gradient(circle_at_92%_12%,rgba(167,80,255,.23),transparent_30%),linear-gradient(180deg,#f9fdff,#f3f9ff_62%,#eef8ff)] px-5 pb-7">
-    <StatusBarMock/>
-    <div className="relative pt-6 text-center">
-      <div className="pointer-events-none absolute -left-20 top-10 h-52 w-52 rounded-full border-[22px] border-white/26"/>
-      <div className="pointer-events-none absolute -right-16 top-20 h-52 w-52 rounded-full border-[22px] border-white/24"/>
-      <BrandLogo size={112} className="mx-auto shadow-[0_22px_48px_rgba(80,78,255,.24)]"/>
-      <h1 className="mt-4 text-[47px] font-black leading-none tracking-tight">لمتنا</h1>
-      <p className="mt-3 text-[17px] font-bold text-[#66728c]">دائمًا مساحة أجمل مع أصدقاء جدد</p>
-    </div>
-
-    <section className="pixel-card relative mt-8 rounded-[38px] px-5 pb-7 pt-7">
+  return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
+    <PixelHeroImage src="/pixel/login-hero.jpg" alt="لمتنا" className="w-full"/>
+    <section className="pixel-card relative -mt-3 mx-4 rounded-[38px] px-5 pb-7 pt-7">
       {isReset?<>
         <h2 className="text-center text-[30px] font-black">كلمة مرور جديدة</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#6f7b95]">اختر كلمة مرور قوية لحسابك</p>
@@ -104,5 +95,7 @@ export default function Login(){
         <p className="mt-6 text-center text-sm font-bold text-[#64718c]">ليس لديك حساب؟ <Link href="/signup" className="font-black text-[#173fc8]">إنشاء حساب</Link></p>
       </>}
     </section>
+
+    <div className="h-7"/>
   </main>
 }

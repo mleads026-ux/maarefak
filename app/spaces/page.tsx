@@ -5,6 +5,7 @@ import {Bell,Plus,Users,Mic2,Lock,Globe2,Flame,Crown,Headphones,ChevronLeft} fro
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
+import {PixelHeroImage} from '@/components/pixel-hero-image'
 
 type Space={
   id:string;owner_id:string;name:string;description:string|null;emoji:string|null;category:string|null;
@@ -79,41 +80,9 @@ export default function Spaces(){
 
       {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#244e87]">{notice}</p>:null}
 
-      {featured?<section className="lammetna-gradient hero-shadow mt-4 overflow-hidden rounded-[31px] p-5 text-white">
-        <div className="flex items-center justify-between">
-          <span className="rounded-full bg-white/18 px-3 py-1.5 text-xs font-black">⭐ اللَّمّة الجديدة</span>
-          <div className="flex items-center gap-2"><span className="rounded-full bg-[#116ddf]/65 px-3 py-1.5 text-xs font-black">◉ {Math.max(128,members)}</span><span className="rounded-full bg-[#ff1678] px-3 py-1.5 text-xs font-black">مباشر 🎙️</span></div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-[1fr_155px] gap-3">
-          <div>
-            <h2 className="text-[32px] font-black">{featured.name||'قهوة الصباح'} {featured.emoji||'☕'}</h2>
-            <p className="mt-2 text-[14px] font-bold leading-6 text-white/90">{featured.description||'سوالف يومية ومشاركة تجارب مع أصدقاء لمتنا'}</p>
-
-            <div className="mt-3 rounded-[23px] border border-white/25 bg-black/10 p-3">
-              <p className="text-center text-[14px] font-black">⚔️ تحدي الآن</p>
-              <div className="mt-2 flex items-center justify-center gap-3">
-                <Mini user={a} fallback={fallback[0]} label="المقعد 2"/>
-                <span className="text-lg font-black">⚡<br/>VS</span>
-                <Mini user={b} fallback={fallback[1]} label="المقعد 3"/>
-              </div>
-            </div>
-
-            <button onClick={()=>join(featured)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-[21px] bg-white py-3 text-[18px] font-black text-[#6127df]"><Headphones/>دخول الآن <ChevronLeft/></button>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="relative h-36 w-36 overflow-hidden rounded-full border-[4px] border-[#ffd552] bg-white/15 shadow-[0_0_0_7px_rgba(255,210,70,.20)]">
-              <img src={royal?.avatar_url||fallback[2]} alt="" className="h-full w-full object-cover"/>
-              <Crown className="absolute left-1/2 top-0 -translate-x-1/2 text-[#ffd02b]" fill="#ffd02b" size={40}/>
-            </div>
-            <span className="-mt-3 rounded-full bg-[#ffe7a1] px-3 py-1.5 text-[11px] font-black text-[#7a4d00]">الضيف الملكي 👑</span>
-            <div className="mt-3 grid h-14 w-14 place-items-center rounded-full border-2 border-white bg-white/15"><Mic2 size={28}/></div>
-            <div className="mt-4 flex -space-x-2 space-x-reverse">{fallback.map((src,i)=><img key={i} src={src} alt="" className="h-8 w-8 rounded-full border-2 border-white object-cover"/>)}</div>
-            <p className="mt-2 flex items-center gap-1 text-[11px] font-black"><Users size={14}/>+{Math.max(128,members)} من الأعضاء</p>
-          </div>
-        </div>
-      </section>:<section className="lammetna-gradient hero-shadow mt-4 rounded-[31px] p-8 text-center text-white"><Mic2 className="mx-auto" size={46}/><h2 className="mt-3 text-2xl font-black">ابدأ أول لَمّة</h2><p className="mt-2 text-sm font-bold text-white/80">أنشئ غرفة صوتية وابدأ الكلام.</p></section>}
+      {featured?<PixelHeroImage src="/pixel/lamma-hero-exact.jpg" alt="اللَّمّة" className="hero-shadow mt-4 rounded-[31px]">
+        <button aria-label="دخول الآن" onClick={()=>join(featured)} className="absolute bottom-[3%] right-[0%] h-[22%] w-[47%] rounded-[22px] bg-transparent"/>
+      </PixelHeroImage>:<img src="/pixel/lamma-compact-exact.jpg" alt="اللَّمّة" className="mt-4 w-full rounded-[31px]"/>}
 
       <div className="mt-4 grid grid-cols-4 gap-2">
         {[[Flame,'الأكثر نشاطًا','#ff2b84'],[Lock,'خاص','#8a37e8'],[Users,'عام','#13b987'],[Globe2,'كل اللَمّات','#0e67f5']].map(([I,t,c]:any)=><button key={t} className="pixel-card rounded-[20px] p-3 text-[11px] font-black"><span className="mx-auto mb-1 grid h-9 w-9 place-items-center rounded-full bg-[#edf5ff]" style={{color:c}}><I size={20}/></span>{t}</button>)}

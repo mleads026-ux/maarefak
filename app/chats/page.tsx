@@ -4,6 +4,7 @@ import {Search,Plus,ChevronLeft,LockKeyhole,CheckCheck,Mic2,Bell} from 'lucide-r
 import {createClient} from '@/lib/supabase/server'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
+import {PixelHeroImage} from '@/components/pixel-hero-image'
 
 const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
 
@@ -53,10 +54,9 @@ export default async function Chats(){
 
       <div className="mt-4 flex h-14 items-center gap-3 rounded-[24px] bg-white px-4 shadow-sm ring-1 ring-[#e1ecf8]"><Search size={23} className="text-[#34496a]"/><span className="text-[14px] font-bold text-[#8a94a8]">ابحث في المحادثات...</span></div>
 
-      <Link href="/discover" className="lammetna-gradient hero-shadow mt-4 grid min-h-[235px] grid-cols-[1fr_145px] items-center overflow-hidden rounded-[30px] p-5 text-white">
-        <div><h2 className="text-[31px] font-black">ابدأ تعارف جديد</h2><p className="mt-2 text-[15px] font-bold text-white/88">اكتشف أشخاصًا جدد وتواصل الآن</p><span className="mt-5 inline-flex items-center gap-2 rounded-[19px] bg-white px-4 py-3 text-sm font-black text-[#5827d8]">اكتشف الآن <ChevronLeft size={18}/></span></div>
-        <div className="relative h-40">{[0,1,2].map((i:number)=><img key={i} src={(people as any)?.[i]?.avatar_url||fallback[i]} alt="" className={`absolute rounded-full border-4 border-white object-cover shadow-lg ${i===0?'right-0 top-0 h-20 w-20':i===1?'left-0 top-8 h-20 w-20':'right-7 bottom-0 h-[68px] w-[68px]'}`}/>)}<span className="absolute bottom-0 left-2 grid h-[52px] w-[52px] place-items-center rounded-full border-2 border-white bg-[#149df4]"><Plus size={28}/></span></div>
-      </Link>
+      <PixelHeroImage src="/pixel/meet-new-exact.jpg" alt="ابدأ تعارف جديد" className="hero-shadow mt-4 rounded-[30px]">
+        <Link href="/discover" aria-label="اكتشف الآن" className="absolute bottom-[7%] right-[51%] h-[36%] w-[45%] rounded-[22px] bg-transparent"/>
+      </PixelHeroImage>
 
       <div className="mt-4 space-y-2">
         {rows.map((x:any,i:number)=>{

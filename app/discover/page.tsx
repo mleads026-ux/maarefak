@@ -5,6 +5,7 @@ import {Users,Heart,Mic2,MapPin,Smile,Gamepad2,ShieldCheck,MessageCircle,Eye,Ban
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
+import {PixelHeroImage} from '@/components/pixel-hero-image'
 
 type Match={
   session_id:string;matched_user_id:string;display_name:string;avatar_url:string|null;
@@ -127,30 +128,7 @@ export default function Discover(){
       {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#24528d]">{notice}</p>:null}
       {advBusy?<p className="mt-3 text-center text-xs font-bold text-[#738097]">جاري التحميل...</p>:null}
 
-      <section className="lammetna-gradient hero-shadow relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
-        <div className="absolute -left-20 -top-12 h-60 w-60 rounded-full bg-[#16d7e4]/50 blur-2xl"/>
-        <div className="absolute left-2 top-8 h-52 w-52 rounded-[44%] border-[18px] border-white/10"/>
-        <span className="relative inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-[#5a23d8]">{mode==='mystery'?'🎭 اكتشاف غامض':mode==='voice'?'🎙️ صوت أول':'✨ على مزاجي'}</span>
-        <div className="relative mt-3 grid grid-cols-[165px_1fr] items-center gap-4">
-          <div className="relative grid h-[225px] place-items-center overflow-hidden rounded-[43%] border-2 border-white/60 bg-white/14">
-            {mode==='mystery'?<>
-              <img src={first?.avatar_url||fallback[0]} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover blur-[17px]"/>
-              <div className="absolute inset-0 bg-[#203e87]/25"/>
-              <span className="relative text-7xl font-black">?</span>
-            </>:<img src={first?.avatar_url||fallback[0]} alt="" className="h-full w-full object-cover"/>}
-            <span className="absolute bottom-3 rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-[#16469f]">🔒 الصورة مكتشفة تدريجيًا</span>
-          </div>
-          <div>
-            <h2 className="text-[31px] font-black">{first?.display_name||'لينا'}</h2>
-            <p className="mt-1 flex items-center gap-2 text-[15px] font-black">{first?.age||25} سنة <span className="h-2.5 w-2.5 rounded-full bg-[#11d096]"/></p>
-            <div className="mt-4 space-y-2 text-[12px] font-black">
-              <p className="flex items-center justify-between rounded-full bg-white/13 px-3 py-2"><span>المدينة</span><span className="flex items-center gap-1"><MapPin size={15}/>{first?.city_name||'الدمام'}</span></p>
-              <p className="flex items-center justify-between rounded-full bg-white/13 px-3 py-2"><span>المزاج</span><span className="flex items-center gap-1"><Smile size={15}/>{first?.mood||'مبتسمة ومتفائلة'}</span></p>
-              <p className="flex items-center justify-between rounded-full bg-white/13 px-3 py-2"><span>الاهتمامات</span><span className="flex items-center gap-1"><Gamepad2 size={15}/>{first?.shared_interests||0} مشتركة</span></p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PixelHeroImage src="/pixel/mystery-exact.jpg" alt="اكتشاف غامض" className="hero-shadow mt-4 rounded-[31px]"/>
 
       <section className="pixel-card mt-4 rounded-[27px] p-4">
         <div className="flex items-center justify-center gap-3"><ShieldCheck className="text-[#13bfc8]" size={32}/><div><p className="text-[17px] font-black">محادثة عشوائية بموافقة الطرفين</p><p className="mt-1 text-[11px] font-bold text-[#76839a]">لن تبدأ المحادثة إلا بعد موافقة الشخص الآخر أيضًا</p></div></div>

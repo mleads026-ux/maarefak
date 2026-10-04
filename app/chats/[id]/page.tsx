@@ -451,14 +451,21 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     setBody('')
 
-    const { error } = await s.from('messages').insert({
+    const { data:row,error } = await s.from('messages').insert({
       conversation_id: id,
       sender_id: uid,
       body: text,
-    })
+      message_type:'text',
+    }).select('id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id').single()
 
     if (error) {
       setNotice('لا يمكن إرسال الرسالة الآن.')
+      setBody(text)
+      return
+    }
+
+    if(row){
+      setMessages(current=>current.some((x:any)=>x.id===row.id)?current:[...current,row])
     }
   }
 
@@ -487,6 +494,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
       `تم إرسال ${gift.emoji} ${gift.name_ar}. يصل للطرف الآخر 85% من قيمة النجوم والمنصة تحتفظ بـ15%.`
     )
     setShowGifts(false)
+    await load()
   }
 
   async function startCall(kind:'voice'|'video') {
@@ -552,45 +560,80 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     setCallLabel('')
   }
 
-  async function uploadImage(file: File) {
+  async function readVideoDuration(file:File){
+    return await new Promise<number>((resolve,reject)=>{
+      const url=URL.createObjectURL(file)
+      const video=document.createElement('video')
+      video.preload='metadata'
+      video.onloadedmetadata=()=>{
+        const duration=Number(video.duration||0)
+        URL.revokeObjectURL(url)
+        resolve(duration)
+      }
+      video.onerror=()=>{
+        URL.revokeObjectURL(url)
+        reject(new Error('invalid_video'))
+      }
+      video.src=url
+    })
+  }
+
+  async function uploadMedia(file: File) {
     setNotice('')
 
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setNotice('المسموح JPG أو PNG أو WEBP فقط.')
+    const imageTypes=['image/jpeg','image/png','image/webp']
+    const videoTypes=['video/mp4','video/webm','video/quicktime']
+    const isImage=imageTypes.includes(file.type)
+    const isVideo=videoTypes.includes(file.type)
+
+    if(!isImage&&!isVideo){
+      setNotice('المسموح صورة JPG/PNG/WEBP أو فيديو MP4/MOV/WEBM.')
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setNotice('حجم الصورة يجب ألا يتجاوز 10MB.')
+    if(file.size>25*1024*1024){
+      setNotice('حجم الملف يجب ألا يتجاوز 25MB.')
       return
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const path = `${id}/${uid}/${crypto.randomUUID()}.${ext}`
+    let duration:number|null=null
+    if(isVideo){
+      try{duration=await readVideoDuration(file)}catch{
+        setNotice('تعذر قراءة مدة الفيديو.')
+        return
+      }
+      if(!duration||duration>10.05){
+        setNotice('الفيديو يجب ألا يتجاوز 10 ثوانٍ.')
+        return
+      }
+    }
 
-    const { error: uploadError } = await s.storage
+    const ext=file.name.split('.').pop()?.toLowerCase()||(isVideo?'mp4':'jpg')
+    const path=`${id}/${uid}/${crypto.randomUUID()}.${ext}`
+
+    const {error:uploadError}=await s.storage
       .from('chat-media-approved')
-      .upload(path, file, {
-        upsert: false,
-        contentType: file.type,
-      })
+      .upload(path,file,{upsert:false,contentType:file.type})
 
-    if (uploadError) {
-      setNotice('تعذر رفع الصورة.')
+    if(uploadError){
+      setNotice(isVideo?'تعذر رفع الفيديو.':'تعذر رفع الصورة.')
       return
     }
 
-    const { error } = await s.rpc('create_image_message', {
-      p_conversation: id,
-      p_pending_path: path,
+    const {error}=await s.rpc('create_media_message',{
+      p_conversation:id,
+      p_media_path:path,
+      p_kind:isVideo?'video':'image',
+      p_duration_seconds:duration,
     })
 
-    if (error) {
-      setNotice('تعذر إرسال الصورة.')
+    if(error){
+      setNotice(isVideo?'تعذر إرسال الفيديو.':'تعذر إرسال الصورة.')
       return
     }
 
-    setNotice('تم إرسال الصورة. ستظهر للطرف الآخر مموهة حتى يختار إظهارها.')
+    setNotice(isVideo?'تم إرسال الفيديو.':'تم إرسال الصورة. ستظهر للطرف الآخر مموهة حتى يختار إظهارها.')
+    await load()
   }
 
   const visibleMessages = messages

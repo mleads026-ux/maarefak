@@ -46,12 +46,15 @@ export default function Discover(){
     if(row.conversation_id){r.push(`/chats/${row.conversation_id}`);return}
     if(row.status!=='active'){setMatch(null);setWaiting(false);return}
     const other=row.user_a===userId?row.user_b:row.user_a
-    const {data:p}=await s.from('profiles').select('id,display_name,avatar_url,mood,birth_date,show_age,cities(name_ar),countries(name_ar)').eq('id',other).single()
+    const [{data:p},{data:ageValue}]=await Promise.all([
+      s.from('profiles').select('id,display_name,avatar_url,mood,show_age,cities(name_ar),countries(name_ar)').eq('id',other).single(),
+      s.rpc('public_profile_age',{p_target:other}),
+    ])
     if(!p)return
     setMatch({
       session_id:row.id,matched_user_id:other,display_name:p.display_name,avatar_url:p.avatar_url,
       city_name:(p.cities as any)?.name_ar||null,country_name:(p.countries as any)?.name_ar||null,mood:p.mood,
-      age:p.show_age&&p.birth_date?Math.floor((Date.now()-new Date(p.birth_date).getTime())/31557600000):null,
+      age:ageValue==null?null:Number(ageValue),
       user_a:row.user_a,user_b:row.user_b,user_a_accepted:!!row.user_a_accepted,user_b_accepted:!!row.user_b_accepted
     })
     setWaiting(false)
@@ -70,17 +73,23 @@ export default function Discover(){
     setMode(m);setAdvBusy(true);setNotice('')
     if(m==='new'){
       let q=s.from('profiles')
-        .select('id,display_name,avatar_url,mood,birth_date,show_age,is_online,created_at,cities(name_ar)')
+        .select('id,display_name,avatar_url,mood,show_age,is_online,created_at,cities(name_ar)')
         .eq('profile_complete',true)
         .eq('discoverable',true)
         .order('created_at',{ascending:false})
         .limit(20)
       if(userId)q=q.neq('id',userId)
       const {data,error}=await q
-      const normalized=(data||[]).map((x:any)=>({
+      const rows=(data||[]) as any[]
+      const ageEntries=!error?await Promise.all(rows.map(async (x:any)=>{
+        const {data:ageValue}=await s.rpc('public_profile_age',{p_target:x.id})
+        return [x.id,ageValue==null?null:Number(ageValue)] as const
+      })):[]
+      const ageMap=new Map(ageEntries)
+      const normalized=rows.map((x:any)=>({
         ...x,
         city_name:(x.cities as any)?.name_ar||null,
-        age:x.show_age&&x.birth_date?Math.floor((Date.now()-new Date(x.birth_date).getTime())/31557600000):null,
+        age:ageMap.get(x.id)??null,
         shared_interests:0
       }))
       if(error){setNotice('تعذر تحميل الوجوه الجديدة الآن.');setAdvanced([])}else setAdvanced(normalized)

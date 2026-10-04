@@ -86,3 +86,33 @@ input,textarea,select{min-width:0;max-width:100%}
 @keyframes voiceGlowSweep{0%{transform:translateX(-78%)}100%{transform:translateX(78%)}}
 @keyframes voiceAmbient{0%,100%{transform:scaleY(.22);opacity:.55}45%{transform:scaleY(.92);opacity:1}70%{transform:scaleY(.48);opacity:.78}}
 @media (prefers-reduced-motion:reduce){.glow-card-surface::before,.glow-card-surface::after,.glow-character-card::before,.glow-character-card::after,.glow-lamma-card::before,.glow-lamma-card::after,.voice-glow-bar::before,.voice-glow-bar__bar{animation:none!important}}
+
+/* LAMMETNA_LIVING_CARDS_V4 */
+.living-card,.auth-glow-card{position:relative;isolation:isolate;overflow:hidden}
+.living-card>*,.auth-glow-card>*{position:relative;z-index:2}
+.living-card::before,.auth-glow-card::before{
+  content:"";position:absolute;z-index:0;inset:-55%;pointer-events:none;
+  background:radial-gradient(circle at 18% 28%,rgba(91,245,255,.46),transparent 19%),radial-gradient(circle at 78% 68%,rgba(201,78,255,.34),transparent 23%),radial-gradient(circle at 54% 12%,rgba(255,255,255,.22),transparent 16%);
+  filter:blur(22px);opacity:.78;animation:lammetnaLivingGlow 7.2s ease-in-out infinite alternate
+}
+.living-card::after,.auth-glow-card::after{
+  content:"";position:absolute;z-index:1;top:-35%;bottom:-35%;left:-62%;width:42%;pointer-events:none;transform:skewX(-18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62),rgba(137,244,255,.24),transparent);opacity:0;
+  animation:lammetnaLivingSweep 5.2s ease-in-out infinite
+}
+.living-card--gold::before{background:radial-gradient(circle at 22% 32%,rgba(255,221,83,.44),transparent 19%),radial-gradient(circle at 76% 68%,rgba(197,87,255,.34),transparent 24%),radial-gradient(circle at 52% 10%,rgba(118,238,255,.28),transparent 18%)}
+.living-card--violet::before{background:radial-gradient(circle at 18% 28%,rgba(67,240,255,.43),transparent 20%),radial-gradient(circle at 82% 70%,rgba(211,58,255,.40),transparent 25%),radial-gradient(circle at 55% 10%,rgba(255,255,255,.20),transparent 17%)}
+.star-orbit{position:relative;box-shadow:inset 0 0 24px rgba(255,255,255,.13),0 0 22px rgba(255,204,45,.18)}
+.star-orbit::before{content:"";position:absolute;inset:-8px;border-radius:999px;border:1px solid rgba(255,229,116,.42);box-shadow:0 0 18px rgba(255,196,24,.30);animation:lammetnaOrbitPulse 2.8s ease-in-out infinite}
+.star-pulse{filter:drop-shadow(0 0 8px rgba(255,194,29,.62));animation:lammetnaStarPulse 2.3s ease-in-out infinite}
+.auth-glow-card{border-color:rgba(174,211,255,.88);box-shadow:0 18px 52px rgba(42,91,171,.13),0 0 0 1px rgba(104,211,255,.10),inset 0 0 30px rgba(130,225,255,.05)}
+.auth-glow-card::before{inset:-42%;opacity:.48;background:radial-gradient(circle at 12% 18%,rgba(34,220,236,.34),transparent 18%),radial-gradient(circle at 90% 72%,rgba(176,75,255,.27),transparent 22%),radial-gradient(circle at 52% 52%,rgba(255,255,255,.72),transparent 34%);filter:blur(26px);animation-duration:8.4s}
+.auth-glow-card::after{background:linear-gradient(90deg,transparent,rgba(93,231,255,.18),rgba(183,100,255,.15),transparent);animation-duration:6.3s}
+.living-cta{position:relative;overflow:hidden;box-shadow:0 14px 30px rgba(72,67,225,.22),0 0 24px rgba(29,213,241,.16)}
+.living-cta::after{content:"";position:absolute;inset:-40% auto -40% -45%;width:34%;pointer-events:none;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.58),transparent);animation:lammetnaCtaSweep 3.9s ease-in-out infinite}
+@keyframes lammetnaLivingGlow{0%{transform:translate3d(-5%,-3%,0) rotate(-3deg) scale(1)}50%{transform:translate3d(5%,4%,0) rotate(6deg) scale(1.06)}100%{transform:translate3d(-1%,7%,0) rotate(-5deg) scale(1.02)}}
+@keyframes lammetnaLivingSweep{0%,56%{left:-62%;opacity:0}64%{opacity:.44}84%{left:122%;opacity:.30}100%{left:122%;opacity:0}}
+@keyframes lammetnaStarPulse{0%,100%{transform:scale(1) rotate(-2deg);filter:drop-shadow(0 0 7px rgba(255,194,29,.52))}50%{transform:scale(1.09) rotate(3deg);filter:drop-shadow(0 0 15px rgba(255,213,56,.86))}}
+@keyframes lammetnaOrbitPulse{0%,100%{transform:scale(.96);opacity:.45}50%{transform:scale(1.08);opacity:.92}}
+@keyframes lammetnaCtaSweep{0%,52%{left:-45%;opacity:0}62%{opacity:.58}84%{left:116%;opacity:.46}100%{left:116%;opacity:0}}
+@media (prefers-reduced-motion:reduce){.living-card::before,.living-card::after,.auth-glow-card::before,.auth-glow-card::after,.star-pulse,.star-orbit::before,.living-cta::after{animation:none!important}}

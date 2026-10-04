@@ -53,7 +53,7 @@ export default function Login(){
 
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
     <PixelHeroImage src="/pixel/login-hero.jpg" alt="لمتنا" className="w-full"/>
-    <section className="pixel-card relative -mt-3 mx-4 rounded-[38px] px-5 pb-7 pt-7">
+    <section className="pixel-card auth-glow-card relative -mt-3 mx-4 rounded-[38px] px-5 pb-7 pt-7">
       {isReset?<>
         <h2 className="text-center text-[30px] font-black">كلمة مرور جديدة</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#6f7b95]">اختر كلمة مرور قوية لحسابك</p>
@@ -62,7 +62,7 @@ export default function Login(){
           <input className="h-14 w-full rounded-[20px] bg-[#f1f5fb] px-4 outline-none ring-1 ring-[#e0e9f5]" type="password" placeholder="تأكيد كلمة المرور" value={p2} onChange={e=>setP2(e.target.value)}/>
         </div>
         {msg?<p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{msg}</p>:null}
-        <button onClick={reset} disabled={busy} className="tap-action lammetna-gradient hero-shadow mt-5 h-[60px] w-full rounded-[24px] py-4 text-lg font-black text-white">حفظ كلمة المرور</button>
+        <button onClick={reset} disabled={busy} className="tap-action lammetna-gradient hero-shadow living-cta mt-5 h-[60px] w-full rounded-[24px] py-4 text-lg font-black text-white">حفظ كلمة المرور</button>
       </>:<>
         <h2 className="text-center text-[32px] font-black">تسجيل الدخول</h2>
         <p className="mt-2 text-center text-[16px] font-bold text-[#66728c]">مرحبًا بك مجددًا في لمتنا 💜</p>
@@ -82,7 +82,7 @@ export default function Login(){
         <button onClick={forgot} className="tap-action mt-4 block text-sm font-black text-[#143dd0]">نسيت كلمة المرور؟</button>
         {msg?<p className="mt-3 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{msg}</p>:null}
 
-        <button onClick={login} disabled={busy||!email.trim()||password.length<6} className="tap-action lammetna-gradient hero-shadow mt-5 flex h-16 w-full items-center justify-between rounded-[25px] px-5 text-[22px] font-black text-white disabled:opacity-50">
+        <button onClick={login} disabled={busy||!email.trim()||password.length<6} className="tap-action lammetna-gradient hero-shadow living-cta mt-5 flex h-16 w-full items-center justify-between rounded-[25px] px-5 text-[22px] font-black text-white disabled:opacity-50">
           <span>{busy?'جاري الدخول...':'تسجيل الدخول'}</span>
           <span className="grid h-11 w-11 place-items-center rounded-[16px] bg-white text-[#7222e5]"><ChevronLeft size={27}/></span>
         </button>

@@ -25,21 +25,23 @@ export default function Person({params}:{params:Promise<{id:string}>}){
   const [paidMessage,setPaidMessage]=useState('')
   const [directCost,setDirectCost]=useState(20)
   const [interested,setInterested]=useState(false)
+  const [profileAge,setProfileAge]=useState<number|null>(null)
 
   useEffect(()=>{(async()=>{
     await s.rpc('record_profile_view',{p_target:id})
-    const [{data:profile},{data:interests},{data:price}]=await Promise.all([
-      s.from('profiles').select('id,display_name,avatar_url,bio,mood,birth_date,show_age,countries(name_ar),cities(name_ar)').eq('id',id).single(),
+    const [{data:profile},{data:interests},{data:price},{data:ageValue}]=await Promise.all([
+      s.from('profiles').select('id,display_name,avatar_url,bio,mood,show_age,countries(name_ar),cities(name_ar)').eq('id',id).single(),
       s.from('profile_interests').select('interests(name_ar)').eq('profile_id',id),
       s.from('feature_prices').select('price_stars').eq('key','direct_message').eq('enabled',true).maybeSingle(),
+      s.rpc('public_profile_age',{p_target:id}),
     ])
-    setP(profile);setTags(interests||[])
+    setP(profile);setTags(interests||[]);setProfileAge(ageValue==null?null:Number(ageValue))
     if(price?.price_stars!=null)setDirectCost(Number(price.price_stars))
   })()},[id,s])
 
   if(!p)return <AppShell><PageHeader title="الملف"/><div className="p-6 text-center text-sm text-slate-500">جاري التحميل...</div></AppShell>
 
-  const age=p.show_age&&p.birth_date?Math.floor((Date.now()-new Date(p.birth_date).getTime())/31557600000):null
+  const age=profileAge
 
   async function findExistingConversation(){
     const {data:{user}}=await s.auth.getUser()

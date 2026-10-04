@@ -7,10 +7,7 @@ import {BrandLogo} from '@/components/brand-logo'
 import {AddInterestButton} from '@/components/add-interest-button'
 import {HomeDiscoverHero} from '@/components/home-discover-hero'
 
-function ageOf(d:string|null|undefined){
-  if(!d)return null
-  return Math.max(18,Math.floor((Date.now()-new Date(d).getTime())/31557600000))
-}
+
 const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
 
 export default async function Home(){
@@ -21,7 +18,7 @@ export default async function Home(){
   const [{data:p},{data:w},{data:people},{count:requests},{data:own}]=await Promise.all([
     s.from('profiles').select('id,display_name,profile_complete').eq('id',user.id).single(),
     s.from('star_wallets').select('balance').eq('user_id',user.id).single(),
-    s.from('profiles').select('id,display_name,avatar_url,mood,birth_date,show_age,is_online,cities(name_ar)').neq('id',user.id).eq('profile_complete',true).eq('discoverable',true).limit(8),
+    s.from('profiles').select('id,display_name,avatar_url,mood,show_age,is_online,cities(name_ar)').neq('id',user.id).eq('profile_complete',true).eq('discoverable',true).limit(8),
     s.from('connection_requests').select('*',{count:'exact',head:true}).eq('receiver_id',user.id).eq('status','pending'),
     s.from('conversation_members').select('conversation_id').eq('user_id',user.id),
   ])
@@ -35,6 +32,11 @@ export default async function Home(){
   }
 
   const faces=(people||[]) as any[]
+  const ageEntries=await Promise.all(faces.map(async (x:any)=>{
+    const {data}=await s.rpc('public_profile_age',{p_target:x.id})
+    return [x.id,data==null?null:Number(data)] as const
+  }))
+  const ages=new Map(ageEntries)
   const stars=Number(w?.balance||0)
 
   return <AppShell>
@@ -66,13 +68,21 @@ export default async function Home(){
       </section>
 
       <section className="mt-3 grid grid-cols-2 gap-3">
-        <Link href="/payments" className="tap-action relative overflow-hidden rounded-[27px] bg-[linear-gradient(135deg,#024c86,#0877be_42%,#5f22d5_100%)] p-4 text-white shadow-[0_14px_30px_rgba(36,55,170,.22)]">
-          <div className="absolute left-3 top-3 grid h-20 w-20 place-items-center rounded-full bg-white/10 blur-[1px]"><Star size={45} fill="#ffc21d" className="text-[#ffc21d]"/></div>
-          <div className="relative mr-[82px]"><p className="text-[12px] font-bold">رصيد النجوم</p><p className="mt-1 text-[27px] font-black">{stars.toLocaleString('en-US')}</p><p className="text-[11px] font-bold">نجمة ⭐</p></div>
-          <span className="relative mt-5 inline-flex rounded-full bg-white px-3 py-2 text-[11px] font-black text-[#5a24d6]">شراء نجوم +</span>
+        <Link href="/payments" className="tap-action living-card living-card--gold relative overflow-hidden rounded-[27px] bg-[linear-gradient(135deg,#024c86,#0877be_42%,#5f22d5_100%)] p-4 text-white shadow-[0_14px_30px_rgba(36,55,170,.22)]">
+          <div className="relative z-10 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-bold">رصيد النجوم</p>
+              <p className="mt-1 whitespace-nowrap text-[31px] font-black leading-none">{stars.toLocaleString('en-US')}</p>
+              <p className="mt-1 text-[11px] font-bold">نجمة ⭐</p>
+            </div>
+            <div className="star-orbit grid h-[74px] w-[74px] shrink-0 place-items-center rounded-full bg-white/10">
+              <Star size={43} fill="#ffc21d" className="star-pulse text-[#ffc21d]"/>
+            </div>
+          </div>
+          <span className="relative z-10 mt-4 inline-flex rounded-full bg-white px-3 py-2 text-[11px] font-black text-[#5a24d6]">شراء نجوم +</span>
         </Link>
 
-        <Link href="/chats" className="tap-action lammetna-gradient hero-shadow relative overflow-hidden rounded-[27px] p-4 text-white">
+        <Link href="/chats" className="tap-action lammetna-gradient hero-shadow living-card living-card--violet relative overflow-hidden rounded-[27px] p-4 text-white">
           <div className="flex items-center gap-2"><MessagesSquare size={28}/><p className="text-[28px] font-black">كلامنا</p></div>
           <p className="mt-2 text-[13px] font-bold text-white/88">{unread?`لديك ${unread} رسائل جديدة`:'محادثاتك الخاصة في مكان واحد'}</p>
           <div className="mt-3 flex -space-x-2 space-x-reverse">{[0,1,2].map(i=><img key={i} src={faces[i]?.avatar_url||fallback[i]} alt="" className="h-9 w-9 rounded-full border-2 border-white object-cover"/>)}</div>
@@ -86,7 +96,7 @@ export default async function Home(){
           {faces.slice(0,6).map((x,i)=>{
             const src=x.avatar_url||null
             const name=x.display_name||'مستخدم لمتنا'
-            const age=x.show_age?ageOf(x.birth_date):null
+            const age=ages.get(x.id)??null
             const city=(x.cities as any)?.name_ar||'غير محدد'
             return <article key={x.id} className="pixel-card glow-character-card min-w-[145px] overflow-hidden rounded-[22px]">
               <Link href={`/people/${x.id}`} className="tap-action block">

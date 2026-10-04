@@ -81,13 +81,13 @@ export default function Signup(){
 
   return <main className="mx-auto min-h-[100dvh] w-full max-w-[432px] overflow-hidden bg-[linear-gradient(180deg,#f9fdff,#eef8ff)]">
     <PixelHeroImage src="/pixel/signup-hero.jpg" alt="لمتنا" className="w-full"/>
-    <section className="pixel-card relative -mt-4 mx-4 min-h-[760px] rounded-[38px] px-5 pb-7 pt-7">
+    <section className="pixel-card auth-glow-card relative -mt-4 mx-4 min-h-[760px] rounded-[38px] px-5 pb-7 pt-7">
       {step==='otp'?<>
         <h2 className="text-center text-[32px] font-black">تأكيد البريد</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#68758e]">أدخل الرمز المرسل إلى<br/><b className="text-[#125ff5]">{email}</b></p>
         <input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,'').slice(0,6))} inputMode="numeric" className="mt-7 h-16 w-full rounded-[22px] bg-[#f1f5fb] text-center text-3xl font-black tracking-[.35em] outline-none ring-1 ring-[#e0e9f5]" placeholder="000000"/>
         {msg?<p className="mt-3 rounded-2xl bg-[#eef5ff] p-3 text-sm font-bold text-[#2a4c80]">{msg}</p>:null}
-        <button onClick={verify} disabled={busy||otp.length!==6} className="tap-action lammetna-gradient hero-shadow mt-5 h-16 w-full rounded-[24px] text-xl font-black text-white">تأكيد الحساب</button>
+        <button onClick={verify} disabled={busy||otp.length!==6} className="tap-action lammetna-gradient hero-shadow living-cta mt-5 h-16 w-full rounded-[24px] text-xl font-black text-white">تأكيد الحساب</button>
         <button onClick={resendOtp} disabled={busy||resend>0} className="tap-action mt-3 w-full py-3 text-sm font-black text-[#1745d6]">{resend>0?`إعادة الإرسال بعد ${resend} ثانية`:'إعادة إرسال الرمز'}</button>
       </>:<>
         <h2 className="text-center text-[34px] font-black">إنشاء حساب</h2>
@@ -123,7 +123,7 @@ export default function Signup(){
 
         {msg?<p className="mt-3 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{msg}</p>:null}
 
-        <button onClick={signup} disabled={busy||!ok||!email.trim()} className="tap-action lammetna-gradient hero-shadow mt-5 flex h-16 w-full items-center justify-between rounded-[25px] px-5 text-[22px] font-black text-white disabled:opacity-50">
+        <button onClick={signup} disabled={busy||!ok||!email.trim()} className="tap-action lammetna-gradient hero-shadow living-cta mt-5 flex h-16 w-full items-center justify-between rounded-[25px] px-5 text-[22px] font-black text-white disabled:opacity-50">
           <span>{busy?'جاري الإنشاء...':'إنشاء حساب'}</span>
           <span className="grid h-11 w-11 place-items-center rounded-[16px] bg-white/25"><ChevronLeft size={27}/></span>
         </button>

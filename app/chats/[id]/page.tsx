@@ -183,6 +183,19 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     }
   }, [id])
 
+  async function refreshPartnerIdentity(){
+    const {data}=await s.rpc('conversation_partner_identity',{p_conversation:id})
+    const row=Array.isArray(data)?data[0]:data
+    if(row)setPartner(row)
+  }
+
+  useEffect(()=>{
+    if(!uid)return
+    refreshPartnerIdentity()
+    const timer=window.setInterval(refreshPartnerIdentity,30000)
+    return()=>window.clearInterval(timer)
+  },[uid,id])
+
   useEffect(() => {
     if (!uid) return
 
@@ -434,6 +447,36 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     }
     if(localVideoRef.current)localVideoRef.current.srcObject=null
     if(remoteVideoRef.current)remoteVideoRef.current.srcObject=null
+  }
+
+  async function copyPartnerId(){
+    if(!partner?.public_user_id)return
+    try{
+      await navigator.clipboard.writeText(partner.public_user_id)
+      setCopiedId(true)
+      setTimeout(()=>setCopiedId(false),1400)
+    }catch{
+      setNotice('تعذر نسخ الـID.')
+    }
+  }
+
+  async function sendStarsToPartner(){
+    const amount=Number(transferStars)
+    if(!partner?.public_user_id||!Number.isInteger(amount)||amount<1)return
+    const {error}=await s.rpc('transfer_stars_by_user_id',{
+      p_public_user_id:partner.public_user_id,
+      p_amount:amount,
+      p_client_reference_id:transferRef
+    })
+    if(error){
+      setNotice(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال النجوم.')
+      return
+    }
+    const fee=Math.ceil(amount*0.15)
+    setNotice(`تم إرسال ${amount} ⭐ — وصل للطرف الآخر ${amount-fee} ⭐ بعد عمولة التطبيق 15%.`)
+    setTransferStars('')
+    setTransferRef(crypto.randomUUID())
+    setShowPartner(false)
   }
 
   async function loadSocialTools(){

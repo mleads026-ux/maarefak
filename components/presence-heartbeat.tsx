@@ -11,7 +11,15 @@ export function PresenceHeartbeat(){
 
     async function setPresence(online:boolean){
       if(stopped)return
-      await s.rpc('set_my_presence',{p_online:online}).catch(()=>{})
+      try{
+        await s.rpc('set_my_presence',{p_online:online})
+      }catch{}
+    }
+
+    async function forceOffline(){
+      try{
+        await s.rpc('set_my_presence',{p_online:false})
+      }catch{}
     }
 
     setPresence(true)
@@ -25,7 +33,7 @@ export function PresenceHeartbeat(){
     }
 
     const onPageHide=()=>{
-      s.rpc('set_my_presence',{p_online:false}).catch(()=>{})
+      void forceOffline()
     }
 
     document.addEventListener('visibilitychange',onVisibility)
@@ -36,7 +44,7 @@ export function PresenceHeartbeat(){
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange',onVisibility)
       window.removeEventListener('pagehide',onPageHide)
-      s.rpc('set_my_presence',{p_online:false}).catch(()=>{})
+      void forceOffline()
     }
   },[s])
 

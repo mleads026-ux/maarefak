@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Gift, ImagePlus, Phone, PhoneOff, Send, X, Sparkles, Images, Timer, Gamepad2, RefreshCw } from 'lucide-react'
+import { Gift, ImagePlus, Phone, PhoneOff, Send, X, Sparkles, Images, Timer, Gamepad2, RefreshCw, Video, Copy, Star, UserRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
@@ -15,6 +15,7 @@ type CallRow = {
   caller_id: string
   callee_id: string
   status: 'ringing' | 'accepted' | 'rejected' | 'ended' | 'missed'
+  call_kind: 'voice' | 'video'
 }
 
 type GiftItem = {
@@ -22,6 +23,7 @@ type GiftItem = {
   name_ar: string
   emoji: string
   price_stars: number
+  animation_tier?: string
 }
 
 export default function Chat({ params }: { params: Promise<{ id: string }> }) {
@@ -46,11 +48,18 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const [duo,setDuo]=useState<any>(null)
   const [speedSession,setSpeedSession]=useState<string|null>(null)
   const [prompt,setPrompt]=useState('')
+  const [partner,setPartner]=useState<any>(null)
+  const [showPartner,setShowPartner]=useState(false)
+  const [transferStars,setTransferStars]=useState('')
+  const [transferRef,setTransferRef]=useState(()=>crypto.randomUUID())
+  const [copiedId,setCopiedId]=useState(false)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const peerRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+  const localVideoRef = useRef<HTMLVideoElement | null>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
   const signalChannelRef = useRef<any>(null)
   const handledSignalsRef = useRef<Set<number>>(new Set())
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([])
@@ -80,15 +89,19 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     const { data: giftRows } = await s
       .from('gift_catalog')
-      .select('id,name_ar,emoji,price_stars')
+      .select('id,name_ar,emoji,price_stars,animation_tier')
       .eq('active', true)
-      .order('sort_order')
+      .order('price_stars')
 
     setGiftItems((giftRows || []) as any)
 
+    const {data:partnerRow}=await s.rpc('conversation_partner_identity',{p_conversation:id})
+    const identity=Array.isArray(partnerRow)?partnerRow[0]:partnerRow
+    if(identity)setPartner(identity)
+
     const { data: ms } = await s
       .from('messages')
-      .select('id,body,created_at,sender_id,message_type,media_path,moderation_status,moderation_reason')
+      .select('id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id')
       .eq('conversation_id', id)
       .order('created_at', { ascending: true })
       .limit(300)
@@ -98,7 +111,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     const withUrls = await Promise.all(
       rows.map(async (m: any) => {
         if (
-          m.message_type === 'image' &&
+          ['image','video'].includes(m.message_type) &&
           m.moderation_status === 'approved' &&
           m.media_path
         ) {

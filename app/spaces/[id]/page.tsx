@@ -74,6 +74,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const [challengePick,setChallengePick]=useState<string[]>([])
   const [micPick,setMicPick]=useState<string[]>([])
   const [royalBusy,setRoyalBusy]=useState(false)
+  const [chatExpanded,setChatExpanded]=useState(false)
 
   const localStreamRef=useRef<MediaStream|null>(null)
   const peersRef=useRef<Map<string,RTCPeerConnection>>(new Map())
@@ -82,6 +83,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const pendingIceRef=useRef<Map<string,RTCIceCandidateInit[]>>(new Map())
   const voiceChannelRef=useRef<any>(null)
   const messagesEndRef=useRef<HTMLDivElement|null>(null)
+  const chatDragStartRef=useRef<number|null>(null)
 
   async function load(){
     const {data:{user}}=await s.auth.getUser()
@@ -105,7 +107,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     ]=await Promise.all([
       s.from('spaces').select('id,name,emoji,is_public,owner_id,seat_count,description,public_lamma_id').eq('id',id).single(),
       s.from('space_messages')
-        .select('id,body,created_at,sender_id,profiles!space_messages_sender_id_fkey(display_name,avatar_url)')
+        .select('id,body,created_at,sender_id,message_type,gift_transaction_id,gift_id,gift_recipient_id,profiles!space_messages_sender_id_fkey(display_name,avatar_url)')
         .eq('space_id',id).order('created_at',{ascending:true}).limit(200),
       s.from('space_members').select('user_id,role,profiles(display_name,avatar_url,mood)').eq('space_id',id),
       s.from('space_voice_participants').select('user_id,mic_enabled,profiles(display_name,avatar_url)').eq('space_id',id),
@@ -201,10 +203,37 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     const text=body.trim()
     if(!text)return
     setBody('')
-    const {error}=await s.from('space_messages').insert({space_id:id,sender_id:uid,body:text})
+    const {data:row,error}=await s.from('space_messages')
+      .insert({space_id:id,sender_id:uid,body:text,message_type:'text'})
+      .select('id,body,created_at,sender_id,message_type,gift_transaction_id,gift_id,gift_recipient_id')
+      .single()
+
     if(error){
       setNotice(error.message.includes('text_not_allowed')?'الشات مقفول عن حسابك حاليًا.':'تعذر إرسال الرسالة.')
+      setBody(text)
+      return
     }
+
+    if(row){
+      const me=memberById(uid)
+      setMessages(current=>current.some((x:any)=>x.id===row.id)
+        ? current
+        : [...current,{...row,profiles:me?.profiles||{display_name:'أنت',avatar_url:null}}])
+    }
+  }
+
+  function chatDragStart(e:any){
+    chatDragStartRef.current=e.clientY
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+
+  function chatDragEnd(e:any){
+    const start=chatDragStartRef.current
+    chatDragStartRef.current=null
+    if(start==null)return
+    const delta=e.clientY-start
+    if(delta<-28)setChatExpanded(true)
+    if(delta>28)setChatExpanded(false)
   }
 
   async function requestVoiceApproval(){
@@ -213,12 +242,12 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     const {error}=await s.rpc('request_lamma_voice_join',{p_space:id})
     if(error){setNotice('تعذر إرسال طلب الانضمام للصوت.');return}
     setVoiceRequestStatus('pending')
-    setNotice('تم إرسال طلب الانضمام للصوت إلى الـHost.')
+    setNotice('تم إرسال طلب المايك إلى الـHost.')
   }
 
   async function hostVoiceDecision(userId:string,accept:boolean){
     const {error}=await s.rpc('host_respond_lamma_voice_request',{p_space:id,p_user:userId,p_accept:accept})
-    setNotice(error?'تعذر تنفيذ القرار.':accept?'تمت الموافقة على دخول الصوت.':'تم رفض طلب الصوت.')
+    setNotice(error?'تعذر تنفيذ القرار.':accept?'تمت الموافقة على طلب المايك.':'تم رفض طلب المايك.')
     await load()
   }
 
@@ -546,7 +575,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
         <div className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full border-[34px] border-white/10"/>
         <div className="pointer-events-none absolute -right-20 top-[28%] h-64 w-64 rounded-full bg-fuchsia-400/20 blur-3xl"/>
 
-        <div className="relative z-10 flex h-[55%] shrink-0 flex-col">
+        <div className={`relative z-10 flex shrink-0 flex-col overflow-hidden transition-[height] duration-300 ${chatExpanded?'h-[18%]':'h-[55%]'}`}>
           <div className="relative flex items-center justify-center pt-1">
             <button onClick={()=>setShowGuests(true)} className="tap-action absolute right-0 top-0 flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-2 text-xs font-black backdrop-blur">
               <Users size={17}/> الضيوف <span className="rounded-full bg-white/20 px-2 py-0.5">{members.length}</span>
@@ -572,9 +601,13 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                     </span>
                     <span className="mt-1 block max-w-[110px] truncate text-[11px] font-black">{royalMember.profiles?.display_name||'الضيف الملكي'}</span>
                   </button>
-                : <div className="mx-auto flex h-[72px] w-[72px] flex-col items-center justify-center rounded-full border-2 border-dashed border-[#ffe28e]/70 bg-white/10 text-[9px] font-black">
-                    <Crown size={18}/><span>يختاره الـHost</span><span className="text-[#ffe083]">150 ⭐</span>
-                  </div>
+                : isHost&&hostMember
+                  ? <button onClick={()=>assignRoyal(hostMember)} className="tap-action mx-auto flex h-[72px] w-[72px] flex-col items-center justify-center rounded-full border-2 border-dashed border-[#ffe28e]/70 bg-white/10 text-[9px] font-black">
+                      <Crown size={18}/><span>عيّن نفسك ملكي</span><span className="text-[#ffe083]">150 ⭐</span>
+                    </button>
+                  : <div className="mx-auto flex h-[72px] w-[72px] flex-col items-center justify-center rounded-full border-2 border-dashed border-[#ffe28e]/70 bg-white/10 text-[9px] font-black">
+                      <Crown size={18}/><span>يختاره الـHost</span><span className="text-[#ffe083]">150 ⭐</span>
+                    </div>
               }
             </div>
 
@@ -617,7 +650,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
         </div>
 
-        <div className="relative z-20 mt-2 flex shrink-0 items-center justify-center gap-2">
+        <div className={`relative z-20 mt-2 shrink-0 items-center justify-center gap-2 ${chatExpanded?'hidden':'flex'}`}>
           {!inVoice
             ? <button
                 onClick={requestVoiceApproval}
@@ -625,7 +658,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                 className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#5e25d8] shadow-lg disabled:opacity-65"
               >
                 <Headphones size={16}/>
-                {isHost?'تشغيل صوت الـHost':voiceRequestStatus==='accepted'?'تمت الموافقة · انضم للصوت':voiceRequestStatus==='pending'?'بانتظار موافقة الـHost':'انضم للصوت'}
+                {isHost?'تشغيل مايك الـHost':voiceRequestStatus==='accepted'?'تمت الموافقة · افتح المايك':voiceRequestStatus==='pending'?'طلب المايك قيد الانتظار':'طلب المايك'}
               </button>
             : <>
                 <button onClick={toggleMic} className={`tap-action grid h-9 w-9 place-items-center rounded-full ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}>{micEnabled?<Mic size={17}/>:<MicOff size={17}/>}</button>
@@ -635,10 +668,17 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           {isHost&&voiceRequests.length?<span className="rounded-full bg-[#ffe16d] px-3 py-2 text-[10px] font-black text-[#694000]">{voiceRequests.length} طلب صوت</span>:null}
         </div>
 
-        <div className="relative z-10 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur">
-          <div className="flex items-center justify-between border-b border-[#dce8f5] px-4 py-3">
+        <div className="relative z-30 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur transition-all duration-300">
+          <div
+            onPointerDown={chatDragStart}
+            onPointerUp={chatDragEnd}
+            className="touch-none cursor-ns-resize border-b border-[#dce8f5] px-4 pb-3 pt-2"
+          >
+            <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-[#c7d5e7]"/>
+            <div className="flex items-center justify-between">
             <div><p className="text-sm font-black">شات اللَمّة</p><p className="text-[9px] font-bold text-[#77849b]">كل رسالة باسم صاحبها</p></div>
             <span className="flex items-center gap-1 rounded-full bg-[#eaf4ff] px-3 py-1.5 text-[10px] font-black text-[#1768f4]"><MessageSquare size={13}/>{messages.length}</span>
+            </div>
           </div>
 
           <div className="hide-scrollbar flex-1 space-y-2 overflow-y-auto px-3 py-3">
@@ -647,7 +687,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
               const profile=(m.profiles as any)
               return <div key={m.id} className={`flex items-end gap-2 ${mine?'justify-start':'justify-end'}`}>
                 {!mine?<button onClick={()=>{const member=members.find(x=>x.user_id===m.sender_id);if(member)setSelectedMember(member)}} className="tap-action h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[#eaf3fb]">{profile?.avatar_url?<img src={profile.avatar_url} alt="" className="h-full w-full object-cover"/>:<span className="grid h-full w-full place-items-center text-[10px] font-black text-[#1768f4]">{(profile?.display_name||'ض')[0]}</span>}</button>:null}
-                <div className={`max-w-[78%] rounded-[18px] px-3 py-2 ${mine?'bg-[#1768f4] text-white':'bg-[#eef4fb] text-[#12203d]'}`}>
+                <div className={`max-w-[78%] rounded-[18px] px-3 py-2 ${m.message_type==='gift'?'bg-[linear-gradient(135deg,#fff0a8,#fff8df)] text-[#6f4c00] ring-1 ring-[#f0d169]':mine?'bg-[#1768f4] text-white':'bg-[#eef4fb] text-[#12203d]'}`}>
                   <p className={`mb-0.5 text-[9px] font-black ${mine?'text-white/75':'text-[#1768f4]'}`}>{mine?'أنت':profile?.display_name||'ضيف'}</p>
                   <p className="break-words text-[12px] font-medium leading-5">{m.body}</p>
                 </div>
@@ -725,7 +765,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                   {member.user_id!==uid?<button onClick={()=>setSelectedMember(member)} className="tap-action rounded-full bg-white px-2 py-1 text-[9px] font-black text-[#1768f4] ring-1 ring-[#dce7f4]">الملف</button>:null}
                 </div>
 
-                {isHost&&member.user_id!==uid&&!isRoyalRow?<button onClick={()=>assignRoyal(member)} className="tap-action mt-2 flex w-full items-center justify-center gap-1 rounded-xl bg-[#fff5c9] px-3 py-2 text-[10px] font-black text-[#8d6200] ring-1 ring-[#f0d777]"><Crown size={13}/> تعيين ضيف ملكي · 150 ⭐</button>:null}
+                {isHost&&!isRoyalRow?<button onClick={()=>assignRoyal(member)} className="tap-action mt-2 flex w-full items-center justify-center gap-1 rounded-xl bg-[#fff5c9] px-3 py-2 text-[10px] font-black text-[#8d6200] ring-1 ring-[#f0d777]"><Crown size={13}/> {member.user_id===uid?'عيّن نفسك ضيف ملكي':'تعيين ضيف ملكي'} · 150 ⭐</button>:null}
 
                 {canRoyalControl?<div className="mt-2 grid grid-cols-3 gap-1.5">
                   <button onClick={()=>royalAction(member.user_id,voice?.mic_enabled?'mute_voice':'unmute_voice')} disabled={royalBusy} className="tap-action flex items-center justify-center gap-1 rounded-xl bg-white px-2 py-2 text-[9px] font-black ring-1 ring-[#e0e8f2]">

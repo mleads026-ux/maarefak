@@ -572,9 +572,9 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                     </span>
                     <span className="mt-1 block max-w-[110px] truncate text-[11px] font-black">{royalMember.profiles?.display_name||'الضيف الملكي'}</span>
                   </button>
-                : <button onClick={requestRoyalSeat} className="tap-action mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 border-dashed border-[#ffe28e]/70 bg-white/10 text-[10px] font-black">
-                    طلب الملكي
-                  </button>
+                : <div className="mx-auto flex h-[72px] w-[72px] flex-col items-center justify-center rounded-full border-2 border-dashed border-[#ffe28e]/70 bg-white/10 text-[9px] font-black">
+                    <Crown size={18}/><span>يختاره الـHost</span><span className="text-[#ffe083]">150 ⭐</span>
+                  </div>
               }
             </div>
 
@@ -615,19 +615,27 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
             })}
           </div>
 
-          <div className="mt-auto flex items-center justify-center gap-2 pt-2">
-            {!inVoice
-              ? <button onClick={joinVoice} className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#5e25d8] shadow-lg"><Headphones size={16}/> انضم للصوت</button>
-              : <>
-                  <button onClick={toggleMic} className={`tap-action grid h-9 w-9 place-items-center rounded-full ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}>{micEnabled?<Mic size={17}/>:<MicOff size={17}/>}</button>
-                  <button onClick={leaveVoice} className="tap-action rounded-full bg-[#ff337d] px-4 py-2 text-[11px] font-black">خروج من الصوت</button>
-                </>
-            }
-            {!isRoyal&&!isHost?<button onClick={requestRoyalSeat} className="tap-action flex items-center gap-1 rounded-full bg-[#ffe16d] px-3 py-2 text-[10px] font-black text-[#694000]"><Crown size={14}/> طلب الملكي</button>:null}
-          </div>
         </div>
 
-        <div className="relative z-10 mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur">
+        <div className="relative z-20 mt-2 flex shrink-0 items-center justify-center gap-2">
+          {!inVoice
+            ? <button
+                onClick={requestVoiceApproval}
+                disabled={!isHost&&voiceRequestStatus==='pending'}
+                className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#5e25d8] shadow-lg disabled:opacity-65"
+              >
+                <Headphones size={16}/>
+                {isHost?'تشغيل صوت الـHost':voiceRequestStatus==='accepted'?'تمت الموافقة · دخول الصوت':voiceRequestStatus==='pending'?'في انتظار موافقة الـHost':'طلب الانضمام للصوت'}
+              </button>
+            : <>
+                <button onClick={toggleMic} className={`tap-action grid h-9 w-9 place-items-center rounded-full ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}>{micEnabled?<Mic size={17}/>:<MicOff size={17}/>}</button>
+                <button onClick={leaveVoice} className="tap-action rounded-full bg-[#ff337d] px-4 py-2 text-[11px] font-black">خروج من الصوت</button>
+              </>
+          }
+          {isHost&&voiceRequests.length?<span className="rounded-full bg-[#ffe16d] px-3 py-2 text-[10px] font-black text-[#694000]">{voiceRequests.length} طلب صوت</span>:null}
+        </div>
+
+        <div className="relative z-10 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur">
           <div className="flex items-center justify-between border-b border-[#dce8f5] px-4 py-3">
             <div><p className="text-sm font-black">شات اللَمّة</p><p className="text-[9px] font-bold text-[#77849b]">كل رسالة باسم صاحبها</p></div>
             <span className="flex items-center gap-1 rounded-full bg-[#eaf4ff] px-3 py-1.5 text-[10px] font-black text-[#1768f4]"><MessageSquare size={13}/>{messages.length}</span>
@@ -650,6 +658,11 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           </div>
 
           <div className="flex gap-2 border-t border-[#dce8f5] bg-white p-2">
+            {!isHost&&hostMember?<button
+              onClick={()=>{setGiftRecipient(hostMember);setGiftMode('chat');setShowGifts(true)}}
+              className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500]"
+              aria-label="إرسال هدية للـHost"
+            ><Gift size={18}/></button>:null}
             <Input
               placeholder="اكتب رسالة في اللَمّة..."
               value={body}
@@ -680,12 +693,13 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
             </div>
           </div>:null}
 
-          {isHost&&starRequests.length?<div className="mb-3 rounded-[20px] bg-[#f5f8fc] p-3">
-            <p className="mb-2 text-xs font-black">طلبات الضيف الملكي</p>
-            <div className="space-y-2">{starRequests.map((q:any)=><div key={q.id} className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-[#e3ebf5]">
-              <span className="flex-1 truncate text-[10px] font-black">{q.profiles?.display_name||'ضيف'} · {q.cost_stars} ⭐</span>
-              <button onClick={()=>hostStarDecision(q.id,true)} className="tap-action rounded-lg bg-[#17b984] px-2 py-1 text-[9px] font-black text-white">قبول</button>
-              <button onClick={()=>hostStarDecision(q.id,false)} className="tap-action rounded-lg bg-[#eef2f7] px-2 py-1 text-[9px] font-black">رفض</button>
+          {isHost&&voiceRequests.length?<div className="mb-3 rounded-[20px] bg-[#eef7ff] p-3 ring-1 ring-[#cfe3fb]">
+            <p className="mb-2 text-xs font-black">طلبات الانضمام للصوت 🎙️</p>
+            <div className="space-y-2">{voiceRequests.map((q:any)=><div key={q.user_id} className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-[#e3ebf5]">
+              {q.avatar_url?<img src={q.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover"/>:<span className="grid h-8 w-8 place-items-center rounded-full bg-[#edf4fb] text-xs font-black">{(q.display_name||'ض')[0]}</span>}
+              <span className="flex-1 truncate text-[10px] font-black">{q.display_name||'ضيف'}</span>
+              <button onClick={()=>hostVoiceDecision(q.user_id,true)} className="tap-action rounded-lg bg-[#17b984] px-2 py-1 text-[9px] font-black text-white">قبول</button>
+              <button onClick={()=>hostVoiceDecision(q.user_id,false)} className="tap-action rounded-lg bg-[#fff0f2] px-2 py-1 text-[9px] font-black text-[#d62449]">رفض</button>
             </div>)}</div>
           </div>:null}
 
@@ -710,6 +724,8 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                   </div>
                   {member.user_id!==uid?<button onClick={()=>setSelectedMember(member)} className="tap-action rounded-full bg-white px-2 py-1 text-[9px] font-black text-[#1768f4] ring-1 ring-[#dce7f4]">الملف</button>:null}
                 </div>
+
+                {isHost&&member.user_id!==uid&&!isRoyalRow?<button onClick={()=>assignRoyal(member)} className="tap-action mt-2 flex w-full items-center justify-center gap-1 rounded-xl bg-[#fff5c9] px-3 py-2 text-[10px] font-black text-[#8d6200] ring-1 ring-[#f0d777]"><Crown size={13}/> تعيين ضيف ملكي · 150 ⭐</button>:null}
 
                 {canRoyalControl?<div className="mt-2 grid grid-cols-3 gap-1.5">
                   <button onClick={()=>royalAction(member.user_id,voice?.mic_enabled?'mute_voice':'unmute_voice')} disabled={royalBusy} className="tap-action flex items-center justify-center gap-1 rounded-xl bg-white px-2 py-2 text-[9px] font-black ring-1 ring-[#e0e8f2]">
@@ -748,11 +764,42 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={()=>requestPrivateContact(selectedMember)}><Star size={15}/> تواصل · {privateContactPrice} ⭐</Button>
-          <Button variant="outline" onClick={()=>setShowGifts(v=>!v)}><Gift size={15}/> هدية</Button>
+          <Button variant="outline" onClick={()=>{setGiftRecipient(selectedMember);setGiftMode('profile');setShowGifts(true);setSelectedMember(null)}}><Gift size={15}/> هدية</Button>
         </div>
 
-        {showGifts?<div className="mt-3 grid grid-cols-3 gap-2">{gifts.map(gift=><button key={gift.id} onClick={()=>sendGift(gift)} className="tap-action rounded-2xl bg-[#f5f8fc] p-3 text-center"><div className="text-xl">{gift.emoji}</div><p className="mt-1 text-[10px] font-black">{gift.name_ar}</p><p className="text-[9px] font-bold text-[#a06a00]">{gift.price_stars} ⭐</p></button>)}</div>:null}
       </section>
+    </div>:null}
+
+    {showGifts&&giftRecipient?<div className="fixed inset-0 z-[125] flex items-end bg-black/45" onClick={()=>{setShowGifts(false);setGiftRecipient(null)}}>
+      <section onClick={e=>e.stopPropagation()} className="mx-auto max-h-[72dvh] w-full max-w-[432px] overflow-hidden rounded-t-[32px] bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#e1eaf4] px-4 py-3">
+          <div>
+            <p className="text-base font-black">اختر هدية 🎁</p>
+            <p className="mt-0.5 text-[10px] font-bold text-[#77849a]">{giftMode==='chat'?'هدية الشات تذهب للـHost':`إرسال إلى ${giftRecipient.profiles?.display_name||'الضيف'}`}</p>
+          </div>
+          <button onClick={()=>{setShowGifts(false);setGiftRecipient(null)}} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>
+        </div>
+        <div className="bg-[#f7faff] px-4 py-2 text-center text-[10px] font-black text-[#47607e]">
+          {giftMode==='chat'
+            ? spotlight
+              ? 'التوزيع: التطبيق 15% · Host 55% · كل متحدي 15%'
+              : 'التوزيع: التطبيق 15% · Host 85%'
+            : giftRecipient.user_id===space?.owner_id||isHost
+              ? 'التوزيع: التطبيق 15% · المستلم 85%'
+              : 'التوزيع داخل اللَمّة: التطبيق 15% · Host 5% · المستلم 80%'}
+        </div>
+        <div className="hide-scrollbar grid max-h-[58dvh] grid-cols-3 gap-2 overflow-y-auto p-3 pb-[max(24px,env(safe-area-inset-bottom))]">
+          {gifts.map(gift=><button key={gift.id} onClick={()=>sendGift(gift)} className={`tap-action gift-card-tier gift-${gift.animation_tier} rounded-[20px] p-3 text-center`}>
+            <div className="gift-emoji text-3xl">{gift.emoji}</div>
+            <p className="mt-1 truncate text-[10px] font-black">{gift.name_ar}</p>
+            <p className="text-[10px] font-black text-[#a06a00]">{gift.price_stars.toLocaleString()} ⭐</p>
+          </button>)}
+        </div>
+      </section>
+    </div>:null}
+
+    {giftBurst?<div className="pointer-events-none fixed inset-0 z-[150] grid place-items-center">
+      <div className="gift-burst-pop text-center"><div className="text-7xl">{giftBurst.emoji}</div><p className="mt-2 rounded-full bg-black/55 px-4 py-2 text-sm font-black text-white">{giftBurst.name}</p></div>
     </div>:null}
   </AppShell>
 }

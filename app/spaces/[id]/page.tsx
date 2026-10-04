@@ -734,7 +734,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           </div>:null}
 
           {isHost&&voiceRequests.length?<div className="mb-3 rounded-[20px] bg-[#eef7ff] p-3 ring-1 ring-[#cfe3fb]">
-            <p className="mb-2 text-xs font-black">طلبات الانضمام للصوت 🎙️</p>
+            <p className="mb-2 text-xs font-black">طلبات المايك 🎙️</p>
             <div className="space-y-2">{voiceRequests.map((q:any)=><div key={q.user_id} className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-[#e3ebf5]">
               {q.avatar_url?<img src={q.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover"/>:<span className="grid h-8 w-8 place-items-center rounded-full bg-[#edf4fb] text-xs font-black">{(q.display_name||'ض')[0]}</span>}
               <span className="flex-1 truncate text-[10px] font-black">{q.display_name||'ضيف'}</span>

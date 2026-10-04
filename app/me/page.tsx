@@ -71,7 +71,7 @@ export default async function Me(){
   return <AppShell><main className="px-4 pb-5 pt-3">
     <header className="safe-top flex items-center justify-between"><div className="flex items-center gap-2.5"><BrandLogo size={50}/><div><h1 className="text-[31px] font-black leading-none">لمتنا</h1><p className="mt-1 text-[12px] font-bold text-[#6d7890]">دائمًا مساحة أجمل مع أصدقاء جدد</p></div></div><Link href="/settings" className="tap-action grid h-11 w-11 place-items-center rounded-full bg-white text-[#0e67f5] shadow-sm ring-1 ring-[#dfe9f5]"><Settings size={23}/></Link></header>
 
-    <section className="lammetna-gradient hero-shadow glow-card-surface living-card living-card--violet relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+    <section className="lammetna-gradient hero-shadow animated-gradient-card relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
       <div className="grid grid-cols-[1fr_155px] items-center gap-4"><div>
         <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-black">{p.is_online?<span className="h-2.5 w-2.5 rounded-full bg-[#17e3a2] shadow-[0_0_12px_rgba(23,227,162,.85)]"/>:null}{p.is_online?'متصل الآن':'غير متصل'}</span>
         <h2 className="mt-3 text-[34px] font-black">{p.display_name||'حسابي'}</h2>

@@ -68,7 +68,7 @@ export default function Spaces(){
   }
 
   const featured=items[0]
-  const royalSeat=seats.find((x:any)=>x.seat_type==='star'||x.seat_no===1)
+  const royalSeat=seats.find((x:any)=>x.seat_type==='star'&&x.user_id)
   const royal=royalSeat?profiles[royalSeat.user_id]:null
   const a=spot?.user_a?profiles[spot.user_a]:null
   const b=spot?.user_b?profiles[spot.user_b]:null
@@ -94,7 +94,7 @@ export default function Spaces(){
 
       {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#244e87]">{notice}</p>:null}
 
-      {featured?<section className="lammetna-gradient hero-shadow glow-card-surface relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+      {featured?<section className="lammetna-gradient hero-shadow animated-gradient-card relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
         <div className="pointer-events-none absolute -left-16 -top-12 h-72 w-72 rounded-full border-[34px] border-white/10"/>
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-white/20 px-3 py-2 text-xs font-black">⭐ اللَّمّة الجديدة</span>

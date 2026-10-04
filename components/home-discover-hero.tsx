@@ -5,7 +5,7 @@ const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg']
 
 export function HomeDiscoverHero({faces}:{faces:any[]}){
   const people=Array.from({length:3},(_,i)=>faces[i]||null)
-  return <section className="lammetna-gradient hero-shadow glow-card-surface living-card living-card--violet relative mt-4 min-h-[205px] overflow-hidden rounded-[30px] px-5 py-5 text-white">
+  return <section className="lammetna-gradient hero-shadow animated-gradient-card relative mt-4 min-h-[205px] overflow-hidden rounded-[30px] px-5 py-5 text-white">
     <div className="pointer-events-none absolute -left-10 -top-20 h-72 w-72 rounded-full border-[32px] border-white/10"/>
     <div className="pointer-events-none absolute left-14 top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"/>
     <div className="grid min-h-[165px] grid-cols-[1.08fr_.92fr] items-center gap-2">

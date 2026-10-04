@@ -15,6 +15,7 @@ type Space={
 }
 type Filter='active'|'private'|'public'|'all'
 const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
+const lammaEmojis=['🎙️','🎧','🎤','🗣️','💬','🫂','👥','👋','✨','⭐','🌟','💫','🔥','🎉','🥳','😎','😂','😍','🥰','🤩','😄','🤝','💜','💙','🩵','❤️','🧡','💚','🌈','☕','🎮','⚽','🎵','🎶','📚','💡','🚀','🌙','☀️','🌍','🧠','🎯','🏆','👑','⚔️','🛋️','🏠']
 
 export default function Spaces(){
   const s=useMemo(()=>createClient(),[])
@@ -158,7 +159,7 @@ export default function Spaces(){
 
       {show?<section className="pixel-card mt-4 rounded-[28px] p-4">
         <h3 className="text-lg font-black">إنشاء لَمّة جديدة</h3>
-        <div className="mt-3 grid grid-cols-[88px_1fr] gap-2"><label className="rounded-2xl bg-[#f2f6fb] px-2 py-1 text-center"><span className="block text-[10px] font-black text-[#6f7d94]">رمز</span><input aria-label="رمز اللَمّة" className="mt-0.5 h-8 w-full bg-transparent text-center text-2xl outline-none" value={emoji} onChange={e=>setEmoji(e.target.value.slice(0,4))} placeholder="🎙️"/></label><input className="h-12 rounded-2xl bg-[#f2f6fb] px-3" placeholder="اسم اللَمّة" value={name} onChange={e=>setName(e.target.value)}/></div>
+        <div className="mt-3 grid grid-cols-[108px_1fr] gap-2"><label className="rounded-2xl bg-[#f2f6fb] px-2 py-1 text-center"><span className="block text-[10px] font-black text-[#6f7d94]">رمز اللَمّة</span><select aria-label="رمز اللَمّة" className="mt-0.5 h-8 w-full cursor-pointer bg-transparent text-center text-2xl outline-none" value={emoji} onChange={e=>setEmoji(e.target.value)}>{lammaEmojis.map(x=><option key={x} value={x}>{x}</option>)}</select></label><input className="h-12 rounded-2xl bg-[#f2f6fb] px-3" placeholder="اسم اللَمّة" value={name} onChange={e=>setName(e.target.value)}/></div>
         <textarea className="mt-2 min-h-20 w-full rounded-2xl bg-[#f2f6fb] p-3" placeholder="وصف مختصر" value={desc} onChange={e=>setDesc(e.target.value)}/>
         <input className="mt-2 h-12 w-full rounded-2xl bg-[#f2f6fb] px-3" placeholder="التصنيف" value={category} onChange={e=>setCategory(e.target.value)}/>
         <div className="mt-2 grid grid-cols-2 gap-2"><button onClick={()=>setIsPublic(true)} className={`tap-action rounded-2xl p-3 font-black ${isPublic?'lammetna-gradient text-white':'bg-[#eef3f9]'}`}>🌍 عامة</button><button onClick={()=>setIsPublic(false)} className={`tap-action rounded-2xl p-3 font-black ${!isPublic?'lammetna-gradient text-white':'bg-[#eef3f9]'}`}>🔒 خاصة</button></div>

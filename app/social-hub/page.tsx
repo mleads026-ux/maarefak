@@ -50,7 +50,7 @@ export default function SocialHub(){
       s.from('daily_mission_definitions').select('code,title_ar,description_ar,reward_stars').eq('active',true),
       s.from('daily_mission_claims').select('mission_code,reward_stars').eq('user_id',user.id).eq('claim_date',today),
       s.from('profiles').select('id,display_name,avatar_url,cities(name_ar),birth_date,show_age,is_online').eq('id',user.id).single(),
-      s.from('social_posts').select('id,user_id,body,media_url,media_type,topic,created_at').order('created_at',{ascending:false}).limit(40),
+      s.from('social_posts').select('id,user_id,body,media_url,media_path,media_type,topic,created_at').order('created_at',{ascending:false}).limit(40),
       s.from('feature_prices').select('price_stars').eq('key','profile_visitors_24h').eq('enabled',true).maybeSingle(),
       s.from('feature_prices').select('price_stars').eq('key','attention_ping').eq('enabled',true).maybeSingle(),
     ])
@@ -67,12 +67,21 @@ export default function SocialHub(){
     if(raw.length){
       const ids=raw.map((x:any)=>x.id)
       const userIds=[...new Set(raw.map((x:any)=>x.user_id))]
-      const [{data:ps},{data:likes},{data:comments}]=await Promise.all([
+      const mediaPaths=[...new Set(raw.map((x:any)=>x.media_path).filter(Boolean))]
+      const [{data:ps},{data:likes},{data:comments},signedResult]=await Promise.all([
         s.from('profiles').select('id,display_name,avatar_url,cities(name_ar),is_online').in('id',userIds),
         s.from('social_post_likes').select('post_id,user_id').in('post_id',ids),
         s.from('social_post_comments').select('id,post_id,user_id,body,created_at').in('post_id',ids).order('created_at',{ascending:true}),
+        mediaPaths.length
+          ? s.storage.from('social-media').createSignedUrls(mediaPaths as string[],600)
+          : Promise.resolve({data:[],error:null}),
       ])
       const pmap=Object.fromEntries((ps||[]).map((x:any)=>[x.id,x]))
+      const signedMap=Object.fromEntries(
+        (signedResult.data||[])
+          .filter((x:any)=>x.path&&x.signedUrl)
+          .map((x:any)=>[x.path,x.signedUrl])
+      )
       const commentUsers=[...new Set((comments||[]).map((x:any)=>x.user_id))]
       let cmap:any={}
       if(commentUsers.length){
@@ -80,7 +89,9 @@ export default function SocialHub(){
         cmap=Object.fromEntries((cp||[]).map((x:any)=>[x.id,x]))
       }
       setPosts(raw.map((x:any)=>({
-        ...x,profile:pmap[x.user_id],
+        ...x,
+        media_display_url:x.media_path?(signedMap[x.media_path]||null):x.media_url,
+        profile:pmap[x.user_id],
         likes:(likes||[]).filter((l:any)=>l.post_id===x.id),
         comments:(comments||[]).filter((cm:any)=>cm.post_id===x.id).map((cm:any)=>({...cm,profile:cmap[cm.user_id]}))
       })))
@@ -144,8 +155,19 @@ export default function SocialHub(){
       mediaUrl=s.storage.from('social-media').getPublicUrl(path).data.publicUrl
       mediaType='image'
     }
-    const {error}=await s.from('social_posts').insert({user_id:uid,body:postBody.trim()||null,media_url:mediaUrl,media_type:mediaType,topic:postTopic})
-    if(error){setNotice('تعذر نشر السالفة الآن.');setBusy(false);return}
+    const mediaPath=media?mediaUrl?.split('/storage/v1/object/public/social-media/')[1]||null:null
+    const {error}=await s.from('social_posts').insert({
+      user_id:uid,
+      body:postBody.trim()||null,
+      media_url:mediaUrl,
+      media_path:mediaPath,
+      media_type:mediaType,
+      topic:postTopic
+    })
+    if(error){
+      if(mediaPath)await s.storage.from('social-media').remove([mediaPath]).catch(()=>{})
+      setNotice('تعذر نشر السالفة الآن.');setBusy(false);return
+    }
     setPostBody('');setMedia(null);setShowComposer(false);setNotice('تم نشر سالفتك ✨')
     await load()
   }
@@ -201,7 +223,9 @@ export default function SocialHub(){
       confirmLabel:'حذف',
       danger:true
     }))return
-    await s.from('social_posts').delete().eq('id',post.id)
+    const {error}=await s.from('social_posts').delete().eq('id',post.id)
+    if(error){setNotice('تعذر حذف السالفة الآن.');setMenuPost(null);return}
+    if(post.media_path)await s.storage.from('social-media').remove([post.media_path]).catch(()=>{})
     setMenuPost(null);await load()
   }
 
@@ -268,8 +292,8 @@ export default function SocialHub(){
           <div className="flex items-center gap-2">{post.user_id!==uid?<button onClick={()=>greet(post.user_id)} className="tap-action rounded-full bg-[#ffe9f7] px-3 py-2 text-xs font-black text-[#ec2aa1]">💗 أرسل تحية</button>:null}<button onClick={()=>setMenuPost(post)} className="tap-action p-2"><MoreHorizontal size={20}/></button></div>
         </div>
         {post.body?<p className="mt-4 text-[16px] font-bold leading-7">{post.body}</p>:null}
-        {post.media_url?<button onClick={()=>setViewer({url:post.media_url,type:post.media_type})} className="tap-action relative mt-4 block w-full overflow-hidden rounded-[20px] bg-[#eef3f8]">
-          {post.media_type==='video'?<video src={post.media_url} className="h-[230px] w-full object-cover" muted playsInline/>:<img src={post.media_url} alt="" className="max-h-[320px] w-full object-cover"/>}
+        {post.media_display_url?<button onClick={()=>setViewer({url:post.media_display_url,type:post.media_type})} className="tap-action relative mt-4 block w-full overflow-hidden rounded-[20px] bg-[#eef3f8]">
+          {post.media_type==='video'?<video src={post.media_display_url} className="h-[230px] w-full object-cover" muted playsInline/>:<img src={post.media_display_url} alt="" className="max-h-[320px] w-full object-cover"/>}
           {post.media_type==='video'?<span className="absolute inset-0 grid place-items-center"><span className="grid h-14 w-14 place-items-center rounded-full bg-black/50 text-white"><Play fill="white"/></span></span>:null}
         </button>:null}
         {post.topic?<span className="mt-3 inline-flex rounded-full bg-[#f2eaff] px-3 py-1.5 text-xs font-black text-[#6930d8]">{post.topic}</span>:null}

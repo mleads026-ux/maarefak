@@ -4,11 +4,13 @@ import {supabaseUrl,supabasePublishableKey} from './config'
 
 type CookieItem={name:string;value:string;options?:any}
 
-function redirect(request:NextRequest,path:string){
+function redirect(request:NextRequest,path:string,source?:NextResponse){
   const u=request.nextUrl.clone()
   u.pathname=path
   u.search=''
-  return NextResponse.redirect(u)
+  const target=NextResponse.redirect(u)
+  source?.cookies.getAll().forEach(cookie=>target.cookies.set(cookie))
+  return target
 }
 
 export async function updateSession(request:NextRequest){
@@ -31,7 +33,7 @@ export async function updateSession(request:NextRequest){
   const onboardingPath=path==='/onboarding'||path.startsWith('/onboarding/')
   const publicPath=signedOutPath||authCallback||path==='/manifest.webmanifest'
 
-  if(!user&&!publicPath)return redirect(request,'/login')
+  if(!user&&!publicPath)return redirect(request,'/login',response)
   if(!user)return response
 
   if(authCallback)return response
@@ -42,23 +44,23 @@ export async function updateSession(request:NextRequest){
   ])
 
   if((legalError||needsLegal===true)&&!legalPath){
-    return redirect(request,'/legal')
+    return redirect(request,'/legal',response)
   }
 
   if(!legalError&&needsLegal===false){
     const profileComplete=!profileError&&profile?.profile_complete===true
 
     if(!profileComplete&&!onboardingPath){
-      return redirect(request,'/onboarding')
+      return redirect(request,'/onboarding',response)
     }
 
     if(profileComplete&&(signedOutPath||onboardingPath||legalPath)){
-      return redirect(request,'/home')
+      return redirect(request,'/home',response)
     }
   }
 
   if(signedOutPath){
-    return redirect(request,'/legal')
+    return redirect(request,'/legal',response)
   }
 
   return response

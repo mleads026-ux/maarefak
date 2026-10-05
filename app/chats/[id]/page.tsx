@@ -29,20 +29,6 @@ import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
 import {ChatMessageList} from '@/components/chat-message-list'
 import {ChatComposer} from '@/components/chat-composer'
 import {useChatWebRtc} from '@/hooks/use-chat-webrtc'
-import {
-  consentPrivatePhotos,
-  endConversationCall,
-  fetchConversationPartnerIdentity,
-  fetchConversationPrompt,
-  fetchPrivatePhotoTools,
-  insertChatTextMessage,
-  requestConversationCall,
-  requestSpeedIntro,
-  respondConversationCall,
-  sendConversationGift,
-  startDuoChallenge,
-  transferStarsToPublicUser,
-} from '@/lib/chat-room-actions'
 
 export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)

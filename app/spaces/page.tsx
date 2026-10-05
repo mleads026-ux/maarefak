@@ -35,13 +35,18 @@ export default function Spaces(){
   const [profiles,setProfiles]=useState<Record<string,any>>({})
   const [filter,setFilter]=useState<Filter>('active')
   const [myRooms,setMyRooms]=useState<Space[]>([])
+  const [hostTerms,setHostTerms]=useState<any>(null)
+  const [hostTermsOpen,setHostTermsOpen]=useState(false)
+  const [hostTermsAccepted,setHostTermsAccepted]=useState(false)
 
   async function load(){
     const {data:{user}}=await s.auth.getUser()
-    const [{data},{data:mine}]=await Promise.all([
+    const [{data},{data:mine},{data:terms}]=await Promise.all([
       s.from('spaces').select('id,owner_id,public_lamma_id,name,description,emoji,category,image_url,is_public,pinned_until,created_at,space_members(count)').limit(100),
-      user?s.from('spaces').select('id,owner_id,public_lamma_id,name,description,emoji,category,image_url,is_public,pinned_until,created_at,space_members(count)').eq('owner_id',user.id).order('created_at',{ascending:false}):Promise.resolve({data:[]} as any)
+      user?s.from('spaces').select('id,owner_id,public_lamma_id,name,description,emoji,category,image_url,is_public,pinned_until,created_at,space_members(count)').eq('owner_id',user.id).order('created_at',{ascending:false}):Promise.resolve({data:[]} as any),
+      s.from('legal_documents').select('title_ar,content_ar,version,effective_at').eq('kind','host_terms').eq('active',true).order('effective_at',{ascending:false}).limit(1).maybeSingle()
     ])
+    setHostTerms(terms||null)
     const sorted=((data||[]) as any).sort((a:Space,b:Space)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime())
     setItems(sorted)
     setMyRooms((mine||[]) as any)
@@ -62,8 +67,19 @@ export default function Spaces(){
 
   async function create(){
     if(!name.trim())return
+    if(!hostTermsAccepted){setNotice('لازم توافق على شروط الاستضافة وإدارة اللَمّة قبل الإنشاء.');return}
     if(!isPublic&&password.trim().length<8){setNotice('كلمة مرور اللَمّة الخاصة لازم تكون 8 أحرف على الأقل.');return}
-    const {data,error}=await s.rpc('create_lamma',{p_name:name.trim(),p_description:desc||null,p_emoji:emoji,p_category:category,p_is_public:isPublic,p_password:isPublic?null:password.trim()})
+    const {data,error}=await s.rpc('create_lamma_v3',{
+      p_name:name.trim(),
+      p_description:desc||null,
+      p_emoji:emoji,
+      p_category:category,
+      p_is_public:isPublic,
+      p_password:isPublic?null:password.trim(),
+      p_accept_host_terms:hostTermsAccepted,
+      p_duration_minutes:0,
+      p_member_limit:null
+    })
     if(error){setNotice('تعذر إنشاء اللَمّة.');return}
     setShow(false)
     if(data)r.push(`/spaces/${data}`)
@@ -164,8 +180,27 @@ export default function Spaces(){
         <input className="mt-2 h-12 w-full rounded-2xl bg-[#f2f6fb] px-3" placeholder="التصنيف" value={category} onChange={e=>setCategory(e.target.value)}/>
         <div className="mt-2 grid grid-cols-2 gap-2"><button onClick={()=>setIsPublic(true)} className={`tap-action rounded-2xl p-3 font-black ${isPublic?'lammetna-gradient text-white':'bg-[#eef3f9]'}`}>🌍 عامة</button><button onClick={()=>setIsPublic(false)} className={`tap-action rounded-2xl p-3 font-black ${!isPublic?'lammetna-gradient text-white':'bg-[#eef3f9]'}`}>🔒 خاصة</button></div>
         {!isPublic?<input type="password" className="mt-2 h-12 w-full rounded-2xl bg-[#f2f6fb] px-3" placeholder="كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)}/>:null}
-        <button onClick={create} className="tap-action lammetna-gradient mt-3 h-12 w-full rounded-2xl font-black text-white">إنشاء اللَمّة</button>
+        <div className="mt-3 rounded-2xl border border-[#dce8f7] bg-[#f8fbff] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <button type="button" onClick={()=>setHostTermsOpen(true)} className="tap-action min-w-0 flex-1 text-right text-xs font-black text-[#1745d6] underline underline-offset-4">
+              {hostTerms?.title_ar||'شروط الاستضافة وإدارة اللَمّة'}{hostTerms?.version?' · '+hostTerms.version:''}
+            </button>
+            <input type="checkbox" checked={hostTermsAccepted} onChange={e=>setHostTermsAccepted(e.target.checked)} className="h-5 w-5 accent-[#1560BD]"/>
+          </div>
+          <p className="mt-2 text-[10px] font-bold leading-4 text-[#77839a]">بالموافقة، تلتزم بإدارة اللَمّة ومنع المخالفات وفق إرشادات المجتمع.</p>
+        </div>
+        <button onClick={create} disabled={!hostTermsAccepted} className="tap-action lammetna-gradient mt-3 h-12 w-full rounded-2xl font-black text-white disabled:opacity-50">إنشاء اللَمّة</button>
       </section>:null}
+
+      {hostTermsOpen?<div className="fixed inset-0 z-[120] flex items-end bg-black/45" onClick={()=>setHostTermsOpen(false)}>
+        <section onClick={e=>e.stopPropagation()} className="mx-auto max-h-[82vh] w-full max-w-[432px] overflow-y-auto rounded-t-[34px] bg-white p-5 pb-[max(24px,env(safe-area-inset-bottom))]">
+          <div className="sticky top-0 flex items-start justify-between gap-3 bg-white pb-3">
+            <div><h3 className="font-black">{hostTerms?.title_ar||'شروط الاستضافة وإدارة اللَمّة'}</h3><p className="mt-1 text-[10px] font-bold text-[#7a869b]">الإصدار {hostTerms?.version||'الحالي'}</p></div>
+            <button onClick={()=>setHostTermsOpen(false)} className="tap-action rounded-full bg-[#eef3f8] px-3 py-2 text-xs font-black">إغلاق</button>
+          </div>
+          <div className="whitespace-pre-wrap text-sm font-medium leading-7 text-[#35435e]">{hostTerms?.content_ar||'تعذر تحميل النص الآن.'}</div>
+        </section>
+      </div>:null}
 
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between"><div><h2 className="text-[22px] font-black">لمّاتي السابقة</h2><p className="text-[11px] font-bold text-[#7a869b]">كل لَمّة أنشأتها لها ID ثابت ويمكنك حذفها في أي وقت.</p></div><Hash size={22} className="text-[#1768f4]"/></div>

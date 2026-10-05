@@ -12,35 +12,14 @@ import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {VoiceGlowBar} from '@/components/voice-glow-bar'
-
-type Member={
-  user_id:string
-  role:string
-  profiles:{
-    display_name:string|null
-    avatar_url:string|null
-    mood:string|null
-  }|null
-}
-
-type VoiceParticipant={
-  user_id:string
-  mic_enabled:boolean
-  profiles:{
-    display_name:string|null
-    avatar_url:string|null
-  }|null
-}
-
-type GiftItem={
-  id:string
-  name_ar:string
-  emoji:string
-  price_stars:number
-  animation_tier:string
-}
-
-const fallback=['/demo/face-1.jpg','/demo/face-2.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
+import {
+  buildLammaGuestLayout,
+  findLammaMember,
+  findLammaVoiceParticipant,
+  type LammaGiftItem,
+  type LammaMember,
+  type LammaVoiceParticipant,
+} from '@/lib/lamma-room'
 
 export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const {id}=use(params)
@@ -49,16 +28,16 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
   const [space,setSpace]=useState<any>(null)
   const [messages,setMessages]=useState<any[]>([])
-  const [members,setMembers]=useState<Member[]>([])
-  const [voiceMembers,setVoiceMembers]=useState<VoiceParticipant[]>([])
-  const [gifts,setGifts]=useState<GiftItem[]>([])
+  const [members,setMembers]=useState<LammaMember[]>([])
+  const [voiceMembers,setVoiceMembers]=useState<LammaVoiceParticipant[]>([])
+  const [gifts,setGifts]=useState<LammaGiftItem[]>([])
   const [privateContactPrice,setPrivateContactPrice]=useState(20)
   const [uid,setUid]=useState('')
   const [body,setBody]=useState('')
-  const [selectedMember,setSelectedMember]=useState<Member|null>(null)
+  const [selectedMember,setSelectedMember]=useState<LammaMember|null>(null)
   const [showGifts,setShowGifts]=useState(false)
   const [showGiftRecipients,setShowGiftRecipients]=useState(false)
-  const [giftRecipient,setGiftRecipient]=useState<Member|null>(null)
+  const [giftRecipient,setGiftRecipient]=useState<LammaMember|null>(null)
   const [giftMode,setGiftMode]=useState<'profile'|'chat'>('profile')
   const [giftBurst,setGiftBurst]=useState<{emoji:string;name:string}|null>(null)
   const [voiceRequestStatus,setVoiceRequestStatus]=useState<'none'|'pending'|'accepted'|'rejected'|'host'>('none')
@@ -179,27 +158,22 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const royalId=royalSeat?.user_id||null
   const isRoyal=Boolean(uid&&royalId===uid)
 
-  function memberById(userId?:string|null){
-    if(!userId)return null
-    return members.find(x=>x.user_id===userId)||null
-  }
-
-  const royalMember=memberById(royalId)
+  const memberById=(userId?:string|null)=>findLammaMember(members,userId)
   const hostMember=memberById(space?.owner_id)
-  const challengeA=memberById(spotlight?.user_a)
-  const challengeB=memberById(spotlight?.user_b)
-  const reserved=new Set([royalId,spotlight?.user_a,spotlight?.user_b].filter(Boolean))
-  const otherGuests=members.filter(x=>!reserved.has(x.user_id)).slice(0,8)
-  const orderedGuests=[
-    ...(royalMember?[royalMember]:[]),
-    ...(challengeA?[challengeA]:[]),
-    ...(challengeB?[challengeB]:[]),
-    ...members.filter(x=>!reserved.has(x.user_id)),
-  ]
+  const {
+    royalMember,
+    challengeA,
+    challengeB,
+    otherGuests,
+    orderedGuests,
+  }=buildLammaGuestLayout(
+    members,
+    royalId,
+    spotlight?.user_a,
+    spotlight?.user_b
+  )
 
-  function voiceState(userId:string){
-    return voiceMembers.find(x=>x.user_id===userId)
-  }
+  const voiceState=(userId:string)=>findLammaVoiceParticipant(voiceMembers,userId)
 
   async function send(){
     const text=body.trim()
@@ -453,7 +427,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     pendingIceRef.current.clear()
   }
 
-  async function requestPrivateContact(member:Member){
+  async function requestPrivateContact(member:LammaMember){
     setNotice('')
     const {error}=await s.rpc('request_private_contact_from_space',{
       p_space:id,p_target:member.user_id,p_message:null
@@ -468,14 +442,14 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     setSelectedMember(null)
   }
 
-  function chooseGiftRecipient(member:Member){
+  function chooseGiftRecipient(member:LammaMember){
     setGiftRecipient(member)
     setGiftMode(member.user_id===space?.owner_id&&uid!==space?.owner_id?'chat':'profile')
     setShowGiftRecipients(false)
     setShowGifts(true)
   }
 
-  async function sendGift(gift:GiftItem){
+  async function sendGift(gift:LammaGiftItem){
     if(!giftRecipient)return
     const {error}=giftMode==='chat'
       ? await s.rpc('send_lamma_chat_gift',{p_space:id,p_gift:gift.id})
@@ -492,7 +466,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     setGiftRecipient(null)
   }
 
-  async function assignRoyal(member:Member){
+  async function assignRoyal(member:LammaMember){
     if(!isHost)return
     const {error}=await s.rpc('host_assign_royal',{p_space:id,p_target:member.user_id})
     setNotice(error
@@ -575,7 +549,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     await load()
   }
 
-  const renderAvatar=(member:Member|null,size='h-12 w-12')=>{
+  const renderAvatar=(member:LammaMember|null,size='h-12 w-12')=>{
     const name=member?.profiles?.display_name||'ضيف'
     return member?.profiles?.avatar_url
       ? <img src={member.profiles.avatar_url} alt="" className={`${size} rounded-full object-cover`}/>

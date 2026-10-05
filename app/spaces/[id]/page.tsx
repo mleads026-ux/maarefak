@@ -2,15 +2,8 @@
 
 import {use,useEffect,useMemo,useRef,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {
-  Crown,Gift,Mic,MicOff,PhoneCall,Send,Star,Users,X,Swords,
-  ChevronLeft,Volume2,VolumeX,UserMinus,MessageSquareOff,
-  MessageSquare,Check,Headphones,ShieldCheck
-} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
-import {Button} from '@/components/ui/button'
-import {Input} from '@/components/ui/input'
 import {LammaRoomStage} from '@/components/lamma-room-stage'
 import {LammaGiftBurst,LammaGiftPicker,LammaGiftRecipientPicker} from '@/components/lamma-gift-modals'
 import {LammaChatPanel} from '@/components/lamma-chat-panel'
@@ -19,7 +12,6 @@ import {LammaGuestDrawer} from '@/components/lamma-guest-drawer'
 import {
   buildLammaGuestLayout,
   findLammaMember,
-  findLammaVoiceParticipant,
   type LammaGiftItem,
   type LammaMember,
   type LammaVoiceParticipant,
@@ -27,6 +19,17 @@ import {
 import {fetchLammaRoomSnapshot} from '@/lib/lamma-room-data'
 import {subscribeLammaRoomRealtime} from '@/lib/lamma-room-realtime'
 import {useLammaWebRtc} from '@/hooks/use-lamma-webrtc'
+import {
+  assignLammaRoyal,
+  controlLammaMember,
+  createLammaTextMessage,
+  requestLammaPrivateContact,
+  requestLammaRoyalSeat,
+  respondLammaRoyalSeat,
+  sendLammaGift,
+  setLammaPairSpotlight,
+  type LammaRoyalAction,
+} from '@/lib/lamma-actions'
 
 export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const {id}=use(params)
@@ -149,16 +152,11 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     spotlight?.user_b
   )
 
-  const voiceState=(userId:string)=>findLammaVoiceParticipant(voiceMembers,userId)
-
   async function send(){
     const text=body.trim()
     if(!text)return
     setBody('')
-    const {data:row,error}=await s.from('space_messages')
-      .insert({space_id:id,sender_id:uid,body:text,message_type:'text'})
-      .select('id,body,created_at,sender_id,message_type,gift_transaction_id,gift_id,gift_recipient_id')
-      .single()
+    const {data:row,error}=await createLammaTextMessage(s,id,uid,text)
 
     if(error){
       setNotice(error.message.includes('text_not_allowed')?'الشات مقفول عن حسابك حاليًا.':'تعذر إرسال الرسالة.')
@@ -257,9 +255,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
   async function requestPrivateContact(member:LammaMember){
     setNotice('')
-    const {error}=await s.rpc('request_private_contact_from_space',{
-      p_space:id,p_target:member.user_id,p_message:null
-    })
+    const {error}=await requestLammaPrivateContact(s,id,member)
     if(error){
       if(error.message.includes('insufficient_stars'))setNotice('رصيد النجوم غير كافٍ.')
       else if(error.message.includes('already_connected'))setNotice('أنتم بالفعل متصلون في كلامنا.')
@@ -279,9 +275,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
   async function sendGift(gift:LammaGiftItem){
     if(!giftRecipient)return
-    const {error}=giftMode==='chat'
-      ? await s.rpc('send_lamma_chat_gift',{p_space:id,p_gift:gift.id})
-      : await s.rpc('send_gift',{p_target:giftRecipient.user_id,p_gift:gift.id,p_space:id})
+    const {error}=await sendLammaGift(s,id,gift,giftRecipient,giftMode)
     if(error){
       setNotice(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال الهدية.')
       return
@@ -296,7 +290,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
   async function assignRoyal(member:LammaMember){
     if(!isHost)return
-    const {error}=await s.rpc('host_assign_royal',{p_space:id,p_target:member.user_id})
+    const {error}=await assignLammaRoyal(s,id,member)
     setNotice(error
       ? error.message.includes('insufficient_stars')?'رصيدك لا يكفي لتعيين ضيف ملكي بـ150 ⭐.':'تعذر تعيين الضيف الملكي.'
       :`تم تعيين ${member.profiles?.display_name||'الضيف'} كضيف ملكي مقابل 150 ⭐.`)
@@ -304,24 +298,22 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   }
 
   async function requestRoyalSeat(){
-    const {error}=await s.rpc('request_star_seat',{p_space:id})
+    const {error}=await requestLammaRoyalSeat(s,id)
     setNotice(error
       ? error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال طلب الضيف الملكي.'
       :'تم إرسال طلب الضيف الملكي للمضيف 👑')
   }
 
   async function hostStarDecision(requestId:string,accept:boolean){
-    const {error}=await s.rpc('respond_star_seat_request',{p_request:requestId,p_accept:accept})
+    const {error}=await respondLammaRoyalSeat(s,requestId,accept)
     setNotice(error?'تعذر تنفيذ القرار.':accept?'تم تعيين الضيف الملكي 👑':'تم رفض الطلب.')
     await load()
   }
 
-  async function royalAction(target:string,action:'mute_voice'|'unmute_voice'|'mute_text'|'unmute_text'|'kick'){
+  async function royalAction(target:string,action:LammaRoyalAction){
     if(!isRoyal)return
     setRoyalBusy(true)
-    const {error}=await s.rpc('royal_control_lamma_member',{
-      p_space:id,p_target:target,p_action:action
-    })
+    const {error}=await controlLammaMember(s,id,target,action)
     setNotice(error
       ? 'تعذر تنفيذ الإجراء الملكي.'
       : action==='kick'?'تم حذف الضيف من اللَمّة.'
@@ -352,11 +344,12 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     setRoyalBusy(true)
     const targets=members.filter(m=>m.user_id!==uid&&m.user_id!==space?.owner_id)
     for(const member of targets){
-      await s.rpc('royal_control_lamma_member',{
-        p_space:id,
-        p_target:member.user_id,
-        p_action:micPick.includes(member.user_id)?'unmute_voice':'mute_voice'
-      })
+      await controlLammaMember(
+        s,
+        id,
+        member.user_id,
+        micPick.includes(member.user_id)?'unmute_voice':'mute_voice'
+      )
     }
     setRoyalBusy(false)
     setNotice('تم تطبيق اختيار المايكات.')
@@ -366,9 +359,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   async function setNewChallenge(){
     if(!isRoyal||challengePick.length!==2)return
     setRoyalBusy(true)
-    const {error}=await s.rpc('royal_set_lamma_pair_spotlight',{
-      p_space:id,p_user_a:challengePick[0],p_user_b:challengePick[1]
-    })
+    const {error}=await setLammaPairSpotlight(s,id,challengePick[0],challengePick[1])
     setNotice(error
       ? error.message.includes('users_must_join_voice')?'الشخصان لازم يكونا داخل الصوت أولًا.':'تعذر تعيين التحدي الجديد.'
       :'تم تعيين شخصين جديدين للتحدي ⚔️')

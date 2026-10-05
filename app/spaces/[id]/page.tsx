@@ -12,6 +12,7 @@ import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {VoiceGlowBar} from '@/components/voice-glow-bar'
+import {LammaGiftBurst,LammaGiftPicker,LammaGiftRecipientPicker} from '@/components/lamma-gift-modals'
 import {
   buildLammaGuestLayout,
   findLammaMember,
@@ -790,31 +791,14 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       </div>
     </div>:null}
 
-    {showGiftRecipients?<div className="fixed inset-0 z-[122] flex items-end bg-black/45" onClick={()=>setShowGiftRecipients(false)}>
-      <section onClick={e=>e.stopPropagation()} className="mx-auto max-h-[70dvh] w-full max-w-[432px] overflow-hidden rounded-t-[30px] bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#e1eaf4] px-4 py-3">
-          <div><p className="text-base font-black">إرسال هدية 🎁</p><p className="mt-0.5 text-[10px] font-bold text-[#77849a]">اختار الشخص اللي هتبعت له الهدية</p></div>
-          <button onClick={()=>setShowGiftRecipients(false)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>
-        </div>
-        <div className="hide-scrollbar max-h-[58dvh] space-y-2 overflow-y-auto p-3 pb-[max(24px,env(safe-area-inset-bottom))]">
-          {members.filter(member=>member.user_id!==uid).map(member=><button
-            key={member.user_id}
-            onClick={()=>chooseGiftRecipient(member)}
-            className="tap-action flex w-full items-center gap-3 rounded-[18px] bg-[#f5f8fc] p-3 text-right ring-1 ring-[#dfe8f2]"
-          >
-            <span className="ornate-silver-ring relative h-11 w-11 shrink-0 rounded-full p-[3px]">
-              {member.profiles?.avatar_url?<img src={member.profiles.avatar_url} alt="" className="h-full w-full rounded-full object-cover"/>:<span className="grid h-full w-full place-items-center rounded-full bg-[#eaf3fb] font-black text-[#1768f4]">{(member.profiles?.display_name||'ض')[0]}</span>}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-black">{member.profiles?.display_name||'ضيف'}</span>
-              <span className="mt-0.5 block text-[9px] font-bold text-[#7b8798]">{member.user_id===space?.owner_id?'Host اللَمّة':'ضيف في اللَمّة'}</span>
-            </span>
-            <Gift size={18} className="text-[#a76500]"/>
-          </button>)}
-          {!members.some(member=>member.user_id!==uid)?<p className="p-5 text-center text-sm font-bold text-[#7b8798]">مفيش ضيوف تانيين في اللَمّة حاليًا.</p>:null}
-        </div>
-      </section>
-    </div>:null}
+    <LammaGiftRecipientPicker
+      open={showGiftRecipients}
+      members={members}
+      uid={uid}
+      ownerId={space?.owner_id}
+      onClose={()=>setShowGiftRecipients(false)}
+      onChoose={chooseGiftRecipient}
+    />
 
     {selectedMember?<div className="fixed inset-0 z-[110] flex items-end bg-black/45" onClick={()=>setSelectedMember(null)}>
       <section onClick={e=>e.stopPropagation()} className="mx-auto w-full max-w-[432px] rounded-t-[30px] bg-white p-4 pb-[max(24px,env(safe-area-inset-bottom))]">
@@ -834,36 +818,18 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       </section>
     </div>:null}
 
-    {showGifts&&giftRecipient?<div className="fixed inset-0 z-[125] flex items-end bg-black/45" onClick={()=>{setShowGifts(false);setGiftRecipient(null)}}>
-      <section onClick={e=>e.stopPropagation()} className="mx-auto max-h-[72dvh] w-full max-w-[432px] overflow-hidden rounded-t-[32px] bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#e1eaf4] px-4 py-3">
-          <div>
-            <p className="text-base font-black">اختر هدية 🎁</p>
-            <p className="mt-0.5 text-[10px] font-bold text-[#77849a]">{giftMode==='chat'?'هدية الشات تذهب للـHost':`إرسال إلى ${giftRecipient.profiles?.display_name||'الضيف'}`}</p>
-          </div>
-          <button onClick={()=>{setShowGifts(false);setGiftRecipient(null)}} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>
-        </div>
-        <div className="bg-[#f7faff] px-4 py-2 text-center text-[10px] font-black text-[#47607e]">
-          {giftMode==='chat'
-            ? spotlight
-              ? 'التوزيع: التطبيق 15% · Host 55% · كل متحدي 15%'
-              : 'التوزيع: التطبيق 15% · Host 85%'
-            : giftRecipient.user_id===space?.owner_id||isHost
-              ? 'التوزيع: التطبيق 15% · المستلم 85%'
-              : 'التوزيع داخل اللَمّة: التطبيق 15% · Host 5% · المستلم 80%'}
-        </div>
-        <div className="hide-scrollbar grid max-h-[58dvh] grid-cols-3 gap-2 overflow-y-auto p-3 pb-[max(24px,env(safe-area-inset-bottom))]">
-          {gifts.map(gift=><button key={gift.id} onClick={()=>sendGift(gift)} className={`tap-action gift-card-tier gift-${gift.animation_tier} rounded-[20px] p-3 text-center`}>
-            <div className="gift-emoji text-3xl">{gift.emoji}</div>
-            <p className="mt-1 truncate text-[10px] font-black">{gift.name_ar}</p>
-            <p className="text-[10px] font-black text-[#a06a00]">{gift.price_stars.toLocaleString()} ⭐</p>
-          </button>)}
-        </div>
-      </section>
-    </div>:null}
+    <LammaGiftPicker
+      open={showGifts}
+      gifts={gifts}
+      recipient={giftRecipient}
+      mode={giftMode}
+      hasSpotlight={Boolean(spotlight)}
+      ownerId={space?.owner_id}
+      isHost={isHost}
+      onClose={()=>{setShowGifts(false);setGiftRecipient(null)}}
+      onSend={sendGift}
+    />
 
-    {giftBurst?<div className="pointer-events-none fixed inset-0 z-[150] grid place-items-center">
-      <div className="gift-burst-pop text-center"><div className="text-7xl">{giftBurst.emoji}</div><p className="mt-2 rounded-full bg-black/55 px-4 py-2 text-sm font-black text-white">{giftBurst.name}</p></div>
-    </div>:null}
+    <LammaGiftBurst gift={giftBurst}/>
   </AppShell>
 }

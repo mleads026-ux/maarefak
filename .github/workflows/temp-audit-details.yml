@@ -1,0 +1,44 @@
+name: Temporary npm audit details
+
+on:
+  push:
+    branches:
+      - chatgpt/lammetna-production-hardeni
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependency tree
+        run: npm install --ignore-scripts
+      - name: Print npm audit details
+        shell: bash
+        run: |
+          npm audit --json > audit.json || true
+          node - <<'NODE'
+          const fs = require('fs');
+          const j = JSON.parse(fs.readFileSync('audit.json','utf8'));
+          console.log('AUDIT_SUMMARY', JSON.stringify(j.metadata?.vulnerabilities || {}));
+          for (const [name, v] of Object.entries(j.vulnerabilities || {})) {
+            console.log(
+              'AUDIT_VULN',
+              name,
+              'severity=' + v.severity,
+              'direct=' + v.isDirect,
+              'range=' + JSON.stringify(v.range),
+              'fix=' + JSON.stringify(v.fixAvailable),
+              'nodes=' + JSON.stringify(v.nodes),
+              'via=' + JSON.stringify(v.via)
+            );
+          }
+          NODE

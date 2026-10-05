@@ -246,7 +246,13 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     if(!giftRecipient)return
     const {error}=await sendLammaGift(s,id,gift,giftRecipient,giftMode)
     if(error){
-      setNotice(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال الهدية.')
+      setNotice(
+        error.message.includes('promotional_stars_not_transferable')
+          ?'النجوم الترويجية لا تُستخدم في الهدايا التي تتحول إلى أرباح.'
+          :error.message.includes('insufficient_stars')
+            ?'رصيد النجوم غير كافٍ.'
+            :'تعذر إرسال الهدية.'
+      )
       return
     }
     setGiftBurst({emoji:gift.emoji,name:gift.name_ar})

@@ -247,7 +247,16 @@ export default function Settings(){
       confirmLabel:'حذف الحساب',
       danger:true
     }))return
-    await s.rpc('delete_my_account')
+    setBusy(true);setNotice('')
+    const {data,error}=await s.functions.invoke('delete-account',{body:{}})
+    if(error||!data?.deleted){
+      const code=data?.error||''
+      setNotice(code==='mfa_required'
+        ?'يلزم إكمال التحقق بخطوتين قبل حذف الحساب.'
+        :'تعذر حذف الحساب بالكامل الآن. لم يتم حذف الحساب جزئيًا؛ حاول مرة أخرى.')
+      setBusy(false)
+      return
+    }
     await s.auth.signOut()
     r.push('/login');r.refresh()
   }

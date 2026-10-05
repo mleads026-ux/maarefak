@@ -46,9 +46,9 @@ export default function Onboarding(){
     setBusy(true);setMsg('')
     const {data:{user}}=await s.auth.getUser()
     if(!user){r.push('/login');return}
-    const {error}=await s.rpc('complete_profile',{
-      p_display_name:name,p_birth_date:birth,p_country_id:country,p_city_id:city,
-      p_bio:bio||null,p_mood:mood,p_interest_ids:selected,p_gender:gender
+    const {error}=await s.rpc('complete_profile_v2',{
+      p_display_name:name,p_birth_date:birth,p_gender:gender,p_country_id:country,p_city_id:city,
+      p_bio:bio||null,p_mood:mood,p_interest_ids:selected
     })
     if(error){setMsg(friendlyError(error.message));setBusy(false);return}
     if(avatar){

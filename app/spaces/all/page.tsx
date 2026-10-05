@@ -146,39 +146,61 @@ export default function AllLammatPage(){
           return <button
             key={room.id}
             onClick={()=>openRoom(room)}
-            className="all-lamma-card-v2 tap-action relative block h-[66px] w-full text-right"
+            className="all-lamma-card-v3 tap-action relative block h-[72px] w-full text-right"
           >
-            <span className="all-lamma-card-v2__surface absolute inset-0 overflow-hidden rounded-[21px] border border-white/55">
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--1">✦</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--2">✧</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--3">✦</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--4">·</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--5">✧</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--6">✦</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--7">·</span>
-              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--8">✧</span>
-            </span>
-
-            <span className="absolute right-4 top-1/2 z-10 flex min-w-0 max-w-[39%] -translate-y-1/2 items-center gap-2 text-white">
-              <AudioLines size={22} strokeWidth={2.5} className="shrink-0 text-white/88"/>
-              <span className="block truncate text-[15px] font-black">{room.name}</span>
-            </span>
-
-            <span className="all-lamma-card-v2__count absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full px-4 py-2 text-[12px] font-black text-white">
-              <Users size={18} strokeWidth={2.7}/>{count}
-            </span>
-
-            <span className="absolute left-2 top-1/2 z-20 h-[84px] w-[84px] -translate-y-1/2">
-              <span className="all-lamma-card-v2__crown absolute -top-[9px] left-1/2 z-30 -translate-x-1/2">
-                <Crown size={18} strokeWidth={2.1}/>
+            <span className="all-lamma-card-v3__surface absolute inset-0 overflow-hidden rounded-[20px]">
+              <span className="all-lamma-card-v3__glow"/>
+              <span className="all-lamma-card-v3__stars" aria-hidden="true">
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--1">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--2">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--3">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--4">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--5">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--6">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--7">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--8">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--9">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--10">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--11">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--12">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--13">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--14">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--15">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--16">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--17">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--18">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--19">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--20">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--21">·</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--22">✦</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--23">✧</span>
+                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--24">·</span>
               </span>
-              <span className="ornate-silver-ring all-lamma-card-v2__avatar-frame absolute inset-0 rounded-full p-[5px]">
-                <span className="relative block h-full w-full overflow-hidden rounded-full bg-[#dfeaf7]">
+            </span>
+
+            <span className="all-lamma-card-v3__wave absolute right-[18px] top-1/2 z-10 -translate-y-1/2 text-white/90">
+              <AudioLines size={26} strokeWidth={2.7}/>
+            </span>
+
+            <span className="absolute right-[58px] top-1/2 z-10 min-w-0 max-w-[34%] -translate-y-1/2">
+              <span className="block truncate text-[16px] font-black text-white">{room.name}</span>
+            </span>
+
+            <span className="all-lamma-card-v3__count absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-[22px] px-[18px] py-[10px] text-[13px] font-black text-white">
+              <Users size={19} strokeWidth={2.8}/>{count}
+            </span>
+
+            <span className="absolute left-[8px] top-1/2 z-20 h-[80px] w-[80px] -translate-y-1/2">
+              <span className="all-lamma-card-v3__crown absolute -top-[7px] left-1/2 z-30 -translate-x-1/2">
+                <Crown size={17} strokeWidth={2.2}/>
+              </span>
+              <span className="ornate-silver-ring all-lamma-card-v3__avatar-frame absolute inset-0 rounded-full p-[5px]">
+                <span className="block h-full w-full overflow-hidden rounded-full bg-[#dfeaf7]">
                   <img src={avatar} alt={hostName} className="h-full w-full object-cover"/>
                 </span>
-                <span className="all-lamma-card-v2__bead all-lamma-card-v2__bead--left"/>
-                <span className="all-lamma-card-v2__bead all-lamma-card-v2__bead--right"/>
-                <span className="all-lamma-card-v2__bead all-lamma-card-v2__bead--bottom"/>
+                <span className="all-lamma-card-v3__bead all-lamma-card-v3__bead--left"/>
+                <span className="all-lamma-card-v3__bead all-lamma-card-v3__bead--right"/>
+                <span className="all-lamma-card-v3__bead all-lamma-card-v3__bead--bottom"/>
               </span>
             </span>
           </button>

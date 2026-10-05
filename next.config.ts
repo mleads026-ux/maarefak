@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 
+// External provider origins must be added explicitly when TURN, KYC, payouts, IAP webhooks, or ads are configured.
 const contentSecurityPolicy=[
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",

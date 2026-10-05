@@ -24,3 +24,8 @@ set chat_media_uploads_enabled=true,
     space_image_uploads_enabled=true,
     updated_at=now()
 where id=1;
+
+
+-- Restore legacy chat aliases if the old client must be served again.
+grant execute on function public.create_image_message(uuid,text) to authenticated;
+grant execute on function public.request_voice_call(uuid) to authenticated;

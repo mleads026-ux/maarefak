@@ -1,6 +1,6 @@
 export async function fetchPaymentsSnapshot(s:any,userId:string){
   const [w,p,e,r,pr,m,wr,fs,is,pid]=await Promise.all([
-    s.from('star_wallets').select('balance').eq('user_id',userId).maybeSingle(),
+    s.from('star_wallets').select('balance,promotional_balance').eq('user_id',userId).maybeSingle(),
     s.rpc('get_my_star_packs'),
     s.rpc('my_lamma_earnings_summary'),
     s.from('financial_risk_state').select('iap_debt_stars,manual_payout_hold,manual_hold_reason').eq('user_id',userId).maybeSingle(),
@@ -14,6 +14,8 @@ export async function fetchPaymentsSnapshot(s:any,userId:string){
 
   return {
     wallet:Number(w.data?.balance||0),
+    promotionalWallet:Number(w.data?.promotional_balance||0),
+    transferableWallet:Math.max(0,Number(w.data?.balance||0)-Number(w.data?.promotional_balance||0)),
     packs:p.data||[],
     earnings:Array.isArray(e.data)?e.data[0]||{}:e.data||{},
     risk:r.data||{},

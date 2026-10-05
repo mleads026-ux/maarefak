@@ -253,169 +253,113 @@ input,textarea,select{min-width:0;max-width:100%}
 }
 
 
-/* LAMMETNA_AUTH_LIVE_HERO_V10 */
+/* LAMMETNA_AUTH_LIVE_HERO_V11 */
 .auth-live-hero{
   --auth-orbit-x:50%;
   --auth-orbit-y:36.2%;
-  --auth-ring-radius:13.4%;
+  --auth-ring-box:27%;
+  --auth-bg-y:26.8%;
   isolation:isolate;
 }
 .auth-live-hero[data-auth-hero="signup"]{
   --auth-orbit-y:29.2%;
-  --auth-ring-radius:13.0%;
+  --auth-ring-box:26.5%;
+  --auth-bg-y:17.6%;
 }
-.auth-live-hero>img:first-child{
-  position:relative;
-  z-index:0;
-}
+.auth-live-hero>img:first-child{position:relative;z-index:0}
 .auth-live-hero__glow,
 .auth-live-hero__sheen,
 .auth-icon-ring-eraser,
-.auth-icon-ring-live{
-  position:absolute;
-  pointer-events:none;
-}
+.auth-icon-ring-crop{position:absolute;pointer-events:none}
+
 .auth-live-hero__glow{
-  z-index:3;
-  inset:-18%;
-  opacity:.72;
-  mix-blend-mode:screen;
+  z-index:3;inset:-18%;opacity:.72;mix-blend-mode:screen;
   background:
     radial-gradient(circle at 17% 25%,rgba(38,236,255,.36),transparent 20%),
     radial-gradient(circle at 78% 28%,rgba(117,140,255,.22),transparent 20%),
     radial-gradient(circle at 83% 72%,rgba(203,69,255,.28),transparent 22%),
     radial-gradient(circle at 42% 62%,rgba(255,255,255,.20),transparent 18%);
   filter:blur(18px);
-  animation:authLiveInsideDriftV10 7.6s ease-in-out infinite alternate;
+  animation:authLiveInsideDriftV11 7.6s ease-in-out infinite alternate;
 }
 .auth-live-hero__sheen{
-  z-index:4;
-  top:-28%;
-  bottom:-28%;
-  left:-46%;
-  width:31%;
-  opacity:0;
-  transform:skewX(-17deg);
-  mix-blend-mode:screen;
-  background:linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(88,238,255,.10) 20%,
-    rgba(255,255,255,.72) 48%,
-    rgba(199,100,255,.17) 68%,
-    transparent 100%
-  );
+  z-index:4;top:-28%;bottom:-28%;left:-46%;width:31%;opacity:0;
+  transform:skewX(-17deg);mix-blend-mode:screen;
+  background:linear-gradient(90deg,transparent,rgba(88,238,255,.10) 20%,rgba(255,255,255,.72) 48%,rgba(199,100,255,.17) 68%,transparent);
   filter:blur(2px);
-  animation:authLiveSheenV10 5.8s ease-in-out infinite;
+  animation:authLiveSheenV11 5.8s ease-in-out infinite;
 }
 
-/* Softly erase only the static decorative ring from the raster source.
-   The phone mark and the card remain untouched. */
+/* Only soften the static ring area; the card itself never transforms. */
 .auth-icon-ring-eraser{
   z-index:5;
-  inset:0;
-  -webkit-mask:radial-gradient(
-    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
-    transparent 0 54%,
-    #000 60% 100%,
-    transparent 100%
-  );
-  mask:radial-gradient(
-    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
-    transparent 0 54%,
-    #000 60% 100%,
-    transparent 100%
-  );
-  backdrop-filter:blur(9px) saturate(1.2);
-  -webkit-backdrop-filter:blur(9px) saturate(1.2);
-  background:rgba(255,255,255,.035);
+  left:var(--auth-orbit-x);
+  top:var(--auth-orbit-y);
+  width:var(--auth-ring-box);
+  aspect-ratio:1;
+  transform:translate(-50%,-50%);
+  border-radius:999px;
+  -webkit-mask:radial-gradient(circle,transparent 0 47%,#000 53% 100%);
+  mask:radial-gradient(circle,transparent 0 47%,#000 53% 100%);
+  backdrop-filter:blur(8px) saturate(1.12);
+  -webkit-backdrop-filter:blur(8px) saturate(1.12);
+  background:rgba(255,255,255,.025);
 }
 
-/* This is the original hero image, clipped to the actual ring.
-   Rotating this layer rotates the real ring artwork, not a synthetic ring. */
-.auth-icon-ring-live{
+/* Hard crop: this box is only the icon ring area. Nothing outside it can rotate. */
+.auth-icon-ring-crop{
   z-index:6;
+  left:var(--auth-orbit-x);
+  top:var(--auth-orbit-y);
+  width:var(--auth-ring-box);
+  aspect-ratio:1;
+  transform:translate(-50%,-50%);
+  border-radius:999px;
+  overflow:hidden;
+}
+.auth-icon-ring-live{
+  position:absolute;
   inset:0;
-  width:100%;
-  height:100%;
-  object-fit:fill;
-  transform-origin:var(--auth-orbit-x) var(--auth-orbit-y);
-  -webkit-mask:radial-gradient(
-    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
-    transparent 0 54%,
-    #000 60% 100%,
-    transparent 100%
-  );
-  mask:radial-gradient(
-    circle var(--auth-ring-radius) at var(--auth-orbit-x) var(--auth-orbit-y),
-    transparent 0 54%,
-    #000 60% 100%,
-    transparent 100%
-  );
+  border-radius:999px;
+  background-repeat:no-repeat;
+  background-size:370.37% auto;
+  background-position:50% var(--auth-bg-y);
+  -webkit-mask:radial-gradient(circle,transparent 0 47%,#000 53% 100%);
+  mask:radial-gradient(circle,transparent 0 47%,#000 53% 100%);
   filter:
     drop-shadow(0 0 5px rgba(255,255,255,.90))
     drop-shadow(0 0 10px rgba(71,232,255,.42))
     drop-shadow(0 0 15px rgba(191,71,255,.22));
-  animation:authOriginalRingBrakeV10 8.2s linear infinite;
+  transform-origin:50% 50%;
+  animation:authOriginalRingBrakeV11 8.6s linear infinite;
   will-change:transform;
 }
 
-@keyframes authLiveInsideDriftV10{
+@keyframes authLiveInsideDriftV11{
   0%{transform:translate3d(-3%,-2%,0) scale(1);opacity:.54}
   48%{transform:translate3d(4%,3%,0) scale(1.05);opacity:.78}
   100%{transform:translate3d(-1%,5%,0) scale(1.02);opacity:.63}
 }
-@keyframes authLiveSheenV10{
+@keyframes authLiveSheenV11{
   0%,55%{left:-46%;opacity:0}
   63%{opacity:.54}
   82%{left:118%;opacity:.34}
   100%{left:118%;opacity:0}
 }
 
-/* 360° clockwise -> small tension overshoot -> ~quarter-turn rebound ->
-   long, progressively slower braking -> quiet stop/pause. */
-@keyframes authOriginalRingBrakeV10{
-  0%{
-    transform:rotate(0deg);
-    animation-timing-function:cubic-bezier(.28,.02,.22,1);
-  }
-  48%{
-    transform:rotate(360deg);
-    animation-timing-function:cubic-bezier(.16,.84,.20,1);
-  }
-  56%{
-    transform:rotate(392deg);
-    animation-timing-function:cubic-bezier(.24,.72,.22,1);
-  }
-  70%{
-    transform:rotate(302deg);
-    animation-timing-function:cubic-bezier(.18,.76,.18,1);
-  }
-  79%{
-    transform:rotate(334deg);
-    animation-timing-function:cubic-bezier(.12,.70,.16,1);
-  }
-  86%{
-    transform:rotate(349deg);
-    animation-timing-function:cubic-bezier(.10,.66,.14,1);
-  }
-  91%{
-    transform:rotate(356deg);
-    animation-timing-function:cubic-bezier(.08,.60,.12,1);
-  }
-  95%{
-    transform:rotate(359deg);
-    animation-timing-function:ease-out;
-  }
-  97%,100%{
-    transform:rotate(360deg);
-  }
+/* Full clockwise turn -> tiny pull -> quarter-turn rebound -> gentle braking stop. */
+@keyframes authOriginalRingBrakeV11{
+  0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.28,.02,.22,1)}
+  48%{transform:rotate(360deg);animation-timing-function:cubic-bezier(.16,.84,.20,1)}
+  56%{transform:rotate(392deg);animation-timing-function:cubic-bezier(.24,.72,.22,1)}
+  70%{transform:rotate(302deg);animation-timing-function:cubic-bezier(.18,.76,.18,1)}
+  80%{transform:rotate(334deg);animation-timing-function:cubic-bezier(.12,.70,.16,1)}
+  87%{transform:rotate(349deg);animation-timing-function:cubic-bezier(.10,.66,.14,1)}
+  92%{transform:rotate(356deg);animation-timing-function:cubic-bezier(.08,.60,.12,1)}
+  96%{transform:rotate(359deg);animation-timing-function:ease-out}
+  98%,100%{transform:rotate(360deg)}
 }
 @media (prefers-reduced-motion:reduce){
-  .auth-live-hero__glow,
-  .auth-live-hero__sheen,
-  .auth-icon-ring-live{
-    animation:none!important;
-  }
+  .auth-live-hero__glow,.auth-live-hero__sheen,.auth-icon-ring-live{animation:none!important}
 }
 

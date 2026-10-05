@@ -24,6 +24,7 @@ import {
   type LammaMember,
   type LammaVoiceParticipant,
 } from '@/lib/lamma-room'
+import {fetchLammaRoomSnapshot} from '@/lib/lamma-room-data'
 
 export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const {id}=use(params)
@@ -79,55 +80,22 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       .select('role').eq('space_id',id).eq('user_id',user.id).maybeSingle()
     if(!membership){r.push('/spaces');return}
 
-    const [
-      {data:sp},
-      {data:ms},
-      {data:memberRows},
-      {data:voiceRows},
-      {data:giftRows},
-      {data:priceRow},
-      {data:seatRows},
-      {data:reqRows},
-      {data:spotRow},
-    ]=await Promise.all([
-      s.from('spaces').select('id,name,emoji,is_public,owner_id,seat_count,description,public_lamma_id').eq('id',id).single(),
-      s.from('space_messages')
-        .select('id,body,created_at,sender_id,message_type,gift_transaction_id,gift_id,gift_recipient_id,profiles!space_messages_sender_id_fkey(display_name,avatar_url)')
-        .eq('space_id',id).order('created_at',{ascending:true}).limit(200),
-      s.from('space_members').select('user_id,role,profiles(display_name,avatar_url,mood)').eq('space_id',id),
-      s.from('space_voice_participants').select('user_id,mic_enabled,profiles(display_name,avatar_url)').eq('space_id',id),
-      s.from('gift_catalog').select('id,name_ar,emoji,price_stars,animation_tier').eq('active',true).order('price_stars'),
-      s.from('feature_prices').select('price_stars').eq('key','private_contact_from_lamma').maybeSingle(),
-      s.from('space_seats').select('space_id,seat_no,user_id,seat_type,profiles(display_name,avatar_url)').eq('space_id',id).order('seat_no'),
-      s.from('space_star_seat_requests')
-        .select('id,requester_id,cost_stars,status,profiles!space_star_seat_requests_requester_id_fkey(display_name,avatar_url)')
-        .eq('space_id',id).eq('status','pending').order('created_at'),
-      s.from('space_pair_spotlights').select('*').eq('space_id',id).eq('status','active').order('started_at',{ascending:false}).limit(1).maybeSingle(),
-    ])
-
-    const voices=(voiceRows||[]) as any[]
-    setSpace(sp)
-    setMessages(ms||[])
-    setMembers((memberRows||[]) as any)
+    const snapshot=await fetchLammaRoomSnapshot(s,id,user.id)
+    const voices=snapshot.voiceMembers
+    setSpace(snapshot.space)
+    setMessages(snapshot.messages)
+    setMembers(snapshot.members)
     setVoiceMembers(voices)
-    setGifts((giftRows||[]) as any)
-    setSeats(seatRows||[])
-    setStarRequests(reqRows||[])
-    setSpotlight(spotRow||null)
-    const hostNow=sp?.owner_id===user.id
-    setIsHost(hostNow)
-    if(priceRow?.price_stars!=null)setPrivateContactPrice(Number(priceRow.price_stars))
+    setGifts(snapshot.gifts)
+    setSeats(snapshot.seats)
+    setStarRequests(snapshot.starRequests)
+    setSpotlight(snapshot.spotlight)
+    setIsHost(snapshot.isHost)
+    if(snapshot.privateContactPrice!=null)setPrivateContactPrice(snapshot.privateContactPrice)
+    setVoiceRequestStatus(snapshot.voiceRequestStatus)
+    setVoiceRequests(snapshot.voiceRequests)
 
-    const {data:voiceStatus}=await s.rpc('my_lamma_voice_request_status',{p_space:id})
-    setVoiceRequestStatus(((voiceStatus as any)||'none') as any)
-    if(hostNow){
-      const {data:pendingVoice}=await s.rpc('host_lamma_voice_requests',{p_space:id})
-      setVoiceRequests((pendingVoice||[]) as any[])
-    }else{
-      setVoiceRequests([])
-    }
-
-    const ownVoice=voices.find((x:any)=>x.user_id===user.id)
+    const ownVoice=voices.find(x=>x.user_id===user.id)
     setInVoice(Boolean(ownVoice))
     if(ownVoice){
       const allowed=Boolean(ownVoice.mic_enabled)

@@ -9,6 +9,7 @@ export function explainFinancialError(error:any){
 
 export function explainStarTransferError(error:any){
   const message=error?.message||''
+  if(message.includes('promotional_stars_not_transferable'))return 'النجوم الترويجية مخصصة للاستخدام داخل لمتنا ولا يمكن تحويلها لمستخدم آخر.'
   if(message.includes('insufficient_stars'))return 'رصيد النجوم غير كافٍ.'
   if(message.includes('financial')||message.includes('iap_refund'))return 'التحويل متوقف بسبب قيد مالي على الحساب.'
   return 'تعذر تحويل النجوم.'

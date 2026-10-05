@@ -129,7 +129,7 @@ export default function SocialHub(){
   async function claim(code:string){
     setBusy(true)
     const {data,error}=await s.rpc('claim_daily_mission',{p_code:code})
-    setNotice(error?'تعذر التنفيذ.':`تم استلام ${Number(data||0)} نجمة ⭐`)
+    setNotice(error?'تعذر التنفيذ.':`تم استلام ${Number(data||0)} نجمة ترويجية ⭐ للاستخدام داخل لمتنا.`)
     await load()
   }
 
@@ -323,7 +323,8 @@ export default function SocialHub(){
 
       <article className="pixel-card mt-4 rounded-[27px] p-4">
         <div className="flex items-start justify-between"><div className="flex items-center gap-3"><img src="/demo/face-4.jpg" alt="" className="h-14 w-14 rounded-full object-cover"/><div><p className="font-black">مهمات اليوم 🎁</p><p className="text-[11px] font-bold text-[#7a869b]">اجمع نجومًا من نشاطك داخل لمتنا</p></div></div></div>
-        <div className="mt-3 space-y-2">{missions.slice(0,4).map((m:any)=><div key={m.code} className="flex items-center justify-between rounded-[17px] bg-[#f4f8fc] p-3"><div><p className="text-sm font-black">{m.title_ar}</p><p className="text-[10px] font-bold text-[#77839a]">{m.description_ar}</p></div><button disabled={busy||m.claimed} onClick={()=>claim(m.code)} className={`tap-action rounded-full px-3 py-2 text-xs font-black ${m.claimed?'bg-[#e8eef4] text-[#8290a4]':'bg-[#fff4c6] text-[#8c6200]'}`}>{m.claimed?'تم':'+'+m.reward_stars+' ⭐'}</button></div>)}</div>
+        <div className="mt-3 space-y-2">{missions.slice(0,4).map((m:any)=><div key={m.code} className="flex items-center justify-between rounded-[17px] bg-[#f4f8fc] p-3"><div><p className="text-sm font-black">{m.title_ar}</p><p className="text-[10px] font-bold text-[#77839a]">{m.description_ar}</p></div><button disabled={busy||m.claimed} onClick={()=>claim(m.code)} className={`tap-action rounded-full px-3 py-2 text-xs font-black ${m.claimed?'bg-[#e8eef4] text-[#8290a4]':'bg-[#fff4c6] text-[#8c6200]'}`}>{m.claimed?'تم':'+'+m.reward_stars+' ⭐ ترويجية'}</button></div>)}</div>
+        <p className="mt-2 text-[10px] font-bold leading-4 text-[#77839a]">⭐ نجوم للاستخدام داخل لمتنا فقط — لا تُسحب نقدًا ولا تتحول إلى أرباح قابلة للسحب.</p>
         <div className="mt-3 flex items-center gap-2"><input value={status} onChange={e=>setStatus(e.target.value)} className="h-11 flex-1 rounded-[16px] bg-[#f3f7fb] px-3 text-sm outline-none" placeholder="حالتك الآن..."/><button onClick={social} disabled={busy||!status.trim()} className="tap-action lammetna-gradient rounded-[16px] px-4 py-3 text-xs font-black text-white">نشر</button></div>
       </article>
     </main>

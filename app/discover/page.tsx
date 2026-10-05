@@ -7,25 +7,26 @@ import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
 import {appConfirm,appPrompt} from '@/components/interaction-dialog'
-
-type Match={
-  session_id:string;matched_user_id:string;display_name:string;avatar_url:string|null;
-  city_name:string|null;country_name:string|null;mood:string|null;age:number|null;
-  user_a:string;user_b:string;user_a_accepted:boolean;user_b_accepted:boolean
-}
-type Mode='new'|'vibe'|'mystery'|'voice'
-const fallback=['/demo/face-2.jpg','/demo/face-1.jpg','/demo/face-3.jpg','/demo/face-4.jpg']
+import {
+  createRandomMatch,
+  discoveryFallback,
+  discoveryRpcForMode,
+  getDiscoveryCardView,
+  normalizeNewFace,
+  type DiscoveryMode,
+  type RandomMatch,
+} from '@/lib/discover-room'
 
 export default function Discover(){
   const s=useMemo(()=>createClient(),[])
   const r=useRouter()
   const [waiting,setWaiting]=useState(false)
   const [busy,setBusy]=useState(false)
-  const [match,setMatch]=useState<Match|null>(null)
+  const [match,setMatch]=useState<RandomMatch|null>(null)
   const [userId,setUserId]=useState<string|null>(null)
   const [notice,setNotice]=useState('')
   const [advanced,setAdvanced]=useState<any[]>([])
-  const [mode,setMode]=useState<Mode>('mystery')
+  const [mode,setMode]=useState<DiscoveryMode>('mystery')
   const [advBusy,setAdvBusy]=useState(false)
   const [stars,setStars]=useState(0)
   const [voicePlaying,setVoicePlaying]=useState(false)
@@ -51,12 +52,12 @@ export default function Discover(){
       s.rpc('public_profile_age',{p_target:other}),
     ])
     if(!p)return
-    setMatch({
-      session_id:row.id,matched_user_id:other,display_name:p.display_name,avatar_url:p.avatar_url,
-      city_name:(p.cities as any)?.name_ar||null,country_name:(p.countries as any)?.name_ar||null,mood:p.mood,
-      age:ageValue==null?null:Number(ageValue),
-      user_a:row.user_a,user_b:row.user_b,user_a_accepted:!!row.user_a_accepted,user_b_accepted:!!row.user_b_accepted
-    })
+    setMatch(createRandomMatch({
+      session:row,
+      profile:p,
+      age:ageValue,
+      currentUserId:userId,
+    }))
     setWaiting(false)
   }
 
@@ -69,7 +70,7 @@ export default function Discover(){
     return()=>{s.removeChannel(c)}
   },[userId,s])
 
-  async function load(m:Mode){
+  async function load(m:DiscoveryMode){
     setMode(m);setAdvBusy(true);setNotice('')
     if(m==='new'){
       let q=s.from('profiles')
@@ -86,17 +87,12 @@ export default function Discover(){
         return [x.id,ageValue==null?null:Number(ageValue)] as const
       })):[]
       const ageMap=new Map(ageEntries)
-      const normalized=rows.map((x:any)=>({
-        ...x,
-        city_name:(x.cities as any)?.name_ar||null,
-        age:ageMap.get(x.id)??null,
-        shared_interests:0
-      }))
+      const normalized=rows.map((x:any)=>normalizeNewFace(x,ageMap.get(x.id)??null))
       if(error){setNotice('تعذر تحميل الوجوه الجديدة الآن.');setAdvanced([])}else setAdvanced(normalized)
       setAdvBusy(false)
       return
     }
-    const fn=m==='mystery'?'mystery_discovery_cards':m==='voice'?'voice_first_discovery':'people_on_my_vibe'
+    const fn=discoveryRpcForMode(m)
     const {data,error}=await s.rpc(fn,{p_limit:20})
     if(error){setNotice('تعذر تحميل الاقتراحات الآن.');setAdvanced([])}else setAdvanced(data||[])
     setAdvBusy(false)
@@ -159,12 +155,14 @@ export default function Discover(){
   }
 
   const first=advanced[0]
-  const target=first?.id||first?.user_id
-  const isKnown=mode==='new'||mode==='vibe'
-  const knownImage=first?.avatar_url||fallback[0]
-  const cardName=isKnown?(first?.display_name||'شخص جديد'):(mode==='voice'?'صوت جديد':'شخص غامض')
-  const cardCity=first?.city_name||'بالقرب منك'
-  const cardMood=first?.mood||'جاهز للتعارف'
+  const {
+    target,
+    isKnown,
+    knownImage,
+    cardName,
+    cardCity,
+    cardMood,
+  }=getDiscoveryCardView(mode,first)
 
   return <AppShell>
     <main className="px-4 pb-5 pt-3">
@@ -231,7 +229,7 @@ export default function Discover(){
       </section>
 
       {match?<section className="pixel-card mt-4 rounded-[28px] p-5 text-center">
-        <button onClick={()=>r.push(`/people/${match.matched_user_id}`)} className="tap-action mx-auto block h-28 w-28 overflow-hidden rounded-full bg-[#eaf3fc] ring-4 ring-[#32d9e5]">{match.avatar_url?<img src={match.avatar_url} alt="" className="h-full w-full object-cover"/>:<img src={fallback[1]} alt="" className="h-full w-full object-cover"/>}</button>
+        <button onClick={()=>r.push(`/people/${match.matched_user_id}`)} className="tap-action mx-auto block h-28 w-28 overflow-hidden rounded-full bg-[#eaf3fc] ring-4 ring-[#32d9e5]">{match.avatar_url?<img src={match.avatar_url} alt="" className="h-full w-full object-cover"/>:<img src={discoveryFallback[1]} alt="" className="h-full w-full object-cover"/>}</button>
         <h3 className="mt-3 text-xl font-black">{match.display_name}{match.age?`، ${match.age}`:''}</h3>
         <p className="text-sm font-bold text-[#738098]">{match.city_name||''} {match.mood?`· ${match.mood}`:''}</p>
         <button onClick={approve} className="tap-action lammetna-gradient mt-4 h-12 w-full rounded-2xl font-black text-white">موافق أتكلم</button>

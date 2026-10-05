@@ -1,7 +1,7 @@
 'use client'
 
 import {useEffect,useMemo,useState} from 'react'
-import {useRouter,useSearchParams} from 'next/navigation'
+import {useRouter} from 'next/navigation'
 import {ShieldCheck} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {Button} from '@/components/ui/button'
@@ -10,13 +10,17 @@ import {Input} from '@/components/ui/input'
 export default function MfaPage(){
   const s=useMemo(()=>createClient(),[])
   const r=useRouter()
-  const params=useSearchParams()
+  const [nextPath,setNextPath]=useState('/home')
   const [factorId,setFactorId]=useState('')
   const [code,setCode]=useState('')
   const [busy,setBusy]=useState(false)
   const [msg,setMsg]=useState('')
 
   useEffect(()=>{(async()=>{
+    const next=new URLSearchParams(location.search).get('next')
+    const safeNext=next&&next.startsWith('/')?next:'/home'
+    setNextPath(safeNext)
+
     const {data:{user}}=await s.auth.getUser()
     if(!user){r.replace('/login');return}
 
@@ -25,20 +29,18 @@ export default function MfaPage(){
 
     const factor=(data?.totp||[]).find((x:any)=>x.status==='verified')
     if(!factor){
-      const next=params.get('next')
-      r.replace(next&&next.startsWith('/')?next:'/home')
+      r.replace(safeNext)
       return
     }
 
     const {data:aal}=await s.auth.mfa.getAuthenticatorAssuranceLevel()
     if(aal?.currentLevel==='aal2'){
-      const next=params.get('next')
-      r.replace(next&&next.startsWith('/')?next:'/home')
+      r.replace(safeNext)
       return
     }
 
     setFactorId(factor.id)
-  })()},[s,r,params])
+  })()},[s,r])
 
   async function verify(){
     if(!factorId||code.length!==6)return
@@ -50,9 +52,8 @@ export default function MfaPage(){
       return
     }
 
-    const next=params.get('next')
-    if(next&&next.startsWith('/')){
-      r.replace(next);r.refresh();return
+    if(nextPath!=='/home'){
+      r.replace(nextPath);r.refresh();return
     }
 
     const {data:{user}}=await s.auth.getUser()

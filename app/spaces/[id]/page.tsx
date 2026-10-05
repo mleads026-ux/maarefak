@@ -84,6 +84,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const voiceChannelRef=useRef<any>(null)
   const messagesEndRef=useRef<HTMLDivElement|null>(null)
   const chatDragStartRef=useRef<number|null>(null)
+  const chatDragMovedRef=useRef(false)
 
   async function load(){
     const {data:{user}}=await s.auth.getUser()
@@ -224,16 +225,22 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
 
   function chatDragStart(e:any){
     chatDragStartRef.current=e.clientY
+    chatDragMovedRef.current=false
     e.currentTarget.setPointerCapture?.(e.pointerId)
   }
 
-  function chatDragEnd(e:any){
+  function chatDragMove(e:any){
     const start=chatDragStartRef.current
-    chatDragStartRef.current=null
     if(start==null)return
     const delta=e.clientY-start
-    if(delta<-28)setChatExpanded(true)
-    if(delta>28)setChatExpanded(false)
+    if(Math.abs(delta)>10)chatDragMovedRef.current=true
+    if(delta<-24&&!chatExpanded)setChatExpanded(true)
+    if(delta>24&&chatExpanded)setChatExpanded(false)
+  }
+
+  function chatDragEnd(e:any){
+    chatDragStartRef.current=null
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
   }
 
   async function requestVoiceApproval(){
@@ -668,28 +675,37 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           {isHost&&voiceRequests.length?<span className="rounded-full bg-[#ffe16d] px-3 py-2 text-[10px] font-black text-[#694000]">{voiceRequests.length} طلب صوت</span>:null}
         </div>
 
-        <div className="relative z-30 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/35 bg-white/94 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur transition-all duration-300">
+        <div className="relative z-30 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/40 bg-[#f1f5fa]/95 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur transition-all duration-300">
           <div
             onPointerDown={chatDragStart}
+            onPointerMove={chatDragMove}
             onPointerUp={chatDragEnd}
-            className="touch-none cursor-ns-resize border-b border-[#dce8f5] px-4 pb-3 pt-2"
+            onPointerCancel={chatDragEnd}
+            className="touch-none cursor-ns-resize border-b border-[#ccd8e7] bg-[#f1f5fa] px-4 pb-3 pt-2"
           >
-            <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-[#c7d5e7]"/>
+            <button
+              type="button"
+              aria-label={chatExpanded?'تصغير الشات':'تكبير الشات'}
+              onClick={()=>{if(!chatDragMovedRef.current)setChatExpanded(v=>!v)}}
+              className="tap-action mx-auto mb-2 block h-1.5 w-14 rounded-full bg-white shadow-[0_1px_4px_rgba(40,80,130,.32)]"
+            />
             <div className="flex items-center justify-between">
             <div><p className="text-sm font-black">شات اللَمّة</p><p className="text-[9px] font-bold text-[#77849b]">كل رسالة باسم صاحبها</p></div>
             <span className="flex items-center gap-1 rounded-full bg-[#eaf4ff] px-3 py-1.5 text-[10px] font-black text-[#1768f4]"><MessageSquare size={13}/>{messages.length}</span>
             </div>
           </div>
 
-          <div className="hide-scrollbar flex-1 space-y-2 overflow-y-auto px-3 py-3">
+          <div className="hide-scrollbar flex-1 space-y-2 overflow-y-auto bg-[#f1f5fa] px-3 py-3">
             {messages.map((m:any)=>{
               const mine=m.sender_id===uid
               const profile=(m.profiles as any)
               return <div key={m.id} className={`flex items-end gap-2 ${mine?'justify-start':'justify-end'}`}>
                 {!mine?<button onClick={()=>{const member=members.find(x=>x.user_id===m.sender_id);if(member)setSelectedMember(member)}} className="tap-action h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[#eaf3fb]">{profile?.avatar_url?<img src={profile.avatar_url} alt="" className="h-full w-full object-cover"/>:<span className="grid h-full w-full place-items-center text-[10px] font-black text-[#1768f4]">{(profile?.display_name||'ض')[0]}</span>}</button>:null}
-                <div className={`max-w-[78%] rounded-[18px] px-3 py-2 ${m.message_type==='gift'?'bg-[linear-gradient(135deg,#fff0a8,#fff8df)] text-[#6f4c00] ring-1 ring-[#f0d169]':mine?'bg-[#1768f4] text-white':'bg-[#eef4fb] text-[#12203d]'}`}>
-                  <p className={`mb-0.5 text-[9px] font-black ${mine?'text-white/75':'text-[#1768f4]'}`}>{mine?'أنت':profile?.display_name||'ضيف'}</p>
-                  <p className="break-words text-[12px] font-medium leading-5">{m.body}</p>
+                <div className={`min-w-0 max-w-[86%] rounded-[18px] px-3 py-2 ${m.message_type==='gift'?'bg-[linear-gradient(135deg,#fff0a8,#fff8df)] text-[#6f4c00] ring-1 ring-[#f0d169]':mine?'bg-[#1768f4] text-white':'bg-white text-[#12203d] ring-1 ring-[#dce6f2]'}`}>
+                  <p className="min-w-0 whitespace-pre-wrap break-words text-[12px] font-medium leading-5 [overflow-wrap:anywhere]">
+                    <span className={`font-black ${mine?'text-white':'text-[#1768f4]'}`}>{mine?'أنت':profile?.display_name||'ضيف'}: </span>
+                    <span>{m.body}</span>
+                  </p>
                 </div>
               </div>
             })}
@@ -697,7 +713,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
             <div ref={messagesEndRef}/>
           </div>
 
-          <div className="flex gap-2 border-t border-[#dce8f5] bg-white p-2">
+          <div className="flex gap-2 border-t border-[#cbd7e5] bg-[#f1f5fa] p-2">
             {!isHost&&hostMember?<button
               onClick={()=>{setGiftRecipient(hostMember);setGiftMode('chat');setShowGifts(true)}}
               className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500]"
@@ -708,7 +724,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
               value={body}
               onChange={e=>setBody(e.target.value)}
               onKeyDown={e=>{if(e.key==='Enter')send()}}
-              className="h-11 rounded-2xl bg-[#f1f5fa]"
+              className="h-11 rounded-2xl border border-[#d7e1ec] bg-[#f1f5fa]"
             />
             <Button size="icon" onClick={send} className="h-11 w-11 shrink-0 rounded-2xl"><Send size={18}/></Button>
           </div>

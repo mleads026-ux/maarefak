@@ -13,3 +13,10 @@ where id='social-media';
 
 -- The signed-read policy can remain in place while the bucket is public.
 -- Re-run the current Production smoke test after restoring compatibility.
+
+
+-- Restore legacy-client chat media compatibility during an emergency rollback.
+update public.app_media_settings
+set chat_media_uploads_enabled=true,
+    updated_at=now()
+where id=1;

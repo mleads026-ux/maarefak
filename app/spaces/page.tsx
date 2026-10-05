@@ -154,7 +154,7 @@ export default function Spaces(){
           ['private',Lock,'خاص','#8a37e8'],
           ['public',Users,'عام','#13b987'],
           ['all',Globe2,'كل اللَمّات','#0e67f5']
-        ].map(([key,I,t,c]:any)=><button key={key} onClick={()=>setFilter(key)} className={`tap-action rounded-[20px] p-3 text-[11px] font-black shadow-sm ring-1 ring-[#e0e9f5] ${filter===key?'bg-[#edf6ff] ring-2 ring-[#8cc7ff]':'bg-white'}`}><span className="mx-auto mb-1 grid h-9 w-9 place-items-center rounded-full bg-[#edf5ff]" style={{color:c}}><I size={20}/></span>{t}</button>)}
+        ].map(([key,I,t,c]:any)=><button key={key} onClick={()=>key==='all'?r.push('/spaces/all'):setFilter(key)} className={`tap-action rounded-[20px] p-3 text-[11px] font-black shadow-sm ring-1 ring-[#e0e9f5] ${filter===key?'bg-[#edf6ff] ring-2 ring-[#8cc7ff]':'bg-white'}`}><span className="mx-auto mb-1 grid h-9 w-9 place-items-center rounded-full bg-[#edf5ff]" style={{color:c}}><I size={20}/></span>{t}</button>)}
       </div>
 
       {show?<section className="pixel-card mt-4 rounded-[28px] p-4">

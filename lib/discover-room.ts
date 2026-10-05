@@ -68,15 +68,21 @@ export function normalizeNewFace(row:any,age:number|null){
 }
 
 export function getDiscoveryCardView(mode:DiscoveryMode,first:any){
-  const isKnown=mode==='new'||mode==='vibe'
+  const fullyKnown=mode==='new'||mode==='vibe'
+  const mysteryShowsName=mode==='mystery'&&first?.reveal_mode==='name'
+  const mysteryShowsPhoto=mode==='mystery'&&first?.reveal_mode==='photo'&&Boolean(first?.avatar_url)
+  const showName=fullyKnown||mysteryShowsName
+  const showImage=fullyKnown||mysteryShowsPhoto
   return {
     target:first?.id||first?.user_id,
-    isKnown,
+    showName,
+    showImage,
     knownImage:first?.avatar_url||discoveryFallback[0],
-    cardName:isKnown
+    cardName:showName
       ? (first?.display_name||'شخص جديد')
       : (mode==='voice'?'صوت جديد':'شخص غامض'),
     cardCity:first?.city_name||'بالقرب منك',
     cardMood:first?.mood||'جاهز للتعارف',
+    promptText:mode==='mystery'?(first?.prompt_text||null):null,
   }
 }

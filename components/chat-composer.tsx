@@ -12,10 +12,11 @@ type Props={
   onSend:()=>void
   onOpenGifts:()=>void
   onMediaFile:(file:File)=>void
+  mediaEnabled:boolean
 }
 
 export function ChatComposer({
-  fileInputRef,body,onBodyChange,onSend,onOpenGifts,onMediaFile,
+  fileInputRef,body,onBodyChange,onSend,onOpenGifts,onMediaFile,mediaEnabled,
 }:Props){
   return <>
     <input
@@ -46,6 +47,8 @@ export function ChatComposer({
         variant="ghost"
         aria-label="إرسال صورة أو فيديو حتى 10 ثواني"
         onClick={()=>fileInputRef.current?.click()}
+      disabled={!mediaEnabled}
+      title={mediaEnabled?'إرسال صورة أو فيديو':'إرسال الصور والفيديو متوقف مؤقتًا لحين تفعيل فحص المحتوى'}
       >
         <ImagePlus size={19}/>
       </Button>

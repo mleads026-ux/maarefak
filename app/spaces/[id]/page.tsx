@@ -485,7 +485,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   }
 
   async function assignRoyal(member:Member){
-    if(!isHost||member.user_id===uid)return
+    if(!isHost)return
     const {error}=await s.rpc('host_assign_royal',{p_space:id,p_target:member.user_id})
     setNotice(error
       ? error.message.includes('insufficient_stars')?'رصيدك لا يكفي لتعيين ضيف ملكي بـ150 ⭐.':'تعذر تعيين الضيف الملكي.'
@@ -665,7 +665,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
                 className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#5e25d8] shadow-lg disabled:opacity-65"
               >
                 <Headphones size={16}/>
-                {isHost?'تشغيل مايك الـHost':voiceRequestStatus==='accepted'?'تمت الموافقة · افتح المايك':voiceRequestStatus==='pending'?'طلب المايك قيد الانتظار':'طلب المايك'}
+                {isHost?'طلب المايك':voiceRequestStatus==='accepted'?'تمت الموافقة · افتح المايك':voiceRequestStatus==='pending'?'طلب المايك قيد الانتظار':'طلب المايك'}
               </button>
             : <>
                 <button onClick={toggleMic} className={`tap-action grid h-9 w-9 place-items-center rounded-full ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}>{micEnabled?<Mic size={17}/>:<MicOff size={17}/>}</button>

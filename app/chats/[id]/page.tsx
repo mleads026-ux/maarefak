@@ -194,7 +194,13 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
       transferRef
     )
     if(error){
-      setNotice(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال النجوم.')
+      setNotice(
+        error.message.includes('promotional_stars_not_transferable')
+          ?'النجوم الترويجية مخصصة للاستخدام داخل لمتنا ولا يمكن تحويلها لمستخدم آخر.'
+          :error.message.includes('insufficient_stars')
+            ?'رصيد النجوم غير كافٍ.'
+            :'تعذر إرسال النجوم.'
+      )
       return
     }
     const fee=Math.ceil(amount*0.15)
@@ -278,9 +284,11 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     if (error) {
       setNotice(
-        error.message.includes('insufficient_stars')
-          ? 'رصيد النجوم غير كافٍ لإرسال الهدية.'
-          : 'تعذر إرسال الهدية.'
+        error.message.includes('promotional_stars_not_transferable')
+          ? 'النجوم الترويجية لا تُستخدم في الهدايا التي تتحول إلى أرباح للمستلم.'
+          : error.message.includes('insufficient_stars')
+            ? 'رصيد النجوم غير كافٍ لإرسال الهدية.'
+            : 'تعذر إرسال الهدية.'
       )
       return
     }

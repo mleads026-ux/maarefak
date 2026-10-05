@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import {calculateStarTransferBreakdown,isApprovedChatMedia,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
 import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
 import {ChatMessageList} from '@/components/chat-message-list'
+import {ChatComposer} from '@/components/chat-composer'
 
 export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -777,51 +778,14 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           onHideImage={hideImage}
         />
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) uploadMedia(file)
-            e.currentTarget.value = ''
-          }}
+        <ChatComposer
+          fileInputRef={fileInputRef}
+          body={body}
+          onBodyChange={setBody}
+          onSend={send}
+          onOpenGifts={()=>setShowGifts(true)}
+          onMediaFile={uploadMedia}
         />
-
-        <div className="sticky bottom-20 flex gap-2 rounded-3xl border border-slate-200 bg-white p-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="إرسال هدية"
-            onClick={()=>setShowGifts(true)}
-            className="text-[#a76500]"
-          >
-            <Gift size={19}/>
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="إرسال صورة أو فيديو حتى 10 ثواني"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImagePlus size={19} />
-          </Button>
-
-          <Input
-            placeholder="اكتب رسالة..."
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') send()
-            }}
-          />
-
-          <Button size="icon" onClick={send}>
-            <Send size={18} />
-          </Button>
-        </div>
       </main>
 
       <ChatPartnerSheet

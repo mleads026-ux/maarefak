@@ -120,6 +120,12 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
         })
         peerRef.current=pc
 
+        pc.oniceconnectionstatechange=()=>{
+          if(pc.iceConnectionState==='failed'){
+            setNotice('تعذر إنشاء اتصال صوتي مباشر على هذه الشبكة. يلزم TURN لضمان الاتصال على الشبكات المقيدة.')
+          }
+        }
+
         stream.getTracks().forEach(track=>pc.addTrack(track,stream))
 
         pc.ontrack=event=>{

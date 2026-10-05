@@ -47,8 +47,9 @@ If any of these fail, stop. Do not apply pending migrations.
 2. `20261005_disable_legacy_create_lamma.sql`
 3. `20261005_disable_legacy_join_lamma.sql`
 4. `20261005_disable_legacy_sql_account_delete.sql`
-5. `20261005_disable_unmoderated_chat_media.sql`
-6. `20261005_finalize_private_social_media.sql`
+5. `20261005_disable_legacy_chat_aliases.sql`
+6. `20261005_disable_unmoderated_chat_media.sql`
+7. `20261005_finalize_private_social_media.sql`
 
 These changes intentionally make the new client authoritative and remove compatibility surfaces required only by the old client.
 

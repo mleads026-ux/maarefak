@@ -157,11 +157,13 @@ export default function Discover(){
   const first=advanced[0]
   const {
     target,
-    isKnown,
+    showName,
+    showImage,
     knownImage,
     cardName,
     cardCity,
     cardMood,
+    promptText,
   }=getDiscoveryCardView(mode,first)
 
   return <AppShell>
@@ -200,10 +202,10 @@ export default function Discover(){
           <div className="relative flex h-[225px] items-center justify-center">
             <div className="absolute h-[190px] w-[155px] rotate-[-8deg] rounded-[48%] bg-white/20 blur-[1px]"/>
             <div className="relative h-[190px] w-[155px] overflow-hidden rounded-[48%] border-2 border-white/60 shadow-2xl">
-              <img src={knownImage} alt="" className={`h-full w-full object-cover ${isKnown?'':'scale-110 blur-[18px]'}`}/>
-              {!isKnown?<span className="absolute inset-0 grid place-items-center text-6xl font-black text-white">?</span>:null}
+              <img src={knownImage} alt="" className={`h-full w-full object-cover ${showImage?'':'scale-110 blur-[18px]'}`}/>
+              {!showImage?<span className="absolute inset-0 grid place-items-center text-6xl font-black text-white">?</span>:null}
             </div>
-            {!isKnown?<span className="absolute bottom-0 rounded-full bg-white px-3 py-2 text-[10px] font-black text-[#2450a4]"><LockKeyhole className="ml-1 inline" size={14}/> {mode==='voice'?'الصورة بعد التعارف':'الصورة مكتشفة تدريجيًا'}</span>:null}
+            {!showImage?<span className="absolute bottom-0 rounded-full bg-white px-3 py-2 text-[10px] font-black text-[#2450a4]"><LockKeyhole className="ml-1 inline" size={14}/> {mode==='voice'?'الصورة بعد التعارف':'الصورة مموهة في هذه البطاقة'}</span>:null}
           </div>
           <div>
             <span className="inline-flex rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-black text-[#6c25d9]">{mode==='mystery'?'🎭 اكتشاف غامض':mode==='voice'?'🎙️ صوت أول':'✨ اقتراح لك'}</span>
@@ -214,6 +216,7 @@ export default function Discover(){
               <div className="rounded-full bg-white/14 px-3 py-2">😊 المزاج <span className="float-left">{cardMood}</span></div>
               <div className="rounded-full bg-white/14 px-3 py-2">🎮 اهتمامات مشتركة <span className="float-left">{Number(first?.shared_interests||0)}</span></div>
             </div>
+            {mode==='mystery'&&promptText?<div className="mt-3 rounded-[18px] bg-white/14 px-3 py-3 text-[11px] font-black leading-5">💬 {promptText}</div>:null}
             {mode==='voice'?<button onClick={playVoice} disabled={!first?.voice_intro_path||voicePlaying} className="tap-action mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#6c25d9]"><Play size={17} fill="currentColor"/>{voicePlaying?'جاري التشغيل...':'تشغيل المقدمة الصوتية'}</button>:null}
           </div>
         </div>

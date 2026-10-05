@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {redirect} from 'next/navigation'
-import {Settings,MapPin,Plus,Star,Heart,Smile,WalletCards,UserRoundCheck,Users,Footprints,Ban,ChevronLeft,Music,Plane,Image as ImageIcon} from 'lucide-react'
+import {Settings,MapPin,Plus,Star,Heart,Smile,WalletCards,UserRoundCheck,Users,Footprints,Ban,ChevronLeft,Music,Plane,Image as ImageIcon,ShieldCheck} from 'lucide-react'
 import {createClient} from '@/lib/supabase/server'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
@@ -64,6 +64,7 @@ export default async function Me(){
     ['المدفوعات والنجوم','إدارة مشترياتك وعمليات الدفع',WalletCards,'/payments','#8f24e7'],
     ['مرّوا من هنا',`${viewCount||0} زاروا ملفك الشخصي`,Footprints,'/social-hub','#c42dbd'],
     ['معارفي','أصدقائي وقائمتي',Users,'/connections','#13b985'],
+    ['الأمان وMFA','التحقق بخطوتين وحماية الحساب',ShieldCheck,'/me/security','#1768f4'],
     ['التحكم','الخصوصية والإعدادات',Settings,'/settings','#0e67f5'],
     ['الحظر','إدارة قائمة المحظورين',Ban,'/settings','#ef233c'],
   ] as const

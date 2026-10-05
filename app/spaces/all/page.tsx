@@ -2,7 +2,7 @@
 
 import {useEffect,useMemo,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {ChevronLeft,Globe2,Lock,Search,Users,X} from 'lucide-react'
+import {AudioLines,ChevronLeft,Crown,Search,Users,X} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
@@ -146,31 +146,40 @@ export default function AllLammatPage(){
           return <button
             key={room.id}
             onClick={()=>openRoom(room)}
-            className="tap-action relative block h-[54px] w-full text-right"
+            className="all-lamma-card-v2 tap-action relative block h-[66px] w-full text-right"
           >
-            <span className="lammetna-gradient absolute inset-0 overflow-hidden rounded-[18px] border border-white/45 shadow-[0_9px_22px_rgba(57,80,216,.22)]">
-              <span className="absolute -right-4 -top-7 h-20 w-20 rounded-full border-[14px] border-white/10"/>
-              <span className="absolute left-[40%] top-1 h-10 w-10 rounded-full bg-white/10"/>
+            <span className="all-lamma-card-v2__surface absolute inset-0 overflow-hidden rounded-[21px] border border-white/55">
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--1">✦</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--2">✧</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--3">✦</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--4">·</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--5">✧</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--6">✦</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--7">·</span>
+              <span className="all-lamma-card-v2__star all-lamma-card-v2__star--8">✧</span>
             </span>
 
-            <span className="absolute right-3 top-1/2 min-w-0 max-w-[42%] -translate-y-1/2 text-white">
-              <span className="block truncate text-[13px] font-black">{room.emoji||'🎙️'} {room.name}</span>
-              <span dir="ltr" className="mt-0.5 block truncate text-left text-[8px] font-black tracking-wide text-white/75">{room.public_lamma_id}</span>
+            <span className="absolute right-4 top-1/2 z-10 flex min-w-0 max-w-[39%] -translate-y-1/2 items-center gap-2 text-white">
+              <AudioLines size={22} strokeWidth={2.5} className="shrink-0 text-white/88"/>
+              <span className="block truncate text-[15px] font-black">{room.name}</span>
             </span>
 
-            <span className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-white/35 bg-white/16 px-3 py-1.5 text-[10px] font-black text-white backdrop-blur">
-              <Users size={14}/>{count}
+            <span className="all-lamma-card-v2__count absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full px-4 py-2 text-[12px] font-black text-white">
+              <Users size={18} strokeWidth={2.7}/>{count}
             </span>
 
-            <span className="ornate-silver-ring absolute left-2 top-1/2 z-10 h-[76px] w-[76px] -translate-y-1/2 rounded-full p-[4px] shadow-[0_5px_16px_rgba(34,62,119,.28)]">
-              <span className="relative block h-full w-full overflow-hidden rounded-full bg-[#dfeaf7]">
-                <img src={avatar} alt={hostName} className="h-full w-full object-cover"/>
-                <span className="absolute inset-x-0 bottom-0 bg-black/38 px-1 py-0.5 text-center text-[7px] font-black text-white">{hostName}</span>
+            <span className="absolute left-2 top-1/2 z-20 h-[84px] w-[84px] -translate-y-1/2">
+              <span className="all-lamma-card-v2__crown absolute -top-[9px] left-1/2 z-30 -translate-x-1/2">
+                <Crown size={18} strokeWidth={2.1}/>
               </span>
-            </span>
-
-            <span className="absolute left-[91px] top-1/2 -translate-y-1/2 text-white/90">
-              {room.is_public?<Globe2 size={14}/>:<Lock size={14}/>}
+              <span className="ornate-silver-ring all-lamma-card-v2__avatar-frame absolute inset-0 rounded-full p-[5px]">
+                <span className="relative block h-full w-full overflow-hidden rounded-full bg-[#dfeaf7]">
+                  <img src={avatar} alt={hostName} className="h-full w-full object-cover"/>
+                </span>
+                <span className="all-lamma-card-v2__bead all-lamma-card-v2__bead--left"/>
+                <span className="all-lamma-card-v2__bead all-lamma-card-v2__bead--right"/>
+                <span className="all-lamma-card-v2__bead all-lamma-card-v2__bead--bottom"/>
+              </span>
             </span>
           </button>
         })}

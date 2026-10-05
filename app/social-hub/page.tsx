@@ -18,7 +18,6 @@ export default function SocialHub(){
   const [q,setQ]=useState<any>(null)
   const [answer,setAnswer]=useState('')
   const [missions,setMissions]=useState<any[]>([])
-  const [status,setStatus]=useState('')
   const [notice,setNotice]=useState('')
   const [busy,setBusy]=useState(false)
   const [profile,setProfile]=useState<any>(null)
@@ -142,14 +141,6 @@ export default function SocialHub(){
     const {data,error}=await s.rpc('claim_daily_mission',{p_code:code})
     setNotice(error?'تعذر التنفيذ.':`تم استلام ${Number(data||0)} نجمة ترويجية ⭐ للاستخدام داخل لمتنا.`)
     await load()
-  }
-
-  async function social(){
-    if(!status.trim())return
-    setBusy(true)
-    const {error}=await s.rpc('set_social_status',{p_status:status.trim(),p_hours:24})
-    setNotice(error?'تعذر النشر.':'تم نشر حالتك لمدة 24 ساعة.')
-    setStatus('');setBusy(false)
   }
 
   async function publishPost(){
@@ -344,7 +335,6 @@ export default function SocialHub(){
         <div className="flex items-start justify-between"><div className="flex items-center gap-3"><img src="/demo/face-4.jpg" alt="" className="h-14 w-14 rounded-full object-cover"/><div><p className="font-black">مهمات اليوم 🎁</p><p className="text-[11px] font-bold text-[#7a869b]">اجمع نجومًا من نشاطك داخل لمتنا</p></div></div></div>
         <div className="mt-3 space-y-2">{missions.slice(0,4).map((m:any)=><div key={m.code} className="flex items-center justify-between rounded-[17px] bg-[#f4f8fc] p-3"><div className="min-w-0 flex-1 pl-3"><p className="text-sm font-black">{m.title_ar}</p><p className="text-[10px] font-bold text-[#77839a]">{m.description_ar}</p>{m.code==='complete_profile'?<p className="mt-1 text-[10px] font-black text-[#9a6b00]">تُمنح هذه النجوم مرة واحدة فقط.</p>:null}</div><button disabled={busy||m.claimed} onClick={()=>claim(m.code)} className={`tap-action shrink-0 rounded-full px-3 py-2 text-xs font-black ${m.claimed?'bg-[#e8eef4] text-[#8290a4]':'bg-[#fff4c6] text-[#8c6200]'}`}>{m.claimed?'تم':'+'+m.reward_stars+' ⭐ ترويجية'}</button></div>)}</div>
         <p className="mt-3 rounded-[16px] bg-[#eef5ff] px-3 py-2 text-[10px] font-bold leading-5 text-[#52627d]">ملاحظة: النجوم الترويجية تُستخدم للصرف داخل التطبيق فقط، ولا تُضاف إلى رصيد قابل للسحب.</p>
-        <div className="mt-3 flex items-center gap-2"><input value={status} onChange={e=>setStatus(e.target.value)} className="h-11 flex-1 rounded-[16px] bg-[#f3f7fb] px-3 text-sm outline-none" placeholder="حالتك الآن..."/><button onClick={social} disabled={busy||!status.trim()} className="tap-action lammetna-gradient rounded-[16px] px-4 py-3 text-xs font-black text-white">نشر</button></div>
       </article>
     </main>
 

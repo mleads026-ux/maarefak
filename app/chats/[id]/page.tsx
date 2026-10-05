@@ -11,6 +11,20 @@ import { Input } from '@/components/ui/input'
 import {calculateStarTransferBreakdown,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
 import {fetchChatRoomSnapshot} from '@/lib/chat-room-data'
 import {subscribeChatCalls,subscribeChatMessages} from '@/lib/chat-room-realtime'
+import {
+  consentPrivatePhotos,
+  endConversationCall,
+  fetchConversationPartnerIdentity,
+  fetchConversationPrompt,
+  fetchPrivatePhotoTools,
+  insertChatTextMessage,
+  requestConversationCall,
+  requestSpeedIntro,
+  respondConversationCall,
+  sendConversationGift,
+  startDuoChallenge,
+  transferStarsToPublicUser,
+} from '@/lib/chat-room-actions'
 import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
 import {ChatMessageList} from '@/components/chat-message-list'
 import {ChatComposer} from '@/components/chat-composer'

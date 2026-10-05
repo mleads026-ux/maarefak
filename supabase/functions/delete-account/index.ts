@@ -66,89 +66,53 @@ Deno.serve(async (req: Request) => {
     dryRun = body?.dry_run === true
   } catch {}
 
-  const userId = user.id
+  const { data: ownedObjects, error: inventoryError } = await admin.rpc(
+    "account_owned_storage_objects",
+    { p_user: user.id },
+  )
+  if (inventoryError) return json({ error: "storage_inventory_failed" }, 500)
 
-  const [{ data: memberships, error: membershipError }, { data: sentMessages, error: messageError }] =
-    await Promise.all([
-      admin.from("conversation_members").select("conversation_id").eq("user_id", userId),
-      admin.from("messages").select("conversation_id").eq("sender_id", userId),
-    ])
-
-  if (membershipError || messageError) {
-    return json({ error: "failed_to_resolve_owned_media" }, 500)
+  const byBucket = new Map<string, string[]>()
+  for (const row of ownedObjects || []) {
+    if (!row?.bucket_id || !row?.object_name) continue
+    const names = byBucket.get(row.bucket_id) || []
+    names.push(row.object_name)
+    byBucket.set(row.bucket_id, names)
   }
 
-  const conversationIds = Array.from(new Set([
-    ...(memberships || []).map((x: any) => x.conversation_id),
-    ...(sentMessages || []).map((x: any) => x.conversation_id),
-  ].filter(Boolean)))
-
-  const prefixes: Array<{ bucket: string; prefix: string }> = [
-    { bucket: "avatars", prefix: userId },
-    { bucket: "social-media", prefix: userId },
-    { bucket: "space-images", prefix: userId },
-    { bucket: "voice-intros", prefix: userId },
-    { bucket: "private-profile-photos", prefix: userId },
-    { bucket: "gift-voice", prefix: userId },
-    { bucket: "chat-media-pending", prefix: userId },
-    ...conversationIds.map((id: string) => ({
-      bucket: "chat-media-approved",
-      prefix: `${id}/${userId}`,
-    })),
-  ]
-
-  async function removePrefix(bucket: string, prefix: string) {
-    let removed = 0
-    while (true) {
-      const { data, error } = await admin.storage.from(bucket).list(prefix, {
-        limit: 1000,
-        sortBy: { column: "name", order: "asc" },
-      })
-      if (error) throw new Error(`list_failed:${bucket}`)
-      const names = (data || [])
-        .filter((item: any) => item?.id && item?.name)
-        .map((item: any) => `${prefix}/${item.name}`)
-      if (!names.length) break
-      if (dryRun) {
-        removed += names.length
-        break
-      }
-      const { error: removeError } = await admin.storage.from(bucket).remove(names)
-      if (removeError) throw new Error(`remove_failed:${bucket}`)
-      removed += names.length
-      if (names.length < 1000) break
-    }
-    return removed
-  }
-
-  const removedByBucket: Record<string, number> = {}
-  try {
-    for (const item of prefixes) {
-      const count = await removePrefix(item.bucket, item.prefix)
-      removedByBucket[item.bucket] = (removedByBucket[item.bucket] || 0) + count
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "storage_cleanup_failed"
-    return json({ error: message }, 500)
-  }
+  const found: Record<string, number> = {}
+  for (const [bucket, names] of byBucket) found[bucket] = names.length
 
   if (dryRun) {
     return json({
       ok: true,
       dry_run: true,
-      user_id: userId,
-      storage_objects_found: removedByBucket,
+      user_id: user.id,
+      storage_objects_found: found,
     })
   }
 
-  const { error: deleteError } = await admin.auth.admin.deleteUser(userId)
-  if (deleteError) {
-    return json({ error: "auth_user_delete_failed" }, 500)
+  for (const [bucket, names] of byBucket) {
+    for (let i = 0; i < names.length; i += 1000) {
+      const chunk = names.slice(i, i + 1000)
+      const { error: removeError } = await admin.storage.from(bucket).remove(chunk)
+      if (removeError) return json({ error: `storage_cleanup_failed:${bucket}` }, 500)
+    }
   }
+
+  const { data: remaining, error: remainingError } = await admin.rpc(
+    "account_owned_storage_objects",
+    { p_user: user.id },
+  )
+  if (remainingError) return json({ error: "storage_cleanup_verify_failed" }, 500)
+  if ((remaining || []).length > 0) return json({ error: "storage_cleanup_incomplete" }, 500)
+
+  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
+  if (deleteError) return json({ error: "auth_user_delete_failed" }, 500)
 
   return json({
     ok: true,
     deleted: true,
-    storage_objects_removed: removedByBucket,
+    storage_objects_removed: found,
   })
 })

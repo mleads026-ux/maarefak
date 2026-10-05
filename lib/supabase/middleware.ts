@@ -29,6 +29,7 @@ export async function updateSession(request:NextRequest){
   const path=request.nextUrl.pathname
   const authCallback=path.startsWith('/auth/callback')
   const signedOutPath=path.startsWith('/login')||path.startsWith('/signup')
+  const verifyEmailPath=path==='/verify-email'||path.startsWith('/verify-email/')
   const legalPath=path==='/legal'||path.startsWith('/legal/')
   const onboardingPath=path==='/onboarding'||path.startsWith('/onboarding/')
   const publicPath=signedOutPath||authCallback||path==='/manifest.webmanifest'
@@ -38,10 +39,20 @@ export async function updateSession(request:NextRequest){
 
   if(authCallback)return response
 
-  const [{data:needsLegal,error:legalError},{data:profile,error:profileError}]=await Promise.all([
+  const [
+    {data:emailReady,error:emailReadyError},
+    {data:needsLegal,error:legalError},
+    {data:profile,error:profileError},
+  ]=await Promise.all([
+    supabase.rpc('current_user_email_verified_for_launch'),
     supabase.rpc('needs_current_legal_acceptance'),
     supabase.from('profiles').select('profile_complete').eq('id',user.id).maybeSingle(),
   ])
+
+  if(emailReadyError||emailReady!==true){
+    if(!verifyEmailPath)return redirect(request,'/verify-email',response)
+    return response
+  }
 
   if((legalError||needsLegal===true)&&!legalPath){
     return redirect(request,'/legal',response)
@@ -54,7 +65,7 @@ export async function updateSession(request:NextRequest){
       return redirect(request,'/onboarding',response)
     }
 
-    if(profileComplete&&(signedOutPath||onboardingPath||legalPath)){
+    if(profileComplete&&(signedOutPath||verifyEmailPath||onboardingPath||legalPath)){
       return redirect(request,'/home',response)
     }
   }

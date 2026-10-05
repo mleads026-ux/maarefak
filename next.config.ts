@@ -18,6 +18,7 @@ const contentSecurityPolicy=[
   "upgrade-insecure-requests",
 ].join('; ')
 
+// Security headers are validated on Preview before production promotion.
 const securityHeaders=[
   {key:'Content-Security-Policy',value:contentSecurityPolicy},
   {key:'X-Frame-Options',value:'DENY'},

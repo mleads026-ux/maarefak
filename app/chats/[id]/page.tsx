@@ -15,6 +15,20 @@ import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
 import {ChatMessageList} from '@/components/chat-message-list'
 import {ChatComposer} from '@/components/chat-composer'
 import {useChatWebRtc} from '@/hooks/use-chat-webrtc'
+import {
+  consentPrivatePhotos,
+  endConversationCall,
+  fetchConversationPartnerIdentity,
+  fetchConversationPrompt,
+  fetchPrivatePhotoTools,
+  insertChatTextMessage,
+  requestConversationCall,
+  requestSpeedIntro,
+  respondConversationCall,
+  sendConversationGift,
+  startDuoChallenge,
+  transferStarsToPublicUser,
+} from '@/lib/chat-room-actions'
 
 export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -101,8 +115,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   },[id])
 
   async function refreshPartnerIdentity(){
-    const {data}=await s.rpc('conversation_partner_identity',{p_conversation:id})
-    const row=Array.isArray(data)?data[0]:data
+    const row=await fetchConversationPartnerIdentity(s,id)
     if(row)setPartner(row)
   }
 
@@ -173,11 +186,12 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   async function sendStarsToPartner(){
     const amount=Number(transferStars)
     if(!partner?.public_user_id||!Number.isInteger(amount)||amount<1)return
-    const {error}=await s.rpc('transfer_stars_by_user_id',{
-      p_public_user_id:partner.public_user_id,
-      p_amount:amount,
-      p_client_reference_id:transferRef
-    })
+    const {error}=await transferStarsToPublicUser(
+      s,
+      partner.public_user_id,
+      amount,
+      transferRef
+    )
     if(error){
       setNotice(error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال النجوم.')
       return
@@ -190,26 +204,57 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   }
 
   async function loadSocialTools(){
-    const target=other?.user_id;if(!target)return;setSocialOpen(true)
-    const {data}=await s.rpc('private_photo_reveal_status',{p_target:target});setPrivateStatus(Array.isArray(data)?data[0]:data)
-    const {data:photos}=await s.rpc('mutually_revealed_private_photos',{p_target:target});setPrivatePhotos(photos||[])
+    const target=other?.user_id
+    if(!target)return
+    setSocialOpen(true)
+    const snapshot=await fetchPrivatePhotoTools(s,target)
+    setPrivateStatus(snapshot.status)
+    setPrivatePhotos(snapshot.photos)
   }
-  async function privateConsent(){const target=other?.user_id;if(!target)return;const {data,error}=await s.rpc('set_private_photo_reveal_consent',{p_target:target,p_consent:true});if(error)setNotice('تعذر تحديث الموافقة.');else{setNotice(data?'الموافقة متبادلة ويمكن عرض الصور الخاصة.':'تم تسجيل موافقتك وفي انتظار الطرف الآخر.');await loadSocialTools()}}
-  async function speedIntro(){const target=other?.user_id;if(!target)return;const {data,error}=await s.rpc('request_speed_intro',{p_target:target});if(error)setNotice('تعذر إرسال طلب دقيقة التعارف.');else{setSpeedSession(data);setNotice('تم إرسال طلب دقيقة التعارف للطرف الآخر.')}}
-  async function startDuo(){const {data,error}=await s.rpc('start_duo_challenge_v2',{p_conversation:id});if(error)setNotice('تعذر بدء تحدي الثنائي.');else{setDuo(data);setNotice('بدأ تحدي الثنائي — 5 أسئلة بدون درجة توافق.')}}
-  async function surprise(kind:'surprise'|'restart'){const fn=kind==='surprise'?'conversation_surprise_prompt':'smart_restart_prompt';const {data,error}=await s.rpc(fn,{p_conversation:id});if(error)setNotice('تعذر تجهيز السؤال الآن.');else setPrompt(String(data||''))}
+
+  async function privateConsent(){
+    const target=other?.user_id
+    if(!target)return
+    const {data,error}=await consentPrivatePhotos(s,target)
+    if(error)setNotice('تعذر تحديث الموافقة.')
+    else{
+      setNotice(data?'الموافقة متبادلة ويمكن عرض الصور الخاصة.':'تم تسجيل موافقتك وفي انتظار الطرف الآخر.')
+      await loadSocialTools()
+    }
+  }
+
+  async function speedIntro(){
+    const target=other?.user_id
+    if(!target)return
+    const {data,error}=await requestSpeedIntro(s,target)
+    if(error)setNotice('تعذر إرسال طلب دقيقة التعارف.')
+    else{
+      setSpeedSession(data)
+      setNotice('تم إرسال طلب دقيقة التعارف للطرف الآخر.')
+    }
+  }
+
+  async function startDuo(){
+    const {data,error}=await startDuoChallenge(s,id)
+    if(error)setNotice('تعذر بدء تحدي الثنائي.')
+    else{
+      setDuo(data)
+      setNotice('بدأ تحدي الثنائي — 5 أسئلة بدون درجة توافق.')
+    }
+  }
+
+  async function surprise(kind:'surprise'|'restart'){
+    const {data,error}=await fetchConversationPrompt(s,id,kind)
+    if(error)setNotice('تعذر تجهيز السؤال الآن.')
+    else setPrompt(String(data||''))
+  }
   async function send() {
     const text = body.trim()
     if (!text) return
 
     setBody('')
 
-    const { data:row,error } = await s.from('messages').insert({
-      conversation_id: id,
-      sender_id: uid,
-      body: text,
-      message_type:'text',
-    }).select('id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id').single()
+    const {data:row,error}=await insertChatTextMessage(s,id,uid,text)
 
     if (error) {
       setNotice('لا يمكن إرسال الرسالة الآن.')
@@ -228,11 +273,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     setNotice('')
 
-    const { error } = await s.rpc('send_gift', {
-      p_target: targetId,
-      p_gift: gift.id,
-      p_conversation: id,
-    })
+    const {error}=await sendConversationGift(s,id,targetId,gift)
 
     if (error) {
       setNotice(
@@ -253,21 +294,12 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   async function startCall(kind:'voice'|'video') {
     setNotice('')
 
-    const { data, error } = await s.rpc('request_chat_call', {
-      p_conversation: id,
-      p_kind: kind,
-    })
+    const {error,row}=await requestConversationCall(s,id,kind)
 
     if (error) {
       setNotice(kind==='video'?'تعذر بدء مكالمة الفيديو الآن.':'تعذر بدء المكالمة الصوتية الآن.')
       return
     }
-
-    const { data: row } = await s
-      .from('voice_call_sessions')
-      .select('*')
-      .eq('id', data)
-      .single()
 
     if (row) {
       setActiveCall(row as ChatCallRow)
@@ -278,21 +310,12 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   async function respondToCall(accept: boolean) {
     if (!incomingCall) return
 
-    await s.rpc('respond_voice_call', {
-      p_call: incomingCall.id,
-      p_accept: accept,
-    })
+    const row=await respondConversationCall(s,incomingCall.id,accept)
 
     if (!accept) {
       setIncomingCall(null)
       return
     }
-
-    const { data: row } = await s
-      .from('voice_call_sessions')
-      .select('*')
-      .eq('id', incomingCall.id)
-      .single()
 
     if (row) {
       setIncomingCall(null)
@@ -304,9 +327,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   async function endCall() {
     if (!activeCall) return
 
-    await s.rpc('end_voice_call', {
-      p_call: activeCall.id,
-    })
+    await endConversationCall(s,activeCall.id)
 
     cleanupPeer()
     setActiveCall(null)

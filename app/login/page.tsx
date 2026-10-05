@@ -53,13 +53,6 @@ export default function Login(){
 
     clearAuthFailures('login',identity)
 
-    const {data:aal,error:aalError}=await s.auth.mfa.getAuthenticatorAssuranceLevel()
-    if(!aalError&&aal?.nextLevel==='aal2'&&aal.currentLevel!=='aal2'){
-      r.push('/mfa')
-      r.refresh()
-      return
-    }
-
     const {data:{user}}=await s.auth.getUser()
     if(!user){setMsg('تعذر تحميل الحساب.');setBusy(false);return}
     const {data:p}=await s.from('profiles').select('profile_complete').eq('id',user.id).single()

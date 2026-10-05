@@ -10,6 +10,13 @@ import {BadgeCheck,Banknote,CreditCard,ShieldAlert,Star,Wallet,Copy,Check,Send} 
 import {appConfirm} from '@/components/interaction-dialog'
 import {calculateStarTransferBreakdown,explainFinancialError,explainStarTransferError} from '@/lib/payments'
 import {fetchPaymentsSnapshot} from '@/lib/payments-data'
+import {
+  lookupUserForStarTransfer,
+  requestWithdrawalToSavedMethod,
+  startIdentityVerification,
+  transferStarsByPublicUserId,
+  useLammaEarnings,
+} from '@/lib/payments-actions'
 
 export default function Payments(){
  const s=useMemo(()=>createClient(),[])
@@ -64,7 +71,7 @@ export default function Payments(){
      confirmLabel:'متابعة'
    }))return
    setBusy(true)
-   const {error}=await s.rpc('use_lamma_earnings',{p_action:action,p_stars:n})
+   const {error}=await useLammaEarnings(s,action,n)
    setNotice(error?explainFinancialError(error):action==='convert'?'تم تحويل الأرباح إلى رصيد نجوم.':'تم نقل الأرباح لمسار السحب.')
    await load()
  }
@@ -80,7 +87,7 @@ export default function Payments(){
      confirmLabel:'إنشاء الطلب'
    }))return
    setBusy(true)
-   const {error}=await s.rpc('request_withdrawal_to_saved_method',{p_stars:n,p_method:method})
+   const {error}=await requestWithdrawalToSavedMethod(s,n,method)
    setNotice(error?explainFinancialError(error):'تم إنشاء طلب السحب.')
    await load()
  }
@@ -89,8 +96,7 @@ export default function Payments(){
    const id=recipientId.trim().toUpperCase()
    if(!id)return
    setBusy(true);setRecipient(null)
-   const {data,error}=await s.rpc('lookup_user_for_star_transfer',{p_public_user_id:id})
-   const row=Array.isArray(data)?data[0]:data
+   const {data:row,error}=await lookupUserForStarTransfer(s,id)
    setRecipient(error?null:(row||null))
    setNotice(error?'تعذر البحث عن المستخدم.':row?'تأكد من الاسم قبل التحويل.':'لم يتم العثور على User ID.')
    setBusy(false)
@@ -106,7 +112,7 @@ export default function Payments(){
      danger:true
    }))return
    setBusy(true)
-   const {error}=await s.rpc('transfer_stars_by_user_id',{p_public_user_id:recipient.public_user_id,p_amount:n,p_client_reference_id:transferRef})
+   const {error}=await transferStarsByPublicUserId(s,recipient.public_user_id,n,transferRef)
    if(error){
      setNotice(explainStarTransferError(error))
    }else{
@@ -119,7 +125,7 @@ export default function Payments(){
 
  async function verify(){
    setBusy(true)
-   const {error}=await s.rpc('start_identity_verification')
+   const {error}=await startIdentityVerification(s)
    setNotice(error?(identity.enabled?'تعذر بدء التحقق الآن.':'مزود التحقق من الهوية لم يتم ربطه بعد.'):'تم بدء التحقق من الهوية.')
    setBusy(false)
  }

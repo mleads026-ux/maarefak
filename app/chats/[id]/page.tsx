@@ -8,7 +8,8 @@ import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {calculateStarTransferBreakdown,isApprovedChatMedia,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
+import {calculateStarTransferBreakdown,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
+import {fetchChatRoomSnapshot} from '@/lib/chat-room-data'
 import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
 import {ChatMessageList} from '@/components/chat-message-list'
 import {ChatComposer} from '@/components/chat-composer'
@@ -65,72 +66,25 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     setUid(user.id)
 
-    const { data: members } = await s
-      .from('conversation_members')
-      .select('user_id,profiles(display_name,avatar_url)')
-      .eq('conversation_id', id)
-
-    if (!members?.some((m: any) => m.user_id === user.id)) {
+    const snapshot=await fetchChatRoomSnapshot(s,id,user.id)
+    if(!snapshot.authorized){
       r.push('/chats')
       return
     }
 
-    const otherMember = (members as any[]).find((m) => m.user_id !== user.id)
-    setOther(otherMember)
+    setOther(snapshot.other)
+    setChatGiftItems(snapshot.gifts)
+    if(snapshot.partner)setPartner(snapshot.partner)
+    setMessages(snapshot.messages)
 
-    const { data: giftRows } = await s
-      .from('gift_catalog')
-      .select('id,name_ar,emoji,price_stars,animation_tier')
-      .eq('active', true)
-      .order('price_stars')
-
-    setChatGiftItems((giftRows || []) as any)
-
-    const {data:partnerRow}=await s.rpc('conversation_partner_identity',{p_conversation:id})
-    const identity=Array.isArray(partnerRow)?partnerRow[0]:partnerRow
-    if(identity)setPartner(identity)
-
-    const { data: ms } = await s
-      .from('messages')
-      .select('id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id')
-      .eq('conversation_id', id)
-      .order('created_at', { ascending: true })
-      .limit(300)
-
-    const rows = ms || []
-
-    const withUrls = await Promise.all(
-      rows.map(async (m: any) => {
-        if (isApprovedChatMedia(m)) {
-          const { data } = await s.storage
-            .from('chat-media-approved')
-            .createSignedUrl(m.media_path, 600)
-
-          return { ...m, signedUrl: data?.signedUrl || null }
-        }
-
-        return m
-      })
-    )
-
-    setMessages(withUrls)
-
-    const { data: call } = await s
-      .from('voice_call_sessions')
-      .select('*')
-      .eq('conversation_id', id)
-      .in('status', ['ringing', 'accepted'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (call) {
-      if (call.status === 'ringing' && call.callee_id === user.id) {
-        setIncomingCall(call as ChatCallRow)
-      } else {
-        setActiveCall(call as ChatCallRow)
+    const call=snapshot.call
+    if(call){
+      if(call.status==='ringing'&&call.callee_id===user.id){
+        setIncomingCall(call)
+      }else{
+        setActiveCall(call)
         setCallLabel(
-          call.status === 'ringing'
+          call.status==='ringing'
             ? 'جارٍ انتظار موافقة الطرف الآخر...'
             : 'المكالمة متصلة'
         )

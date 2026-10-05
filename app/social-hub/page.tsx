@@ -223,9 +223,16 @@ export default function SocialHub(){
       confirmLabel:'حذف',
       danger:true
     }))return
+    if(post.media_path){
+      const {error:mediaError}=await s.storage.from('social-media').remove([post.media_path])
+      if(mediaError){
+        setNotice('تعذر حذف صورة السالفة بأمان. لم يتم حذف السالفة.')
+        setMenuPost(null)
+        return
+      }
+    }
     const {error}=await s.from('social_posts').delete().eq('id',post.id)
-    if(error){setNotice('تعذر حذف السالفة الآن.');setMenuPost(null);return}
-    if(post.media_path)await s.storage.from('social-media').remove([post.media_path]).catch(()=>{})
+    if(error){setNotice('تم حذف ملف الصورة لكن تعذر حذف سجل السالفة؛ أعد المحاولة.');setMenuPost(null);return}
     setMenuPost(null);await load()
   }
 

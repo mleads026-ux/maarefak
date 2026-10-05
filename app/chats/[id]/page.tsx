@@ -58,6 +58,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const [transferStars,setTransferStars]=useState('')
   const [transferRef,setTransferRef]=useState(()=>crypto.randomUUID())
   const [copiedId,setCopiedId]=useState(false)
+  const [mediaEnabled,setMediaEnabled]=useState(false)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const {
@@ -82,7 +83,12 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     setUid(user.id)
 
-    const snapshot=await fetchChatRoomSnapshot(s,id,user.id)
+    const [snapshot,{data:mediaSettings}]=await Promise.all([
+      fetchChatRoomSnapshot(s,id,user.id),
+      s.from('app_media_settings').select('chat_media_uploads_enabled').eq('id',1).maybeSingle(),
+    ])
+    setMediaEnabled(mediaSettings?.chat_media_uploads_enabled===true)
+
     if(!snapshot.authorized){
       r.push('/chats')
       return
@@ -345,6 +351,10 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
   async function uploadMedia(file:File){
     setNotice('')
+    if(!mediaEnabled){
+      setNotice('إرسال الصور والفيديو متوقف مؤقتًا لحين تفعيل فحص المحتوى.')
+      return
+    }
     const result=await uploadConversationMedia(s,id,uid,file)
 
     if(!result.ok){
@@ -485,6 +495,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           onSend={send}
           onOpenGifts={()=>setShowGifts(true)}
           onMediaFile={uploadMedia}
+          mediaEnabled={mediaEnabled}
         />
       </main>
 

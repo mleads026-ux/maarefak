@@ -8,7 +8,7 @@ import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {calculateStarTransferBreakdown,isApprovedChatMedia,type ChatChatCallRow,type ChatChatGiftItem} from '@/lib/chat-room'
+import {calculateStarTransferBreakdown,isApprovedChatMedia,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
 
 export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)

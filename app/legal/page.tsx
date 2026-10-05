@@ -70,10 +70,12 @@ export default function LegalAcceptance(){
       return
     }
 
-    const {data:profile}=await s
+    const {data:{user}}=await s.auth.getUser()
+    const {data:profile}=user?await s
       .from('profiles')
       .select('profile_complete')
-      .maybeSingle()
+      .eq('id',user.id)
+      .maybeSingle():{data:null}
 
     r.push(profile?.profile_complete?'/home':'/onboarding')
     r.refresh()

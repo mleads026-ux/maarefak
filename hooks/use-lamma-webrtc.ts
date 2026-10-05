@@ -11,10 +11,11 @@ type Args={
   setVoiceMembers:Dispatch<SetStateAction<LammaVoiceParticipant[]>>
   setMicEnabled:Dispatch<SetStateAction<boolean>>
   setVoiceStreams:Dispatch<SetStateAction<MediaStream[]>>
+  setNotice:Dispatch<SetStateAction<string>>
 }
 
 export function useLammaWebRtc({
-  s,id,uid,localStreamRef,setVoiceMembers,setMicEnabled,setVoiceStreams,
+  s,id,uid,localStreamRef,setVoiceMembers,setMicEnabled,setVoiceStreams,setNotice,
 }:Args){
   const peersRef=useRef<Map<string,RTCPeerConnection>>(new Map())
   const audiosRef=useRef<Map<string,HTMLAudioElement>>(new Map())
@@ -27,6 +28,11 @@ export function useLammaWebRtc({
     if(existing)return existing
 
     const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]})
+    pc.oniceconnectionstatechange=()=>{
+      if(pc.iceConnectionState==='failed'){
+        setNotice('تعذر اتصال الصوت بأحد المشاركين على هذه الشبكة. يلزم TURN لضمان الاتصال على الشبكات المقيدة.')
+      }
+    }
     localStreamRef.current?.getTracks().forEach(track=>pc.addTrack(track,localStreamRef.current!))
 
     pc.onicecandidate=async(event)=>{

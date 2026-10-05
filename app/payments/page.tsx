@@ -22,6 +22,8 @@ export default function Payments(){
  const s=useMemo(()=>createClient(),[])
  const [uid,setUid]=useState('')
  const [wallet,setWallet]=useState(0)
+ const [promotionalWallet,setPromotionalWallet]=useState(0)
+ const [transferableWallet,setTransferableWallet]=useState(0)
  const [packs,setPacks]=useState<any[]>([])
  const [earn,setEarn]=useState<any>({})
  const [risk,setRisk]=useState<any>({})
@@ -47,6 +49,8 @@ export default function Payments(){
    setUid(user.id)
    const snapshot=await fetchPaymentsSnapshot(s,user.id)
    setWallet(snapshot.wallet)
+   setPromotionalWallet(snapshot.promotionalWallet)
+   setTransferableWallet(snapshot.transferableWallet)
    setPacks(snapshot.packs)
    setEarn(snapshot.earnings)
    setRisk(snapshot.risk)
@@ -149,7 +153,7 @@ export default function Payments(){
  {notice&&<p className="rounded-2xl bg-[#EAF2FC] p-3 text-sm font-bold text-[#1560BD]">{notice}</p>}
 
  <section className="grid grid-cols-2 gap-3">
-   <Card><CardContent><Wallet className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">رصيد النجوم</p><p className="text-2xl font-black">{wallet.toLocaleString()} ⭐</p></CardContent></Card>
+   <Card><CardContent><Wallet className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">رصيد النجوم</p><p className="text-2xl font-black">{wallet.toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">ترويجي: {promotionalWallet.toLocaleString()} ⭐</p><p className="text-[10px] font-bold text-[#1560BD]">قابل للتحويل: {transferableWallet.toLocaleString()} ⭐</p></CardContent></Card>
    <Card><CardContent><Banknote className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">أرباح متاحة</p><p className="text-2xl font-black">{Number(earn.available_stars||0).toLocaleString()} ⭐</p></CardContent></Card>
  </section>
 

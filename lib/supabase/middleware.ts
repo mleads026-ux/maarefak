@@ -18,39 +18,20 @@ export async function updateSession(request:NextRequest){
 
   const {data:{user}}=await supabase.auth.getUser()
   const path=request.nextUrl.pathname
+  const publicPath=path.startsWith('/login')||path.startsWith('/signup')||path.startsWith('/auth/callback')
 
-  const anonymousAllowed=
-    path.startsWith('/login')
-    ||path.startsWith('/signup')
-    ||path.startsWith('/auth/callback')
-
-  if(!user&&!anonymousAllowed){
+  if(!user&&!publicPath){
     const u=request.nextUrl.clone()
     u.pathname='/login'
     u.search=''
     return NextResponse.redirect(u)
   }
 
-  if(user){
-    const {data:aal}=await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-    const requiresMfa=aal?.nextLevel==='aal2'&&aal.currentLevel!=='aal2'
-
-    if(requiresMfa&&path!=='/mfa'){
-      const u=request.nextUrl.clone()
-      u.pathname='/mfa'
-      u.search=''
-      if(!path.startsWith('/login')&&!path.startsWith('/signup')&&!path.startsWith('/auth/callback')){
-        u.searchParams.set('next',path)
-      }
-      return NextResponse.redirect(u)
-    }
-
-    if(!requiresMfa&&(path==='/login'||path==='/signup'||path==='/mfa')){
-      const u=request.nextUrl.clone()
-      u.pathname='/home'
-      u.search=''
-      return NextResponse.redirect(u)
-    }
+  if(user&&(path==='/login'||path==='/signup')){
+    const u=request.nextUrl.clone()
+    u.pathname='/home'
+    u.search=''
+    return NextResponse.redirect(u)
   }
 
   return response

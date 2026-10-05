@@ -153,6 +153,11 @@ export default function Payments(){
    <Card><CardContent><Banknote className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">أرباح متاحة</p><p className="text-2xl font-black">{Number(earn.available_stars||0).toLocaleString()} ⭐</p></CardContent></Card>
  </section>
 
+ <div className="rounded-3xl border border-[#DCE8F7] bg-[#F7FBFF] p-4">
+   <p className="font-black text-[#1560BD]">⭐ نجوم للاستخدام داخل لمتنا فقط</p>
+   <p className="mt-1 text-xs font-bold leading-5 text-slate-600">النجوم المجانية من المهمات والمكافآت هي نجوم ترويجية. يمكن استخدامها داخل التطبيق، ولا يمكن سحبها نقدًا أو تحويلها إلى أرباح قابلة للسحب.</p>
+ </div>
+
  {blocked?<div className="rounded-3xl border border-red-200 bg-red-50 p-4"><div className="flex gap-2"><ShieldAlert className="text-red-600"/><div><p className="font-extrabold text-red-700">قيود مالية على الحساب</p>{Number(risk.iap_debt_stars||0)>0?<p className="mt-1 text-sm text-red-700">مديونية IAP: {risk.iap_debt_stars} ⭐ — أي شراء نجوم جديد يسدد الدين أولًا.</p>:null}{risk.manual_payout_hold?<p className="mt-1 text-sm text-red-700">السحب تحت المراجعة{risk.manual_hold_reason?' · '+risk.manual_hold_reason:''}</p>:null}</div></div></div>:null}
 
  <Card><CardContent>

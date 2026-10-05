@@ -35,6 +35,7 @@ export default function SocialHub(){
   const [menuPost,setMenuPost]=useState<any>(null)
   const [visitorCost,setVisitorCost]=useState<number|null>(null)
   const [greetingCost,setGreetingCost]=useState<number|null>(null)
+  const [imageUploadsEnabled,setImageUploadsEnabled]=useState(false)
 
   async function load(){
     setBusy(true)
@@ -42,7 +43,7 @@ export default function SocialHub(){
     if(!user){setBusy(false);return}
     setUid(user.id)
     const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
-    const [v,c,dq,da,md,mc,p,sp,fp,gp]=await Promise.all([
+    const [v,c,dq,da,md,mc,p,sp,fp,gp,mediaSafety]=await Promise.all([
       s.rpc('get_my_profile_visitors',{p_limit:20}),
       s.rpc('my_profile_visitor_count'),
       s.from('daily_questions').select('id,question_ar').eq('active',true).eq('active_date',today).maybeSingle(),
@@ -53,6 +54,7 @@ export default function SocialHub(){
       s.from('social_posts').select('id,user_id,body,media_url,media_path,media_type,topic,created_at').order('created_at',{ascending:false}).limit(40),
       s.from('feature_prices').select('price_stars').eq('key','profile_visitors_24h').eq('enabled',true).maybeSingle(),
       s.from('feature_prices').select('price_stars').eq('key','attention_ping').eq('enabled',true).maybeSingle(),
+      s.from('app_media_settings').select('social_image_uploads_enabled').eq('id',1).maybeSingle(),
     ])
     setVisitors(v.data||[])
     setCount(Number(c.data||0))
@@ -62,6 +64,7 @@ export default function SocialHub(){
     setProfile(p.data||null)
     setVisitorCost(fp.data?.price_stars==null?null:Number(fp.data.price_stars))
     setGreetingCost(gp.data?.price_stars==null?null:Number(gp.data.price_stars))
+    setImageUploadsEnabled(mediaSafety.data?.social_image_uploads_enabled===true)
 
     const raw=sp.data||[]
     if(raw.length){
@@ -146,6 +149,7 @@ export default function SocialHub(){
     setBusy(true);setNotice('')
     let mediaUrl:string|null=null,mediaType:string|null=null
     if(media){
+      if(!imageUploadsEnabled){setNotice('رفع الصور في سوالف متوقف مؤقتًا لحين تفعيل فحص المحتوى.');setBusy(false);return}
       const allowed=['image/jpeg','image/png','image/webp']
       if(!allowed.includes(media.type)){setNotice('السوالف تقبل صور JPG أو PNG أو WebP فقط.');setBusy(false);return}
       const ext=(media.name.split('.').pop()||'jpg').toLowerCase()
@@ -342,9 +346,9 @@ export default function SocialHub(){
         <textarea value={postBody} onChange={e=>setPostBody(e.target.value)} maxLength={1000} className="mt-4 min-h-28 w-full rounded-[22px] bg-[#f3f7fb] p-4 outline-none" placeholder="شارك لحظتك أو سالفتك..."/>
         {mediaPreview?<div className="relative mt-3 overflow-hidden rounded-[20px] bg-[#eef3f8]"><img src={mediaPreview} alt="" className="max-h-64 w-full object-cover"/><button onClick={()=>setMedia(null)} className="absolute left-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/55 text-white"><X size={18}/></button></div>:null}
         <div className="mt-3 flex items-center gap-2">
-          <button onClick={()=>picker.current?.click()} className="tap-action flex items-center gap-2 rounded-full bg-[#eaf4ff] px-4 py-2 text-xs font-black text-[#0e67f5]"><ImagePlus size={18}/> صورة</button>
+          <button disabled={!imageUploadsEnabled} title={imageUploadsEnabled?'إضافة صورة':'رفع الصور متوقف مؤقتًا لحين تفعيل فحص المحتوى'} onClick={()=>picker.current?.click()} className="tap-action flex items-center gap-2 rounded-full bg-[#eaf4ff] px-4 py-2 text-xs font-black text-[#0e67f5] disabled:opacity-50"><ImagePlus size={18}/> صورة</button>
           <select value={postTopic} onChange={e=>setPostTopic(e.target.value)} className="h-10 flex-1 rounded-full bg-[#f3f7fb] px-3 text-xs font-black outline-none">{TOPICS.slice(1).map(x=><option key={x}>{x}</option>)}</select>
-          <input ref={picker} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setMedia(e.target.files?.[0]||null)}/>
+          <input ref={picker} hidden disabled={!imageUploadsEnabled} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setMedia(e.target.files?.[0]||null)}/>
         </div>
         <button onClick={publishPost} disabled={busy||(!postBody.trim()&&!media)} className="tap-action lammetna-gradient mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-[18px] font-black text-white"><Send size={18}/> نشر السالفة</button>
       </section>

@@ -100,7 +100,7 @@ export default function AllLammatPage(){
   }
 
   return <AppShell>
-    <main className="px-4 pb-8 pt-3">
+    <main className="overflow-x-hidden px-4 pb-8 pt-3">
       <header className="safe-top flex items-center justify-between">
         <button
           onClick={()=>r.push('/spaces')}
@@ -127,7 +127,7 @@ export default function AllLammatPage(){
             onChange={e=>setQuery(e.target.value)}
             dir="auto"
             placeholder="ابحث باسم اللَمّة أو LM100002"
-            className="min-w-0 flex-1 bg-transparent text-right text-sm font-bold outline-none placeholder:text-[#98a4b6]"
+            className="min-w-0 flex-1 bg-transparent text-right text-[16px] font-bold outline-none placeholder:text-[#98a4b6]"
           />
           {query?<button onClick={()=>setQuery('')} aria-label="مسح البحث" className="tap-action grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-[#6f7d94]"><X size={15}/></button>:null}
         </div>
@@ -137,7 +137,7 @@ export default function AllLammatPage(){
         </div>
       </section>
 
-      <section className="mt-5 space-y-[22px]">
+      <section className="mt-5 space-y-[18px] px-1">
         {shown.map((room,index)=>{
           const count=room.space_members?.[0]?.count||0
           const hostName=room.profiles?.display_name||'Host'
@@ -146,39 +146,39 @@ export default function AllLammatPage(){
           return <button
             key={room.id}
             onClick={()=>openRoom(room)}
-            className="all-lamma-card-v3 tap-action relative block h-[72px] w-full text-right"
+            className="all-lamma-card-v4 tap-action relative mx-auto block h-[70px] w-full max-w-full text-right"
           >
-            <span className="all-lamma-card-v3__surface absolute inset-0 overflow-hidden rounded-[20px]">
-              <span className="all-lamma-card-v3__glow"/>
-              <span className="all-lamma-card-v3__stars" aria-hidden="true">
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--1">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--2">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--3">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--4">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--5">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--6">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--7">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--8">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--9">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--10">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--11">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--12">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--13">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--14">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--15">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--16">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--17">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--18">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--19">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--20">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--21">·</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--22">✦</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--23">✧</span>
-                <span className="all-lamma-card-v3__star all-lamma-card-v3__star--24">·</span>
+            <span className="all-lamma-card-v4__surface absolute inset-0 overflow-hidden rounded-[20px]">
+              <span className="all-lamma-card-v4__glow"/>
+              <span className="all-lamma-card-v4__stars" aria-hidden="true">
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--1">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--2">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--3">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--4">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--5">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--6">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--7">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--8">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--9">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--10">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--11">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--12">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--13">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--14">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--15">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--16">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--17">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--18">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--19">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--20">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--21">·</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--22">✦</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--23">✧</span>
+                <span className="all-lamma-card-v4__star all-lamma-card-v4__star--24">·</span>
               </span>
             </span>
 
-            <span className="all-lamma-card-v3__wave absolute right-[18px] top-1/2 z-10 -translate-y-1/2 text-white/90">
+            <span className="all-lamma-card-v4__wave absolute right-[18px] top-1/2 z-10 -translate-y-1/2 text-white/90">
               <AudioLines size={26} strokeWidth={2.7}/>
             </span>
 
@@ -186,21 +186,21 @@ export default function AllLammatPage(){
               <span className="block truncate text-[16px] font-black text-white">{room.name}</span>
             </span>
 
-            <span className="all-lamma-card-v3__count absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-[22px] px-[18px] py-[10px] text-[13px] font-black text-white">
+            <span className="all-lamma-card-v4__count absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-[22px] px-[18px] py-[10px] text-[13px] font-black text-white">
               <Users size={19} strokeWidth={2.8}/>{count}
             </span>
 
-            <span className="absolute left-[8px] top-1/2 z-20 h-[80px] w-[80px] -translate-y-1/2">
-              <span className="all-lamma-card-v3__crown absolute -top-[7px] left-1/2 z-30 -translate-x-1/2">
-                <Crown size={17} strokeWidth={2.2}/>
+            <span className="absolute left-[7px] top-1/2 z-20 h-[78px] w-[78px] -translate-y-1/2">
+              <span className="all-lamma-card-v4__crown absolute -top-[6px] left-1/2 z-30 -translate-x-1/2">
+                <Crown size={16} strokeWidth={2.2}/>
               </span>
-              <span className="ornate-silver-ring all-lamma-card-v3__avatar-frame absolute inset-0 rounded-full p-[5px]">
+              <span className="all-lamma-card-v4__avatar-frame absolute inset-0 rounded-full p-[5px]">
                 <span className="block h-full w-full overflow-hidden rounded-full bg-[#dfeaf7]">
                   <img src={avatar} alt={hostName} className="h-full w-full object-cover"/>
                 </span>
-                <span className="all-lamma-card-v3__bead all-lamma-card-v3__bead--left"/>
-                <span className="all-lamma-card-v3__bead all-lamma-card-v3__bead--right"/>
-                <span className="all-lamma-card-v3__bead all-lamma-card-v3__bead--bottom"/>
+                <span className="all-lamma-card-v4__bead all-lamma-card-v4__bead--left"/>
+                <span className="all-lamma-card-v4__bead all-lamma-card-v4__bead--right"/>
+                <span className="all-lamma-card-v4__bead all-lamma-card-v4__bead--bottom"/>
               </span>
             </span>
           </button>
@@ -219,7 +219,7 @@ export default function AllLammatPage(){
             <div><p className="text-base font-black">🔒 {privateRoom.name}</p><p className="mt-1 text-[10px] font-bold text-[#7b879a]">اكتب كلمة مرور اللَمّة للدخول</p></div>
             <button onClick={()=>setPrivateRoom(null)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>
           </div>
-          <Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="كلمة المرور" className="mt-3 h-12 rounded-2xl"/>
+          <Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="كلمة المرور" className="mt-3 h-12 rounded-2xl text-[16px]"/>
           <Button onClick={()=>enter(privateRoom,password)} className="lammetna-gradient mt-2 h-12 w-full rounded-2xl font-black text-white">دخول اللَمّة</Button>
         </section>
       </div>:null}

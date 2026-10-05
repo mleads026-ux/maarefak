@@ -47,7 +47,8 @@ If any of these fail, stop. Do not apply pending migrations.
 2. `20261005_disable_legacy_create_lamma.sql`
 3. `20261005_disable_legacy_join_lamma.sql`
 4. `20261005_disable_legacy_sql_account_delete.sql`
-5. `20261005_finalize_private_social_media.sql`
+5. `20261005_disable_unmoderated_chat_media.sql`
+6. `20261005_finalize_private_social_media.sql`
 
 These changes intentionally make the new client authoritative and remove compatibility surfaces required only by the old client.
 
@@ -58,6 +59,7 @@ Verify again:
 - private lamma wrong passwords are rate-limited
 - account deletion invokes the Edge Function path
 - Social Hub images load via signed URLs
+- if moderation is still unconfigured, private-chat image/video attachment control is disabled and server uploads are rejected
 - blocks prevent access to social media
 - chat text still sends
 - gifts/media use secure RPC flows
@@ -68,6 +70,7 @@ Verify again:
 - Public tables without RLS: 0
 - Performance Advisor: no unindexed foreign keys
 - `social-media` bucket: private
+- if moderation provider is unconfigured: `app_media_settings.chat_media_uploads_enabled=false`
 - only intentionally public bucket should remain `avatars`
 
 ## Rollback rule

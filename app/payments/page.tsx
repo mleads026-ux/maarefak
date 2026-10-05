@@ -8,6 +8,7 @@ import {Card,CardContent} from '@/components/ui/card'
 import {Input} from '@/components/ui/input'
 import {BadgeCheck,Banknote,CreditCard,ShieldAlert,Star,Wallet,Copy,Check,Send} from 'lucide-react'
 import {appConfirm} from '@/components/interaction-dialog'
+import {calculateStarTransferBreakdown,explainFinancialError,explainStarTransferError} from '@/lib/payments'
 
 export default function Payments(){
  const s=useMemo(()=>createClient(),[])
@@ -63,15 +64,6 @@ export default function Payments(){
 
  useEffect(()=>{load()},[])
 
- function explain(e:any){
-   const m=e?.message||''
-   if(m.includes('iap_refund_debt_outstanding'))return 'السحب متوقف حتى سداد مديونية استرداد مشتريات النجوم.'
-   if(m.includes('financial_account_on_hold'))return 'الحساب المالي تحت المراجعة حاليًا.'
-   if(m.includes('verification'))return 'يلزم إكمال التحقق من الهوية قبل السحب.'
-   if(m.includes('payouts_disabled'))return 'السحب الحقيقي غير مفعّل حاليًا.'
-   return 'تعذر تنفيذ العملية الآن.'
- }
-
  async function useEarnings(action:'convert'|'withdraw'){
    const n=Number(stars)
    if(!n||n<1)return
@@ -83,7 +75,7 @@ export default function Payments(){
    }))return
    setBusy(true)
    const {error}=await s.rpc('use_lamma_earnings',{p_action:action,p_stars:n})
-   setNotice(error?explain(error):action==='convert'?'تم تحويل الأرباح إلى رصيد نجوم.':'تم نقل الأرباح لمسار السحب.')
+   setNotice(error?explainFinancialError(error):action==='convert'?'تم تحويل الأرباح إلى رصيد نجوم.':'تم نقل الأرباح لمسار السحب.')
    await load()
  }
 
@@ -99,7 +91,7 @@ export default function Payments(){
    }))return
    setBusy(true)
    const {error}=await s.rpc('request_withdrawal_to_saved_method',{p_stars:n,p_method:method})
-   setNotice(error?explain(error):'تم إنشاء طلب السحب.')
+   setNotice(error?explainFinancialError(error):'تم إنشاء طلب السحب.')
    await load()
  }
 
@@ -126,8 +118,7 @@ export default function Payments(){
    setBusy(true)
    const {error}=await s.rpc('transfer_stars_by_user_id',{p_public_user_id:recipient.public_user_id,p_amount:n,p_client_reference_id:transferRef})
    if(error){
-     const m=error.message||''
-     setNotice(m.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':m.includes('financial')||m.includes('iap_refund')?'التحويل متوقف بسبب قيد مالي على الحساب.':'تعذر تحويل النجوم.')
+     setNotice(explainStarTransferError(error))
    }else{
      setNotice('تم إرسال '+n+' ⭐. وصل للمستلم '+(n-Math.ceil(n*0.15))+' ⭐ بعد عمولة التطبيق 15%.')
      setTransferStars('');setRecipient(null);setRecipientId('');setTransferRef(crypto.randomUUID())
@@ -156,9 +147,7 @@ export default function Payments(){
  }
 
  const blocked=Number(risk.iap_debt_stars||0)>0||!!risk.manual_payout_hold
- const transferGross=Math.max(0,Number(transferStars)||0)
- const transferFee=transferGross?Math.ceil(transferGross*0.15):0
- const transferNet=Math.max(0,transferGross-transferFee)
+ const {gross:transferGross,fee:transferFee,net:transferNet}=calculateStarTransferBreakdown(transferStars)
 
  return <AppShell><PageHeader title="المدفوعات"/><main className="space-y-4 p-4">
  {notice&&<p className="rounded-2xl bg-[#EAF2FC] p-3 text-sm font-bold text-[#1560BD]">{notice}</p>}

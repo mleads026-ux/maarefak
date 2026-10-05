@@ -41,7 +41,7 @@ export default function Signup(){
 
   async function accept(){
     const s=createClient()
-    const {error}=await s.rpc('accept_signup_legal')
+    const {error}=await s.rpc('accept_current_legal',{p_adult_confirmed:true})
     if(error){setMsg('تعذر تسجيل الموافقات القانونية. حاول مرة أخرى.');return false}
     return true
   }

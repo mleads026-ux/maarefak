@@ -8,23 +8,7 @@ import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
-type CallRow = {
-  id: string
-  conversation_id: string
-  caller_id: string
-  callee_id: string
-  status: 'ringing' | 'accepted' | 'rejected' | 'ended' | 'missed'
-  call_kind: 'voice' | 'video'
-}
-
-type GiftItem = {
-  id: string
-  name_ar: string
-  emoji: string
-  price_stars: number
-  animation_tier?: string
-}
+import {calculateStarTransferBreakdown,isApprovedChatMedia,type ChatChatCallRow,type ChatChatGiftItem} from '@/lib/chat-room'
 
 export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -36,10 +20,10 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
   const [messages, setMessages] = useState<any[]>([])
   const [body, setBody] = useState('')
   const [notice, setNotice] = useState('')
-  const [incomingCall, setIncomingCall] = useState<CallRow | null>(null)
-  const [activeCall, setActiveCall] = useState<CallRow | null>(null)
+  const [incomingCall, setIncomingCall] = useState<ChatCallRow | null>(null)
+  const [activeCall, setActiveCall] = useState<ChatCallRow | null>(null)
   const [callLabel, setCallLabel] = useState('')
-  const [giftItems, setGiftItems] = useState<GiftItem[]>([])
+  const [giftItems, setChatGiftItems] = useState<ChatGiftItem[]>([])
   const [showGifts, setShowGifts] = useState(false)
   const [revealedImages, setRevealedImages] = useState<Set<string>>(new Set())
   const [socialOpen,setSocialOpen]=useState(false)
@@ -93,7 +77,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
       .eq('active', true)
       .order('price_stars')
 
-    setGiftItems((giftRows || []) as any)
+    setChatGiftItems((giftRows || []) as any)
 
     const {data:partnerRow}=await s.rpc('conversation_partner_identity',{p_conversation:id})
     const identity=Array.isArray(partnerRow)?partnerRow[0]:partnerRow
@@ -110,11 +94,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     const withUrls = await Promise.all(
       rows.map(async (m: any) => {
-        if (
-          ['image','video'].includes(m.message_type) &&
-          m.moderation_status === 'approved' &&
-          m.media_path
-        ) {
+        if (isApprovedChatMedia(m)) {
           const { data } = await s.storage
             .from('chat-media-approved')
             .createSignedUrl(m.media_path, 600)
@@ -139,9 +119,9 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     if (call) {
       if (call.status === 'ringing' && call.callee_id === user.id) {
-        setIncomingCall(call as CallRow)
+        setIncomingCall(call as ChatCallRow)
       } else {
-        setActiveCall(call as CallRow)
+        setActiveCall(call as ChatCallRow)
         setCallLabel(
           call.status === 'ringing'
             ? 'جارٍ انتظار موافقة الطرف الآخر...'
@@ -209,7 +189,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           table: 'voice_call_sessions',
           filter: `conversation_id=eq.${id}`,
         },
-        (payload: any) => handleCallRow(payload.new)
+        (payload: any) => handleChatCallRow(payload.new)
       )
       .on(
         'postgres_changes',
@@ -219,7 +199,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           table: 'voice_call_sessions',
           filter: `conversation_id=eq.${id}`,
         },
-        (payload: any) => handleCallRow(payload.new)
+        (payload: any) => handleChatCallRow(payload.new)
       )
       .subscribe()
 
@@ -228,7 +208,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     }
   }, [uid, id])
 
-  function handleCallRow(row: CallRow) {
+  function handleChatCallRow(row: ChatCallRow) {
     if (row.caller_id !== uid && row.callee_id !== uid) return
 
     if (row.status === 'ringing') {
@@ -271,7 +251,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     let cancelled = false
     const callId = activeCall.id
-    const callKind:CallRow['call_kind'] = activeCall.call_kind
+    const callKind:ChatCallRow['call_kind'] = activeCall.call_kind
     const isCaller = activeCall.caller_id === uid
 
     async function processSignal(signal: any) {
@@ -513,7 +493,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     }
   }
 
-  async function sendGift(gift: GiftItem) {
+  async function sendGift(gift: ChatGiftItem) {
     const targetId = other?.user_id
     if (!targetId) return
 
@@ -561,7 +541,7 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
       .single()
 
     if (row) {
-      setActiveCall(row as CallRow)
+      setActiveCall(row as ChatCallRow)
       setCallLabel(kind==='video'?'جارٍ انتظار موافقة الطرف الآخر على الفيديو...':'جارٍ انتظار موافقة الطرف الآخر على المكالمة الصوتية...')
     }
   }
@@ -587,8 +567,8 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
     if (row) {
       setIncomingCall(null)
-      setActiveCall(row as CallRow)
-      setCallLabel((row as CallRow).call_kind==='video'?'مكالمة الفيديو متصلة':'المكالمة الصوتية متصلة')
+      setActiveCall(row as ChatCallRow)
+      setCallLabel((row as ChatCallRow).call_kind==='video'?'مكالمة الفيديو متصلة':'المكالمة الصوتية متصلة')
     }
   }
 
@@ -698,9 +678,11 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     })
   }
 
-  const transferGross=Math.max(0,Number(transferStars)||0)
-  const transferFee=transferGross?Math.ceil(transferGross*0.15):0
-  const transferNet=Math.max(0,transferGross-transferFee)
+  const {
+    gross:transferGross,
+    fee:transferFee,
+    net:transferNet,
+  }=calculateStarTransferBreakdown(transferStars)
 
   return (
     <AppShell>

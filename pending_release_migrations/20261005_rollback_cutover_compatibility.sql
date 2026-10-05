@@ -18,5 +18,9 @@ where id='social-media';
 -- Restore legacy-client chat media compatibility during an emergency rollback.
 update public.app_media_settings
 set chat_media_uploads_enabled=true,
+    avatar_uploads_enabled=true,
+    social_image_uploads_enabled=true,
+    private_photo_uploads_enabled=true,
+    space_image_uploads_enabled=true,
     updated_at=now()
 where id=1;

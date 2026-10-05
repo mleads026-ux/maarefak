@@ -51,7 +51,13 @@ export default function Signup(){
     const s=createClient()
     const {data,error}=await s.auth.signUp({email:email.trim(),password})
     if(error){setMsg(friendlyError(error.message));setBusy(false);return}
-    if(data.session){if(await accept()){r.push('/onboarding');r.refresh()}setBusy(false);return}
+    if(data.session){
+      setMsg('يلزم تأكيد البريد قبل دخول لمتنا.')
+      r.push('/verify-email')
+      r.refresh()
+      setBusy(false)
+      return
+    }
     setStep('otp');setResend(60);setMsg('أرسلنا رمز تحقق من 6 أرقام إلى بريدك.');setBusy(false)
   }
   async function verify(){

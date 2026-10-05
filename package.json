@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "postinstall": "npm audit --json || true"
+    "start": "next start"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",

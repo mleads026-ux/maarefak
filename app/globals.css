@@ -264,7 +264,7 @@ input,textarea,select{min-width:0;max-width:100%}
 .auth-live-hero[data-auth-hero="signup"]{
   --auth-orbit-y:29.2%;
   --auth-ring-box:26.5%;
-  --auth-bg-y:17.6%;
+  --auth-bg-y:-10.4%;
 }
 .auth-live-hero>img:first-child{position:relative;z-index:0}
 .auth-live-hero__glow,

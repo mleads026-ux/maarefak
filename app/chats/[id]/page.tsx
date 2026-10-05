@@ -885,6 +885,16 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
           <Button
             size="icon"
             variant="ghost"
+            aria-label="إرسال هدية"
+            onClick={()=>setShowGifts(true)}
+            className="text-[#a76500]"
+          >
+            <Gift size={19}/>
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
             aria-label="إرسال صورة أو فيديو حتى 10 ثواني"
             onClick={() => fileInputRef.current?.click()}
           >

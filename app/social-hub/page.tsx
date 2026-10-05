@@ -6,6 +6,8 @@ import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
 import {appConfirm,appPrompt} from '@/components/interaction-dialog'
+import {DailyMissionRow} from '@/components/daily-mission-row'
+import {ONE_TIME_CLAIM_DATE,prepareDailyMissions,type DailyMission} from '@/lib/daily-missions'
 
 const TOPICS=['الكل','💗 حب','✨ جمال','✈️ سفر','☕ قهوة','👥 تعارف','# تقنية']
 
@@ -17,7 +19,7 @@ export default function SocialHub(){
   const [count,setCount]=useState(0)
   const [q,setQ]=useState<any>(null)
   const [answer,setAnswer]=useState('')
-  const [missions,setMissions]=useState<any[]>([])
+  const [missions,setMissions]=useState<DailyMission[]>([])
   const [notice,setNotice]=useState('')
   const [busy,setBusy]=useState(false)
   const [profile,setProfile]=useState<any>(null)
@@ -42,14 +44,13 @@ export default function SocialHub(){
     if(!user){setBusy(false);return}
     setUid(user.id)
     const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
-    const [v,c,dq,da,md,mc,mcOnce,p,sp,fp,gp,mediaSafety]=await Promise.all([
+    const [v,c,dq,da,md,mc,p,sp,fp,gp,mediaSafety]=await Promise.all([
       s.rpc('get_my_profile_visitors',{p_limit:20}),
       s.rpc('my_profile_visitor_count'),
       s.from('daily_questions').select('id,question_ar').eq('active',true).eq('active_date',today).maybeSingle(),
       s.from('daily_answers').select('question_id,answer,highlighted_until').eq('user_id',user.id),
-      s.from('daily_mission_definitions').select('code,title_ar,description_ar,reward_stars').eq('active',true),
-      s.from('daily_mission_claims').select('mission_code,reward_stars').eq('user_id',user.id).eq('claim_date',today),
-      s.from('daily_mission_claims').select('mission_code').eq('user_id',user.id).eq('mission_code','complete_profile').limit(1),
+      s.from('daily_mission_definitions').select('code,title_ar,description_ar,reward_stars,cadence').eq('active',true),
+      s.from('daily_mission_claims').select('mission_code,claim_date').eq('user_id',user.id).in('claim_date',[today,ONE_TIME_CLAIM_DATE]),
       s.from('profiles').select('id,display_name,avatar_url,cities(name_ar),birth_date,show_age,is_online').eq('id',user.id).single(),
       s.from('social_posts').select('id,user_id,body,media_url,media_path,media_type,topic,created_at').order('created_at',{ascending:false}).limit(40),
       s.from('feature_prices').select('price_stars').eq('key','profile_visitors_24h').eq('enabled',true).maybeSingle(),
@@ -60,14 +61,10 @@ export default function SocialHub(){
     setCount(Number(c.data||0))
     setQ(dq.data||null)
     setAnswer((da.data||[]).find((x:any)=>x.question_id===dq.data?.id)?.answer||'')
-    const missionOrder:Record<string,number>={complete_profile:0,answer_daily:1,join_lamma:2,send_message:3}
-    setMissions((md.data||[])
-      .map((x:any)=>({
-        ...x,
-        claimed:(mc.data||[]).some((y:any)=>y.mission_code===x.code)
-          ||(x.code==='complete_profile'&&(mcOnce.data||[]).some((y:any)=>y.mission_code==='complete_profile'))
-      }))
-      .sort((a:any,b:any)=>(missionOrder[a.code]??99)-(missionOrder[b.code]??99)))
+    setMissions(prepareDailyMissions(
+      (md.data||[]) as DailyMission[],
+      (mc.data||[]) as {mission_code:string;claim_date:string}[]
+    ))
     setProfile(p.data||null)
     setVisitorCost(fp.data?.price_stars==null?null:Number(fp.data.price_stars))
     setGreetingCost(gp.data?.price_stars==null?null:Number(gp.data.price_stars))
@@ -333,7 +330,7 @@ export default function SocialHub(){
 
       <article className="pixel-card mt-4 rounded-[27px] p-4">
         <div className="flex items-start justify-between"><div className="flex items-center gap-3"><img src="/demo/face-4.jpg" alt="" className="h-14 w-14 rounded-full object-cover"/><div><p className="font-black">مهمات اليوم 🎁</p><p className="text-[11px] font-bold text-[#7a869b]">اجمع نجومًا من نشاطك داخل لمتنا</p></div></div></div>
-        <div className="mt-3 space-y-2">{missions.slice(0,4).map((m:any)=><div key={m.code} className="flex items-center justify-between rounded-[17px] bg-[#f4f8fc] p-3"><div className="min-w-0 flex-1 pl-3"><p className="text-sm font-black">{m.title_ar}</p><p className="text-[10px] font-bold text-[#77839a]">{m.description_ar}</p>{m.code==='complete_profile'?<p className="mt-1 text-[10px] font-black text-[#9a6b00]">تُمنح هذه النجوم مرة واحدة فقط.</p>:null}</div><button disabled={busy||m.claimed} onClick={()=>claim(m.code)} className={`tap-action shrink-0 rounded-full px-3 py-2 text-xs font-black ${m.claimed?'bg-[#e8eef4] text-[#8290a4]':'bg-[#fff4c6] text-[#8c6200]'}`}>{m.claimed?'تم':'+'+m.reward_stars+' ⭐ ترويجية'}</button></div>)}</div>
+        <div className="mt-3 space-y-2">{missions.slice(0,4).map(m=><DailyMissionRow key={m.code} mission={m} busy={busy} onClaim={claim}/>)}</div>
         <p className="mt-3 rounded-[16px] bg-[#eef5ff] px-3 py-2 text-[10px] font-bold leading-5 text-[#52627d]">ملاحظة: النجوم الترويجية تُستخدم للصرف داخل التطبيق فقط، ولا تُضاف إلى رصيد قابل للسحب.</p>
       </article>
     </main>

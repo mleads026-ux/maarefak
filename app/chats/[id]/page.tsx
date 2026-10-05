@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {calculateStarTransferBreakdown,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
 import {fetchChatRoomSnapshot} from '@/lib/chat-room-data'
+import {subscribeChatCalls,subscribeChatMessages} from '@/lib/chat-room-realtime'
 import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
 import {ChatMessageList} from '@/components/chat-message-list'
 import {ChatComposer} from '@/components/chat-composer'
@@ -94,35 +95,10 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
 
   useEffect(() => {
     load()
-
-    const ch = s
-      .channel(`chat-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${id}`,
-        },
-        () => load()
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${id}`,
-        },
-        () => load()
-      )
-      .subscribe()
-
-    return () => {
-      s.removeChannel(ch)
-    }
-  }, [id])
+    const ch=subscribeChatMessages(s,id,load)
+    return()=>{s.removeChannel(ch)}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[id])
 
   async function refreshPartnerIdentity(){
     const {data}=await s.rpc('conversation_partner_identity',{p_conversation:id})
@@ -137,37 +113,12 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     return()=>window.clearInterval(timer)
   },[uid,id])
 
-  useEffect(() => {
-    if (!uid) return
-
-    const ch = s
-      .channel(`voice-call-${id}-${uid}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'voice_call_sessions',
-          filter: `conversation_id=eq.${id}`,
-        },
-        (payload: any) => handleChatCallRow(payload.new)
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'voice_call_sessions',
-          filter: `conversation_id=eq.${id}`,
-        },
-        (payload: any) => handleChatCallRow(payload.new)
-      )
-      .subscribe()
-
-    return () => {
-      s.removeChannel(ch)
-    }
-  }, [uid, id])
+  useEffect(()=>{
+    if(!uid)return
+    const ch=subscribeChatCalls(s,id,uid,handleChatCallRow)
+    return()=>{s.removeChannel(ch)}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[uid,id])
 
   function handleChatCallRow(row: ChatCallRow) {
     if (row.caller_id !== uid && row.callee_id !== uid) return

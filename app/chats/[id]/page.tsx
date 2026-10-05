@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {calculateStarTransferBreakdown,type ChatCallRow,type ChatGiftItem} from '@/lib/chat-room'
 import {fetchChatRoomSnapshot} from '@/lib/chat-room-data'
+import {uploadConversationMedia} from '@/lib/chat-media'
 import {subscribeChatCalls,subscribeChatMessages} from '@/lib/chat-room-realtime'
 import {
   consentPrivatePhotos,
@@ -334,79 +335,23 @@ export default function Chat({ params }: { params: Promise<{ id: string }> }) {
     setCallLabel('')
   }
 
-  async function readVideoDuration(file:File){
-    return await new Promise<number>((resolve,reject)=>{
-      const url=URL.createObjectURL(file)
-      const video=document.createElement('video')
-      video.preload='metadata'
-      video.onloadedmetadata=()=>{
-        const duration=Number(video.duration||0)
-        URL.revokeObjectURL(url)
-        resolve(duration)
-      }
-      video.onerror=()=>{
-        URL.revokeObjectURL(url)
-        reject(new Error('invalid_video'))
-      }
-      video.src=url
-    })
-  }
-
-  async function uploadMedia(file: File) {
+  async function uploadMedia(file:File){
     setNotice('')
+    const result=await uploadConversationMedia(s,id,uid,file)
 
-    const imageTypes=['image/jpeg','image/png','image/webp']
-    const videoTypes=['video/mp4','video/webm','video/quicktime']
-    const isImage=imageTypes.includes(file.type)
-    const isVideo=videoTypes.includes(file.type)
-
-    if(!isImage&&!isVideo){
-      setNotice('المسموح صورة JPG/PNG/WEBP أو فيديو MP4/MOV/WEBM.')
+    if(!result.ok){
+      if(result.code==='invalid_type')setNotice('المسموح صورة JPG/PNG/WEBP أو فيديو MP4/MOV/WEBM.')
+      else if(result.code==='too_large')setNotice('حجم الملف يجب ألا يتجاوز 25MB.')
+      else if(result.code==='duration_read')setNotice('تعذر قراءة مدة الفيديو.')
+      else if(result.code==='too_long')setNotice('الفيديو يجب ألا يتجاوز 10 ثوانٍ.')
+      else if(result.code==='upload')setNotice(result.isVideo?'تعذر رفع الفيديو.':'تعذر رفع الصورة.')
+      else setNotice(result.isVideo?'تعذر إرسال الفيديو.':'تعذر إرسال الصورة.')
       return
     }
 
-    if(file.size>25*1024*1024){
-      setNotice('حجم الملف يجب ألا يتجاوز 25MB.')
-      return
-    }
-
-    let duration:number|null=null
-    if(isVideo){
-      try{duration=await readVideoDuration(file)}catch{
-        setNotice('تعذر قراءة مدة الفيديو.')
-        return
-      }
-      if(!duration||duration>10.05){
-        setNotice('الفيديو يجب ألا يتجاوز 10 ثوانٍ.')
-        return
-      }
-    }
-
-    const ext=file.name.split('.').pop()?.toLowerCase()||(isVideo?'mp4':'jpg')
-    const path=`${id}/${uid}/${crypto.randomUUID()}.${ext}`
-
-    const {error:uploadError}=await s.storage
-      .from('chat-media-approved')
-      .upload(path,file,{upsert:false,contentType:file.type})
-
-    if(uploadError){
-      setNotice(isVideo?'تعذر رفع الفيديو.':'تعذر رفع الصورة.')
-      return
-    }
-
-    const {error}=await s.rpc('create_media_message',{
-      p_conversation:id,
-      p_media_path:path,
-      p_kind:isVideo?'video':'image',
-      p_duration_seconds:duration,
-    })
-
-    if(error){
-      setNotice(isVideo?'تعذر إرسال الفيديو.':'تعذر إرسال الصورة.')
-      return
-    }
-
-    setNotice(isVideo?'تم إرسال الفيديو.':'تم إرسال الصورة. ستظهر للطرف الآخر مموهة حتى يختار إظهارها.')
+    setNotice(result.isVideo
+      ?'تم إرسال الفيديو.'
+      :'تم إرسال الصورة. ستظهر للطرف الآخر مموهة حتى يختار إظهارها.')
     await load()
   }
 

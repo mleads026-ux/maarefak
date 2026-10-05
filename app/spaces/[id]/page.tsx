@@ -14,6 +14,7 @@ import {Input} from '@/components/ui/input'
 import {VoiceGlowBar} from '@/components/voice-glow-bar'
 import {LammaGiftBurst,LammaGiftPicker,LammaGiftRecipientPicker} from '@/components/lamma-gift-modals'
 import {LammaChatPanel} from '@/components/lamma-chat-panel'
+import {LammaMemberSheet} from '@/components/lamma-member-sheet'
 import {
   buildLammaGuestLayout,
   findLammaMember,
@@ -763,23 +764,18 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
       onChoose={chooseGiftRecipient}
     />
 
-    {selectedMember?<div className="fixed inset-0 z-[110] flex items-end bg-black/45" onClick={()=>setSelectedMember(null)}>
-      <section onClick={e=>e.stopPropagation()} className="mx-auto w-full max-w-[432px] rounded-t-[30px] bg-white p-4 pb-[max(24px,env(safe-area-inset-bottom))]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="ornate-silver-ring rounded-full p-[4px]">{selectedMember.profiles?.avatar_url?<img src={selectedMember.profiles.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover"/>:<span className="grid h-12 w-12 place-items-center rounded-full bg-[#eaf3fb] font-black text-[#1768f4]">{(selectedMember.profiles?.display_name||'ض')[0]}</span>}</span>
-            <div><p className="font-black">{selectedMember.profiles?.display_name||'ضيف'}</p><p className="text-[10px] font-bold text-[#7b879b]">{selectedMember.profiles?.mood||'ضيف في اللَمّة'}</p></div>
-          </div>
-          <button onClick={()=>setSelectedMember(null)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={()=>requestPrivateContact(selectedMember)}><Star size={15}/> تواصل · {privateContactPrice} ⭐</Button>
-          <Button variant="outline" onClick={()=>{setGiftRecipient(selectedMember);setGiftMode('profile');setShowGifts(true);setSelectedMember(null)}}><Gift size={15}/> هدية</Button>
-        </div>
-
-      </section>
-    </div>:null}
+    <LammaMemberSheet
+      member={selectedMember}
+      privateContactPrice={privateContactPrice}
+      onClose={()=>setSelectedMember(null)}
+      onContact={requestPrivateContact}
+      onGift={(member)=>{
+        setGiftRecipient(member)
+        setGiftMode('profile')
+        setShowGifts(true)
+        setSelectedMember(null)
+      }}
+    />
 
     <LammaGiftPicker
       open={showGifts}

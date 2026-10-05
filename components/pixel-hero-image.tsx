@@ -16,7 +16,12 @@ export function PixelHeroImage({src,alt,className='',children,liveIcon}:Props){
       <span aria-hidden="true" className="auth-live-hero__glow"/>
       <span aria-hidden="true" className="auth-live-hero__sheen"/>
       <span aria-hidden="true" className="auth-icon-ring-eraser"/>
-      <img aria-hidden="true" src={src} alt="" className="auth-icon-ring-live select-none" draggable={false}/>
+      <span aria-hidden="true" className="auth-icon-ring-crop">
+        <span
+          className="auth-icon-ring-live"
+          style={{backgroundImage:`url("${src}")`}}
+        />
+      </span>
     </>:null}
     {children}
   </div>

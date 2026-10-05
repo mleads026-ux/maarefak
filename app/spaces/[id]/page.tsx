@@ -84,6 +84,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     setVoiceMembers,
     setMicEnabled,
     setVoiceStreams,
+    setNotice,
   })
 
   const {

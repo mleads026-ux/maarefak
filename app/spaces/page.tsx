@@ -86,8 +86,23 @@ export default function Spaces(){
   }
 
   async function join(x:Space){
-    const {error}=await s.rpc('join_lamma',{p_space:x.id,p_password:x.is_public?null:joinPw[x.id]||null})
-    if(error){setNotice(error.message.includes('wrong_password')?'كلمة المرور غير صحيحة.':'تعذر دخول اللَمّة.');return}
+    const {data:status,error}=await s.rpc('join_lamma_v2',{p_space:x.id,p_password:x.is_public?null:joinPw[x.id]||null})
+    if(error){setNotice('تعذر دخول اللَمّة.');return}
+    if(status!=='joined'){
+      const message=status==='wrong_password'
+        ?'كلمة المرور غير صحيحة.'
+        :status==='too_many_password_attempts'
+          ?'محاولات كثيرة لكلمة المرور. حاول مرة أخرى بعد 15 دقيقة.'
+          :status==='lamma_full'
+            ?'اللَمّة وصلت للعدد الأقصى من الأعضاء.'
+            :status==='banned_from_lamma'
+              ?'لا يمكنك دخول هذه اللَمّة حاليًا.'
+              :status==='lamma_ended'
+                ?'انتهت هذه اللَمّة.'
+                :'تعذر دخول اللَمّة.'
+      setNotice(message)
+      return
+    }
     r.push(`/spaces/${x.id}`)
   }
 

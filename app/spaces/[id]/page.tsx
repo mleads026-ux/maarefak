@@ -13,7 +13,7 @@ import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {VoiceGlowBar} from '@/components/voice-glow-bar'
 import {LammaGiftBurst,LammaGiftPicker,LammaGiftRecipientPicker} from '@/components/lamma-gift-modals'
-import {LammaMessageList} from '@/components/lamma-message-list'
+import {LammaChatPanel} from '@/components/lamma-chat-panel'
 import {
   buildLammaGuestLayout,
   findLammaMember,
@@ -659,50 +659,22 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           {isHost&&voiceRequests.length?<span className="rounded-full bg-[#ffe16d] px-3 py-2 text-[10px] font-black text-[#694000]">{voiceRequests.length} طلب صوت</span>:null}
         </div>
 
-        <div className="relative z-30 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/40 bg-[#f1f5fa]/95 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur transition-all duration-300">
-          <div
-            onPointerDown={chatDragStart}
-            onPointerMove={chatDragMove}
-            onPointerUp={chatDragEnd}
-            onPointerCancel={chatDragEnd}
-            className="touch-none cursor-ns-resize border-b border-[#ccd8e7] bg-[#f1f5fa] px-4 pb-3 pt-2"
-          >
-            <button
-              type="button"
-              aria-label={chatExpanded?'تصغير الشات':'تكبير الشات'}
-              onClick={()=>{if(!chatDragMovedRef.current)setChatExpanded(v=>!v)}}
-              className="tap-action mx-auto mb-2 block h-1.5 w-14 rounded-full bg-white shadow-[0_1px_4px_rgba(40,80,130,.32)]"
-            />
-            <div className="flex items-center justify-between">
-            <div><p className="text-sm font-black">شات اللَمّة</p><p className="text-[9px] font-bold text-[#77849b]">كل رسالة باسم صاحبها</p></div>
-            <span className="flex items-center gap-1 rounded-full bg-[#eaf4ff] px-3 py-1.5 text-[10px] font-black text-[#1768f4]"><MessageSquare size={13}/>{messages.length}</span>
-            </div>
-          </div>
-
-          <LammaMessageList
-            messages={messages}
-            uid={uid}
-            members={members}
-            onSelectMember={setSelectedMember}
-            messagesEndRef={messagesEndRef}
-          />
-
-          <div className="flex gap-2 border-t border-[#cbd7e5] bg-[#f1f5fa] p-2">
-            <button
-              onClick={()=>setShowGiftRecipients(true)}
-              className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500] shadow-sm ring-1 ring-[#efd892]"
-              aria-label="إرسال هدية"
-            ><Gift size={19}/></button>
-            <Input
-              placeholder="اكتب رسالة في اللَمّة..."
-              value={body}
-              onChange={e=>setBody(e.target.value)}
-              onKeyDown={e=>{if(e.key==='Enter')send()}}
-              className="h-11 rounded-2xl border border-[#d7e1ec] bg-[#f1f5fa]"
-            />
-            <Button size="icon" onClick={send} className="h-11 w-11 shrink-0 rounded-2xl"><Send size={18}/></Button>
-          </div>
-        </div>
+        <LammaChatPanel
+          chatExpanded={chatExpanded}
+          messages={messages}
+          uid={uid}
+          members={members}
+          body={body}
+          messagesEndRef={messagesEndRef}
+          onSelectMember={setSelectedMember}
+          onBodyChange={setBody}
+          onSend={send}
+          onOpenGifts={()=>setShowGiftRecipients(true)}
+          onDragStart={chatDragStart}
+          onDragMove={chatDragMove}
+          onDragEnd={chatDragEnd}
+          onToggleExpanded={()=>{if(!chatDragMovedRef.current)setChatExpanded(v=>!v)}}
+        />
       </section>
     </main>
 

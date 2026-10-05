@@ -57,6 +57,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const [body,setBody]=useState('')
   const [selectedMember,setSelectedMember]=useState<Member|null>(null)
   const [showGifts,setShowGifts]=useState(false)
+  const [showGiftRecipients,setShowGiftRecipients]=useState(false)
   const [giftRecipient,setGiftRecipient]=useState<Member|null>(null)
   const [giftMode,setGiftMode]=useState<'profile'|'chat'>('profile')
   const [giftBurst,setGiftBurst]=useState<{emoji:string;name:string}|null>(null)
@@ -467,6 +468,13 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     setSelectedMember(null)
   }
 
+  function chooseGiftRecipient(member:Member){
+    setGiftRecipient(member)
+    setGiftMode(member.user_id===space?.owner_id&&uid!==space?.owner_id?'chat':'profile')
+    setShowGiftRecipients(false)
+    setShowGifts(true)
+  }
+
   async function sendGift(gift:GiftItem){
     if(!giftRecipient)return
     const {error}=giftMode==='chat'
@@ -714,11 +722,11 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           </div>
 
           <div className="flex gap-2 border-t border-[#cbd7e5] bg-[#f1f5fa] p-2">
-            {!isHost&&hostMember?<button
-              onClick={()=>{setGiftRecipient(hostMember);setGiftMode('chat');setShowGifts(true)}}
-              className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500]"
-              aria-label="إرسال هدية للـHost"
-            ><Gift size={18}/></button>:null}
+            <button
+              onClick={()=>setShowGiftRecipients(true)}
+              className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500] shadow-sm ring-1 ring-[#efd892]"
+              aria-label="إرسال هدية"
+            ><Gift size={19}/></button>
             <Input
               placeholder="اكتب رسالة في اللَمّة..."
               value={body}
@@ -806,6 +814,32 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           {isRoyal?<div className="mt-4 flex items-center gap-2 rounded-[18px] bg-[#eef7ff] p-3 text-[10px] font-bold text-[#315b91]"><ShieldCheck size={18} className="shrink-0 text-[#1768f4]"/>صلاحيات التحكم دي تظهر وتعمل للضيف الملكي الحالي فقط.</div>:null}
         </aside>
       </div>
+    </div>:null}
+
+    {showGiftRecipients?<div className="fixed inset-0 z-[122] flex items-end bg-black/45" onClick={()=>setShowGiftRecipients(false)}>
+      <section onClick={e=>e.stopPropagation()} className="mx-auto max-h-[70dvh] w-full max-w-[432px] overflow-hidden rounded-t-[30px] bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#e1eaf4] px-4 py-3">
+          <div><p className="text-base font-black">إرسال هدية 🎁</p><p className="mt-0.5 text-[10px] font-bold text-[#77849a]">اختار الشخص اللي هتبعت له الهدية</p></div>
+          <button onClick={()=>setShowGiftRecipients(false)} className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#eef3f8]"><X size={18}/></button>
+        </div>
+        <div className="hide-scrollbar max-h-[58dvh] space-y-2 overflow-y-auto p-3 pb-[max(24px,env(safe-area-inset-bottom))]">
+          {members.filter(member=>member.user_id!==uid).map(member=><button
+            key={member.user_id}
+            onClick={()=>chooseGiftRecipient(member)}
+            className="tap-action flex w-full items-center gap-3 rounded-[18px] bg-[#f5f8fc] p-3 text-right ring-1 ring-[#dfe8f2]"
+          >
+            <span className="ornate-silver-ring relative h-11 w-11 shrink-0 rounded-full p-[3px]">
+              {member.profiles?.avatar_url?<img src={member.profiles.avatar_url} alt="" className="h-full w-full rounded-full object-cover"/>:<span className="grid h-full w-full place-items-center rounded-full bg-[#eaf3fb] font-black text-[#1768f4]">{(member.profiles?.display_name||'ض')[0]}</span>}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-black">{member.profiles?.display_name||'ضيف'}</span>
+              <span className="mt-0.5 block text-[9px] font-bold text-[#7b8798]">{member.user_id===space?.owner_id?'Host اللَمّة':'ضيف في اللَمّة'}</span>
+            </span>
+            <Gift size={18} className="text-[#a76500]"/>
+          </button>)}
+          {!members.some(member=>member.user_id!==uid)?<p className="p-5 text-center text-sm font-bold text-[#7b8798]">مفيش ضيوف تانيين في اللَمّة حاليًا.</p>:null}
+        </div>
+      </section>
     </div>:null}
 
     {selectedMember?<div className="fixed inset-0 z-[110] flex items-end bg-black/45" onClick={()=>setSelectedMember(null)}>

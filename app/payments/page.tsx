@@ -9,6 +9,7 @@ import {Input} from '@/components/ui/input'
 import {BadgeCheck,Banknote,CreditCard,ShieldAlert,Star,Wallet,Copy,Check,Send} from 'lucide-react'
 import {appConfirm} from '@/components/interaction-dialog'
 import {calculateStarTransferBreakdown,explainFinancialError,explainStarTransferError} from '@/lib/payments'
+import {fetchPaymentsSnapshot} from '@/lib/payments-data'
 
 export default function Payments(){
  const s=useMemo(()=>createClient(),[])
@@ -37,28 +38,17 @@ export default function Payments(){
    const {data:{user}}=await s.auth.getUser()
    if(!user){setBusy(false);return}
    setUid(user.id)
-   const [w,p,e,r,pr,m,wr,fs,is,pid]=await Promise.all([
-     s.from('star_wallets').select('balance').eq('user_id',user.id).maybeSingle(),
-     s.rpc('get_my_star_packs'),
-     s.rpc('my_lamma_earnings_summary'),
-     s.from('financial_risk_state').select('iap_debt_stars,manual_payout_hold,manual_hold_reason').eq('user_id',user.id).maybeSingle(),
-     s.from('profiles').select('verification_status,verified_at').eq('id',user.id).single(),
-     s.from('payout_methods').select('id,route,country_code,wallet_issuer,label,destination_masked,bank_name_masked,is_default,active').eq('user_id',user.id).eq('active',true),
-     s.from('withdrawal_requests').select('id,requested_stars,cash_amount_egp,payout_method,payout_provider,destination_masked,status,requested_at,paid_at,provider_status,provider_currency,provider_amount,bank_name_masked').eq('user_id',user.id).order('requested_at',{ascending:false}).limit(10),
-     s.from('app_financial_settings').select('payouts_enabled,min_withdrawal_stars,require_verified_payouts').eq('id',1).single(),
-     s.from('app_identity_settings').select('provider,enabled,liveness_required').eq('id',1).single(),
-     s.rpc('my_public_user_id')
-   ])
-   setWallet(Number(w.data?.balance||0))
-   setPacks(p.data||[])
-   setEarn(Array.isArray(e.data)?e.data[0]||{}:e.data||{})
-   setRisk(r.data||{})
-   setProfile(pr.data||{})
-   setPublicId((pid.data as string)||'')
-   setMethods(m.data||[])
-   setWithdrawals(wr.data||[])
-   setSettings(fs.data||{})
-   setIdentity(is.data||{})
+   const snapshot=await fetchPaymentsSnapshot(s,user.id)
+   setWallet(snapshot.wallet)
+   setPacks(snapshot.packs)
+   setEarn(snapshot.earnings)
+   setRisk(snapshot.risk)
+   setProfile(snapshot.profile)
+   setPublicId(snapshot.publicId)
+   setMethods(snapshot.methods)
+   setWithdrawals(snapshot.withdrawals)
+   setSettings(snapshot.settings)
+   setIdentity(snapshot.identity)
    setBusy(false)
  }
 

@@ -683,3 +683,30 @@ input,textarea,select{min-width:0;max-width:100%}
   .all-lamma-card-v4__star{animation:none!important}
   .all-lamma-card-v4__star{opacity:.45}
 }
+
+/* LAMMETNA_SIGNUP_BRAND_CARD_SCALE_V18 */
+.auth-signup-brand-hero{
+  width:100%;
+  aspect-ratio:1536/611;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eef8ff;
+  --auth-orbit-x:50%;
+  --auth-orbit-y:50%;
+  --auth-icon-box:22%;
+}
+.auth-signup-brand-hero>img:first-child{
+  display:block;
+  width:100%;
+  height:auto;
+  max-width:none;
+  object-fit:contain;
+  object-position:center;
+}
+.auth-signup-brand-hero::before,
+.auth-signup-brand-hero::after,
+.auth-signup-brand-hero .auth-live-hero__glow,
+.auth-signup-brand-hero .auth-live-hero__sheen{
+  display:none!important;
+}

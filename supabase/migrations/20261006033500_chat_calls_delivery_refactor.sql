@@ -26,7 +26,7 @@ create or replace function private.notify_star_transfer()
 returns trigger
 language plpgsql
 security definer
-set search_path=public,private
+set search_path=''
 as $$
 declare
   v_sender_name text;
@@ -67,7 +67,7 @@ create or replace function public.transfer_stars_in_conversation(
 returns uuid
 language plpgsql
 security definer
-set search_path=public,private
+set search_path=''
 as $$
 declare
   v_user uuid:=auth.uid();
@@ -170,7 +170,7 @@ create or replace function public.request_chat_call(
 returns uuid
 language plpgsql
 security definer
-set search_path=public,private
+set search_path=''
 as $$
 declare
   v_user uuid:=auth.uid();
@@ -239,7 +239,7 @@ create or replace function public.expire_my_stale_voice_calls()
 returns integer
 language plpgsql
 security definer
-set search_path=public
+set search_path=''
 as $$
 declare
   v_user uuid:=auth.uid();
@@ -274,7 +274,7 @@ create or replace function public.respond_voice_call(
 returns text
 language plpgsql
 security definer
-set search_path=public
+set search_path=''
 as $$
 declare
   v_user uuid:=auth.uid();
@@ -341,7 +341,7 @@ create or replace function private.cleanup_voice_call_signals()
 returns trigger
 language plpgsql
 security definer
-set search_path=public
+set search_path=''
 as $$
 begin
   if old.status in ('ringing','accepted')

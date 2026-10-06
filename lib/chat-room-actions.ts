@@ -136,20 +136,24 @@ export async function respondConversationCall(
   callId:string,
   accept:boolean
 ){
-  await s.rpc('respond_voice_call',{
+  const {error}=await s.rpc('respond_voice_call',{
     p_call:callId,
     p_accept:accept,
   })
 
-  if(!accept)return null
+  if(error)return {row:null,error}
+  if(!accept)return {row:null,error:null}
 
-  const {data:row}=await s
+  const {data:row,error:rowError}=await s
     .from('voice_call_sessions')
     .select('*')
     .eq('id',callId)
     .single()
 
-  return (row||null) as ChatCallRow|null
+  return {
+    row:(row||null) as ChatCallRow|null,
+    error:rowError,
+  }
 }
 
 export async function endConversationCall(

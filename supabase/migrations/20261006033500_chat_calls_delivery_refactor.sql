@@ -264,3 +264,101 @@ $$;
 revoke all on function public.expire_my_stale_voice_calls() from public;
 revoke execute on function public.expire_my_stale_voice_calls() from anon;
 grant execute on function public.expire_my_stale_voice_calls() to authenticated;
+
+
+-- Prevent accepting a second call if either participant became busy after the ring started.
+create or replace function public.respond_voice_call(
+  p_call uuid,
+  p_accept boolean
+)
+returns text
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  v_user uuid:=auth.uid();
+  v_caller uuid;
+  v_status text;
+  v_first text;
+  v_second text;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+
+  select caller_id into v_caller
+  from public.voice_call_sessions
+  where id=p_call
+    and callee_id=v_user
+    and status='ringing'
+  for update;
+
+  if v_caller is null then raise exception 'call_not_available'; end if;
+
+  if p_accept then
+    v_first:=least(v_user::text,v_caller::text);
+    v_second:=greatest(v_user::text,v_caller::text);
+
+    perform pg_advisory_xact_lock(hashtextextended('voice-call:'||v_first,0));
+    perform pg_advisory_xact_lock(hashtextextended('voice-call:'||v_second,0));
+
+    if exists(
+      select 1
+      from public.voice_call_sessions
+      where id<>p_call
+        and status in ('ringing','accepted')
+        and (
+          caller_id in (v_user,v_caller)
+          or callee_id in (v_user,v_caller)
+        )
+    ) then
+      update public.voice_call_sessions
+      set status='rejected',ended_at=now()
+      where id=p_call and status='ringing';
+      raise exception 'user_already_in_call';
+    end if;
+  end if;
+
+  update public.voice_call_sessions
+     set status=case when p_accept then 'accepted' else 'rejected' end,
+         accepted_at=case when p_accept then now() else null end,
+         ended_at=case when p_accept then null else now() end
+   where id=p_call
+     and callee_id=v_user
+     and status='ringing'
+   returning status into v_status;
+
+  if v_status is null then raise exception 'call_not_available'; end if;
+  return v_status;
+end
+$$;
+
+revoke all on function public.respond_voice_call(uuid,boolean) from public;
+revoke execute on function public.respond_voice_call(uuid,boolean) from anon;
+grant execute on function public.respond_voice_call(uuid,boolean) to authenticated;
+
+-- Remove SDP/ICE rows as soon as a call is no longer active.
+create or replace function private.cleanup_voice_call_signals()
+returns trigger
+language plpgsql
+security definer
+set search_path=public
+as $$
+begin
+  if old.status in ('ringing','accepted')
+     and new.status in ('ended','rejected','missed') then
+    delete from public.voice_call_signals where call_id=new.id;
+  end if;
+  return new;
+end
+$$;
+
+drop trigger if exists cleanup_voice_call_signals_trg on public.voice_call_sessions;
+create trigger cleanup_voice_call_signals_trg
+after update of status on public.voice_call_sessions
+for each row execute function private.cleanup_voice_call_signals();
+
+-- One-time cleanup for historical completed calls.
+delete from public.voice_call_signals s
+using public.voice_call_sessions c
+where c.id=s.call_id
+  and c.status in ('ended','rejected','missed');

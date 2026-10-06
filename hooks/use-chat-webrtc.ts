@@ -196,9 +196,20 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
           void localVideoRef.current.play().catch(()=>{})
         }
 
-        const pc=new RTCPeerConnection({
-          iceServers:[{urls:'stun:stun.l.google.com:19302'}],
-        })
+        let iceServers:RTCIceServer[]=[{urls:'stun:stun.l.google.com:19302'}]
+        try{
+          const response=await fetch('/api/rtc/ice-servers',{cache:'no-store'})
+          if(response.ok){
+            const payload=await response.json()
+            if(Array.isArray(payload?.iceServers)&&payload.iceServers.length){
+              iceServers=payload.iceServers
+            }
+          }
+        }catch{
+          // STUN fallback remains available when the TURN credential endpoint is unavailable.
+        }
+
+        const pc=new RTCPeerConnection({iceServers})
         peerRef.current=pc
 
         pc.oniceconnectionstatechange=()=>{

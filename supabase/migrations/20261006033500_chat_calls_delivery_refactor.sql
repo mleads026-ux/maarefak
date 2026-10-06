@@ -127,6 +127,13 @@ begin
     select 1 from public.messages where star_transfer_id=v_transfer
   );
 
+  -- Make the recipient notification return directly to this conversation.
+  update public.notifications
+  set data=coalesce(data,'{}'::jsonb)||jsonb_build_object('conversation_id',p_conversation)
+  where user_id=v_target
+    and type='star_transfer_received'
+    and data->>'star_transfer_id'=v_transfer::text;
+
   return v_transfer;
 end
 $$;

@@ -24,7 +24,7 @@ export function ChatMessageList({
     return()=>cancelAnimationFrame(frame)
   },[lastMessageId])
 
-  return <div className="flex-1 space-y-2 pb-4">
+  return <div className="flex-1 space-y-2 pb-24">
     {messages.map((m:any)=>(
       <div
         key={m.id}
@@ -99,6 +99,6 @@ export function ChatMessageList({
         </p>
       </div>
     ))}
-    <div ref={endRef} aria-hidden="true" className="h-1"/>
+    <div ref={endRef} aria-hidden="true" className="h-20 scroll-mb-40"/>
   </div>
 }

@@ -23,7 +23,31 @@ export default function Notifications(){
     ])
     setNotes(n||[]);setRequests(r||[])
   }
-  useEffect(()=>{load()},[])
+  useEffect(()=>{
+    let channel:any=null
+    let disposed=false
+
+    void (async()=>{
+      const {data:{user}}=await s.auth.getUser()
+      if(!user||disposed)return
+      await load()
+      channel=s
+        .channel(`notifications-${user.id}`)
+        .on('postgres_changes',{
+          event:'*',
+          schema:'public',
+          table:'notifications',
+          filter:`user_id=eq.${user.id}`,
+        },()=>{void load()})
+        .subscribe()
+    })()
+
+    return()=>{
+      disposed=true
+      if(channel)s.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[s])
 
   async function respond(id:string,action:'accept'|'ignore'){
     await s.rpc('respond_connection_request',{p_request:id,p_action:action})

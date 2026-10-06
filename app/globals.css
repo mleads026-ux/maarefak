@@ -253,6 +253,22 @@ input,textarea,select{min-width:0;max-width:100%}
 }
 
 
+/* LAMMETNA_LOGIN_BRAND_CARD_FIX_V15 */
+.auth-login-brand-hero{
+  aspect-ratio:502/784;
+  background:#eef8ff;
+}
+.auth-login-brand-hero>img:first-child{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 50%;
+}
+.auth-login-brand-hero::before,
+.auth-login-brand-hero::after{
+  display:none!important;
+}
+
 /* LAMMETNA_AUTH_LAYERED_ICON_V14 */
 .auth-live-hero{
   --auth-orbit-x:50%;

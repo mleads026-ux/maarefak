@@ -15,8 +15,10 @@ export function PixelHeroImage({src,alt,className='',children,liveIcon}:Props){
   >
     <img src={src} alt={alt} className="block h-auto w-full select-none" draggable={false}/>
     {liveIcon?<>
-      <span aria-hidden="true" className="auth-live-hero__glow"/>
-      <span aria-hidden="true" className="auth-live-hero__sheen"/>
+      {liveIcon==='signup'?<>
+        <span aria-hidden="true" className="auth-live-hero__glow"/>
+        <span aria-hidden="true" className="auth-live-hero__sheen"/>
+      </>:null}
       <AuthLayeredAppIcon/>
     </>:null}
     {children}

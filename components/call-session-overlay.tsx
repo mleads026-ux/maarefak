@@ -278,3 +278,19 @@ function PartnerAvatar({partner,size}:{partner:CallPartner|null;size:'large'|'he
       :<div className={`grid h-full w-full place-items-center ${textClass} font-black`}>{(partner?.display_name||'ل')[0]}</div>}
   </div>
 }
+
+
+function CallButton({label,onClick,active,children}:{
+  label:string
+  onClick:()=>void
+  active?:boolean
+  children:React.ReactNode
+}){
+  return <button
+    onClick={onClick}
+    className={`tap-action flex min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 py-2 text-[9px] font-black ${active?'bg-white text-[#17233c]':'bg-white/12 text-white'}`}
+  >
+    {children}
+    <span className="truncate">{label}</span>
+  </button>
+}

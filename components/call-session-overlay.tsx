@@ -1,6 +1,6 @@
 'use client'
 
-import type {RefObject} from 'react'
+import {useEffect,useRef,type RefObject} from 'react'
 import {
   Camera,Gift,Lock,MessageCircle,Mic,MicOff,Minimize2,
   Phone,PhoneOff,Send,Unlock,Video,Volume2,X,
@@ -232,15 +232,27 @@ function CallChatPanel({uid,messages,body,isVideo,onBodyChange,onSendMessage,onO
   onSendMessage:()=>void
   onOpenGifts:()=>void
 }){
-  return <div className={`absolute bottom-32 left-3 right-3 z-20 rounded-[26px] p-3 backdrop-blur-xl ${isVideo?'bg-black/42 ring-1 ring-white/20':'bg-white/10 ring-1 ring-white/15'}`}>
-    <div className="hide-scrollbar max-h-[31dvh] space-y-1.5 overflow-y-auto pb-2">
-      {messages.slice(-10).map(message=><div key={message.id} className={`max-w-[86%] rounded-2xl px-3 py-2 text-xs font-bold ${message.message_type==='gift'||message.message_type==='star_transfer'?'mx-auto bg-amber-100/90 text-amber-950':message.sender_id===uid?'mr-auto bg-[#1560BD]/90 text-white':'ml-auto bg-white/85 text-[#17233c]'}`}>
+  const endRef=useRef<HTMLDivElement|null>(null)
+  const latestMessageId=messages[messages.length-1]?.id
+
+  useEffect(()=>{
+    endRef.current?.scrollIntoView({behavior:'smooth',block:'end'})
+  },[latestMessageId])
+
+  return <div
+    className="absolute left-3 right-3 z-20"
+    style={{bottom:'calc(max(22px, env(safe-area-inset-bottom)) + 150px)'}}
+  >
+    <div className={`hide-scrollbar max-h-[34dvh] space-y-1.5 overflow-y-auto rounded-[22px] p-2 backdrop-blur-xl ${isVideo?'bg-black/30 ring-1 ring-white/15':'bg-black/12 ring-1 ring-white/10'}`}>
+      {messages.slice(-12).map(message=><div key={message.id} className={`w-fit max-w-[86%] rounded-2xl px-3 py-2 text-xs font-bold ${message.message_type==='gift'||message.message_type==='star_transfer'?'mx-auto bg-amber-100/90 text-amber-950':message.sender_id===uid?'mr-auto bg-[#1560BD]/90 text-white':'ml-auto bg-white/90 text-[#17233c]'}`}>
         {message.body}
       </div>)}
+      <div ref={endRef} className="h-px" aria-hidden="true"/>
     </div>
-    <div className="mt-2 flex items-center gap-2" dir="rtl">
+
+    <div className={`mt-2 flex items-center gap-2 rounded-full p-2 shadow-lg backdrop-blur-xl ${isVideo?'bg-black/45 ring-1 ring-white/20':'bg-white/14 ring-1 ring-white/15'}`} dir="rtl">
       <button onClick={onOpenGifts} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/90 text-[#a76500]"><Gift size={18}/></button>
-      <input value={body} onChange={event=>onBodyChange(event.target.value)} onKeyDown={event=>{if(event.key==='Enter')onSendMessage()}} placeholder="اكتب رسالة..." className="h-11 min-w-0 flex-1 rounded-full border border-white/25 bg-white/90 px-4 text-sm font-bold text-[#17233c] outline-none"/>
+      <input value={body} onChange={event=>onBodyChange(event.target.value)} onKeyDown={event=>{if(event.key==='Enter')onSendMessage()}} placeholder="اكتب رسالة..." className="h-11 min-w-0 flex-1 rounded-full border border-white/25 bg-white/95 px-4 text-sm font-bold text-[#17233c] outline-none"/>
       <button onClick={onSendMessage} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#1560BD] text-white"><Send size={18}/></button>
     </div>
   </div>

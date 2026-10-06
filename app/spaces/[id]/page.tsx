@@ -16,7 +16,7 @@ import {
   type LammaMember,
   type LammaVoiceParticipant,
 } from '@/lib/lamma-room'
-import {fetchLammaRoomSnapshot} from '@/lib/lamma-room-data'
+import {fetchLammaMessages,fetchLammaRoomSnapshot} from '@/lib/lamma-room-data'
 import {subscribeLammaRoomRealtime} from '@/lib/lamma-room-realtime'
 import {useLammaWebRtc} from '@/hooks/use-lamma-webrtc'
 import {useLammaVoiceControls} from '@/hooks/use-lamma-voice-controls'
@@ -143,12 +143,41 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     }
   }
 
+  async function refreshMessages(){
+    try{
+      const rows=await fetchLammaMessages(s,id)
+      setMessages(rows)
+    }catch{
+      // Keep the current feed if a transient realtime refresh fails.
+    }
+  }
+
   useEffect(()=>{
-    load()
-    const roomChannel=subscribeLammaRoomRealtime(s,id,load)
+    let cancelled=false
+    let roomChannel:any=null
+
+    const start=async()=>{
+      const {data:{session}}=await s.auth.getSession()
+      if(session?.access_token)await s.realtime.setAuth(session.access_token)
+      await load()
+      if(cancelled)return
+      roomChannel=subscribeLammaRoomRealtime(s,id,refreshMessages,load)
+    }
+
+    void start()
+
+    const {data:{subscription:authSubscription}}=s.auth.onAuthStateChange((_event,session)=>{
+      if(session?.access_token)void s.realtime.setAuth(session.access_token)
+    })
+
+    const syncOnFocus=()=>{void refreshMessages()}
+    window.addEventListener('focus',syncOnFocus)
 
     return()=>{
-      s.removeChannel(roomChannel)
+      cancelled=true
+      authSubscription.unsubscribe()
+      window.removeEventListener('focus',syncOnFocus)
+      if(roomChannel)s.removeChannel(roomChannel)
       cleanupVoice()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

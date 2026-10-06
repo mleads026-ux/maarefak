@@ -13,7 +13,7 @@ type Props={
 export function LammaMessageList({
   messages,uid,members,unreadFromId,onSelectMember,
 }:Props){
-  return <div className="space-y-2.5">
+  return <div className="space-y-2.5 text-right" dir="rtl">
     {messages.map((message:any)=>{
       const mine=message.sender_id===uid
       const profile=message.profiles as any
@@ -27,19 +27,11 @@ export function LammaMessageList({
         </div>:null}
 
         {message.message_type==='gift'
-          ? <div className="mx-auto w-fit max-w-[90%] rounded-full bg-[#fff1a8]/92 px-3 py-1.5 text-center text-[11px] font-black text-[#704a00] shadow-sm">
+          ? <div className="ml-auto w-fit max-w-[90%] rounded-full bg-[#fff1a8]/92 px-3 py-1.5 text-right text-[11px] font-black text-[#704a00] shadow-sm">
               {message.body}
             </div>
-          : <div className={`flex items-start gap-2 ${mine?'justify-start':'justify-end'}`}>
-              {!mine?<button
-                onClick={()=>member&&onSelectMember(member)}
-                className="tap-action mt-0.5 h-6 w-6 shrink-0 overflow-hidden rounded-full bg-white/18 ring-1 ring-white/30"
-              >
-                {profile?.avatar_url
-                  ?<img src={profile.avatar_url} alt="" className="h-full w-full object-cover"/>
-                  :<span className="grid h-full w-full place-items-center text-[9px] font-black text-white">{(profile?.display_name||'ض')[0]}</span>}
-              </button>:null}
-              <p className={`min-w-0 max-w-[88%] whitespace-pre-wrap break-words text-[12px] leading-5 [overflow-wrap:anywhere] ${mine?'text-white':'text-white/95'}`}>
+          : <div className="flex items-start justify-end gap-2" dir="ltr">
+              <p dir="rtl" className={`ml-auto w-fit min-w-0 max-w-[88%] whitespace-pre-wrap break-words text-right text-[12px] leading-5 [overflow-wrap:anywhere] ${mine?'text-white':'text-white/95'}`}>
                 <button
                   type="button"
                   onClick={()=>!mine&&member&&onSelectMember(member)}
@@ -49,6 +41,14 @@ export function LammaMessageList({
                 </button>{' '}
                 <span className="font-medium">{message.body}</span>
               </p>
+              {!mine?<button
+                onClick={()=>member&&onSelectMember(member)}
+                className="tap-action mt-0.5 h-6 w-6 shrink-0 overflow-hidden rounded-full bg-white/18 ring-1 ring-white/30"
+              >
+                {profile?.avatar_url
+                  ?<img src={profile.avatar_url} alt="" className="h-full w-full object-cover"/>
+                  :<span className="grid h-full w-full place-items-center text-[9px] font-black text-white">{(profile?.display_name||'ض')[0]}</span>}
+              </button>:null}
             </div>}
       </div>
     })}

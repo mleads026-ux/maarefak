@@ -15,6 +15,17 @@ export type LammaRoomSnapshot={
   isHost:boolean
 }
 
+export async function fetchLammaMessages(s:any,id:string){
+  const {data,error}=await s.from('space_messages')
+    .select('id,body,created_at,sender_id,message_type,gift_transaction_id,gift_id,gift_recipient_id,profiles!space_messages_sender_id_fkey(display_name,avatar_url)')
+    .eq('space_id',id)
+    .order('created_at',{ascending:true})
+    .limit(200)
+
+  if(error)throw error
+  return data||[]
+}
+
 export async function fetchLammaRoomSnapshot(
   s:any,
   id:string,

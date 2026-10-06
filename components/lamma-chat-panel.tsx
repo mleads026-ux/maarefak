@@ -30,20 +30,22 @@ export function LammaChatPanel({
     <div
       ref={scrollRef}
       onScroll={onScroll}
-      className="pointer-events-auto absolute inset-x-2 bottom-[76px] top-[26%] overflow-y-auto overscroll-contain px-2 pb-5 pt-16"
+      className="pointer-events-auto absolute inset-x-2 bottom-[70px] top-[22%] flex flex-col overflow-y-auto overscroll-contain px-2 pb-1 pt-4"
       style={{
-        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, transparent 16%, rgba(0,0,0,.4) 38%, #000 61%, #000 100%)',
-        maskImage:'linear-gradient(to bottom, transparent 0%, transparent 16%, rgba(0,0,0,.4) 38%, #000 61%, #000 100%)',
+        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.45) 10%, #000 24%, #000 100%)',
+        maskImage:'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.45) 10%, #000 24%, #000 100%)',
       }}
     >
-      <LammaMessageList
-        messages={messages}
-        uid={uid}
-        members={members}
-        unreadFromId={unreadFromId}
-        onSelectMember={onSelectMember}
-      />
-      <div ref={endRef} className="h-3" aria-hidden="true"/>
+      <div className="mt-auto w-full">
+        <LammaMessageList
+          messages={messages}
+          uid={uid}
+          members={members}
+          unreadFromId={unreadFromId}
+          onSelectMember={onSelectMember}
+        />
+        <div ref={endRef} className="h-1" aria-hidden="true"/>
+      </div>
     </div>
 
     <div className="pointer-events-auto absolute inset-x-2 bottom-1 rounded-[26px] bg-white/96 p-2 text-[#0b1734] shadow-[0_8px_28px_rgba(7,27,75,.25)] ring-1 ring-white/70 backdrop-blur-xl">

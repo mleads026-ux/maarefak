@@ -1,76 +1,108 @@
 'use client'
 
-import type {PointerEvent,RefObject} from 'react'
-import {Gift,MessageSquare,Send} from 'lucide-react'
-import {Button} from '@/components/ui/button'
-import {Input} from '@/components/ui/input'
+import {useEffect,useRef,useState} from 'react'
+import {Gift,Send} from 'lucide-react'
 import {LammaMessageList} from '@/components/lamma-message-list'
 import type {LammaMember} from '@/lib/lamma-room'
 
 type Props={
-  chatExpanded:boolean
   messages:any[]
   uid:string
   members:LammaMember[]
   body:string
-  messagesEndRef:RefObject<HTMLDivElement|null>
   onSelectMember:(member:LammaMember)=>void
   onBodyChange:(value:string)=>void
   onSend:()=>void
   onOpenGifts:()=>void
-  onDragStart:(event:PointerEvent<HTMLDivElement>)=>void
-  onDragMove:(event:PointerEvent<HTMLDivElement>)=>void
-  onDragEnd:(event:PointerEvent<HTMLDivElement>)=>void
-  onToggleExpanded:()=>void
 }
 
 export function LammaChatPanel({
-  chatExpanded,messages,uid,members,body,messagesEndRef,
-  onSelectMember,onBodyChange,onSend,onOpenGifts,
-  onDragStart,onDragMove,onDragEnd,onToggleExpanded,
+  messages,uid,members,body,onSelectMember,onBodyChange,onSend,onOpenGifts,
 }:Props){
-  return <div className="relative z-30 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/40 bg-[#f1f5fa]/95 text-[#0b1734] shadow-[0_-8px_30px_rgba(5,40,110,.12)] backdrop-blur transition-all duration-300">
+  const scrollRef=useRef<HTMLDivElement|null>(null)
+  const endRef=useRef<HTMLDivElement|null>(null)
+  const atBottomRef=useRef(true)
+  const previousLatestIdRef=useRef<string|null>(null)
+  const readTimerRef=useRef<number|null>(null)
+  const [unreadFromId,setUnreadFromId]=useState<string|null>(null)
+
+  useEffect(()=>{
+    const latest=messages[messages.length-1]
+    if(!latest)return
+
+    const previousLatestId=previousLatestIdRef.current
+    const firstLoad=previousLatestId==null
+    const mine=latest.sender_id===uid
+
+    if(firstLoad||atBottomRef.current||mine){
+      requestAnimationFrame(()=>{
+        endRef.current?.scrollIntoView({behavior:firstLoad?'auto':'smooth',block:'end'})
+      })
+      setUnreadFromId(null)
+    }else if(!unreadFromId){
+      const previousIndex=messages.findIndex(message=>message.id===previousLatestId)
+      const firstUnread=messages[Math.max(0,previousIndex+1)]
+      if(firstUnread)setUnreadFromId(firstUnread.id)
+    }
+
+    previousLatestIdRef.current=latest.id
+  },[messages,uid,unreadFromId])
+
+  function handleScroll(){
+    const element=scrollRef.current
+    if(!element)return
+    const distance=element.scrollHeight-element.scrollTop-element.clientHeight
+    const atBottom=distance<56
+    atBottomRef.current=atBottom
+
+    if(readTimerRef.current)window.clearTimeout(readTimerRef.current)
+    if(atBottom&&unreadFromId){
+      readTimerRef.current=window.setTimeout(()=>{
+        if(atBottomRef.current)setUnreadFromId(null)
+      },1200)
+    }
+  }
+
+  return <div className="pointer-events-none absolute inset-0 z-20">
     <div
-      onPointerDown={onDragStart}
-      onPointerMove={onDragMove}
-      onPointerUp={onDragEnd}
-      onPointerCancel={onDragEnd}
-      className="touch-none cursor-ns-resize border-b border-[#ccd8e7] bg-[#f1f5fa] px-4 pb-3 pt-2"
+      ref={scrollRef}
+      onScroll={handleScroll}
+      className="pointer-events-auto absolute inset-x-2 bottom-[76px] top-[26%] overflow-y-auto overscroll-contain px-2 pb-5 pt-16"
+      style={{
+        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, transparent 16%, rgba(0,0,0,.4) 38%, #000 61%, #000 100%)',
+        maskImage:'linear-gradient(to bottom, transparent 0%, transparent 16%, rgba(0,0,0,.4) 38%, #000 61%, #000 100%)',
+      }}
     >
-      <button
-        type="button"
-        aria-label={chatExpanded?'تصغير الشات':'تكبير الشات'}
-        onClick={onToggleExpanded}
-        className="tap-action mx-auto mb-2 block h-1.5 w-14 rounded-full bg-white shadow-[0_1px_4px_rgba(40,80,130,.32)]"
+      <LammaMessageList
+        messages={messages}
+        uid={uid}
+        members={members}
+        unreadFromId={unreadFromId}
+        onSelectMember={onSelectMember}
       />
-      <div className="flex items-center justify-between">
-        <div><p className="text-sm font-black">شات اللَمّة</p><p className="text-[9px] font-bold text-[#77849b]">كل رسالة باسم صاحبها</p></div>
-        <span className="flex items-center gap-1 rounded-full bg-[#eaf4ff] px-3 py-1.5 text-[10px] font-black text-[#1768f4]"><MessageSquare size={13}/>{messages.length}</span>
-      </div>
+      <div ref={endRef} className="h-3" aria-hidden="true"/>
     </div>
 
-    <LammaMessageList
-      messages={messages}
-      uid={uid}
-      members={members}
-      onSelectMember={onSelectMember}
-      messagesEndRef={messagesEndRef}
-    />
-
-    <div className="flex gap-2 border-t border-[#cbd7e5] bg-[#f1f5fa] p-2">
-      <button
-        onClick={onOpenGifts}
-        className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500] shadow-sm ring-1 ring-[#efd892]"
-        aria-label="إرسال هدية"
-      ><Gift size={19}/></button>
-      <Input
-        placeholder="اكتب رسالة في اللَمّة..."
-        value={body}
-        onChange={e=>onBodyChange(e.target.value)}
-        onKeyDown={e=>{if(e.key==='Enter')onSend()}}
-        className="h-11 rounded-2xl border border-[#d7e1ec] bg-[#f1f5fa]"
-      />
-      <Button size="icon" onClick={onSend} className="h-11 w-11 shrink-0 rounded-2xl"><Send size={18}/></Button>
+    <div className="pointer-events-auto absolute inset-x-2 bottom-1 rounded-[26px] bg-white/96 p-2 text-[#0b1734] shadow-[0_8px_28px_rgba(7,27,75,.25)] ring-1 ring-white/70 backdrop-blur-xl">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onOpenGifts}
+          className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fff2c8] text-[#a76500] ring-1 ring-[#efd892]"
+          aria-label="إرسال هدية"
+        ><Gift size={19}/></button>
+        <input
+          placeholder="اكتب رسالة في اللَمّة..."
+          value={body}
+          onChange={event=>onBodyChange(event.target.value)}
+          onKeyDown={event=>{if(event.key==='Enter')onSend()}}
+          className="h-11 min-w-0 flex-1 rounded-2xl border border-[#d7e1ec] bg-white px-4 text-sm font-bold text-[#12203d] outline-none placeholder:text-[#8a96a8]"
+        />
+        <button
+          onClick={onSend}
+          aria-label="إرسال"
+          className="tap-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1560BD] text-white shadow-sm"
+        ><Send size={18}/></button>
+      </div>
     </div>
   </div>
 }

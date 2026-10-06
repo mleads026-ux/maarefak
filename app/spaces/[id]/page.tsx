@@ -65,12 +65,8 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const [challengePick,setChallengePick]=useState<string[]>([])
   const [micPick,setMicPick]=useState<string[]>([])
   const [royalBusy,setRoyalBusy]=useState(false)
-  const [chatExpanded,setChatExpanded]=useState(false)
 
   const localStreamRef=useRef<MediaStream|null>(null)
-  const messagesEndRef=useRef<HTMLDivElement|null>(null)
-  const chatDragStartRef=useRef<number|null>(null)
-  const chatDragMovedRef=useRef(false)
 
   const {
     refreshVoiceMembers,
@@ -158,9 +154,6 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[id])
 
-  useEffect(()=>{
-    messagesEndRef.current?.scrollIntoView({behavior:'smooth',block:'end'})
-  },[messages.length])
 
   const royalSeat=seats.find((x:any)=>x.seat_type==='star'&&x.user_id)
   const royalId=royalSeat?.user_id||null
@@ -199,26 +192,6 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
         ? current
         : [...current,{...row,profiles:me?.profiles||{display_name:'أنت',avatar_url:null}}])
     }
-  }
-
-  function chatDragStart(e:any){
-    chatDragStartRef.current=e.clientY
-    chatDragMovedRef.current=false
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-
-  function chatDragMove(e:any){
-    const start=chatDragStartRef.current
-    if(start==null)return
-    const delta=e.clientY-start
-    if(Math.abs(delta)>10)chatDragMovedRef.current=true
-    if(delta<-24&&!chatExpanded)setChatExpanded(true)
-    if(delta>24&&chatExpanded)setChatExpanded(false)
-  }
-
-  function chatDragEnd(e:any){
-    chatDragStartRef.current=null
-    e.currentTarget.releasePointerCapture?.(e.pointerId)
   }
 
 
@@ -359,7 +332,6 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
         <div className="pointer-events-none absolute -right-20 top-[28%] h-64 w-64 rounded-full bg-fuchsia-400/20 blur-3xl"/>
 
         <LammaRoomStage
-          chatExpanded={chatExpanded}
           space={space}
           members={members}
           voiceMembers={voiceMembers}
@@ -390,15 +362,10 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
           uid={uid}
           members={members}
           body={body}
-          messagesEndRef={messagesEndRef}
           onSelectMember={setSelectedMember}
           onBodyChange={setBody}
           onSend={send}
           onOpenGifts={()=>setShowGiftRecipients(true)}
-          onDragStart={chatDragStart}
-          onDragMove={chatDragMove}
-          onDragEnd={chatDragEnd}
-          onToggleExpanded={()=>{if(!chatDragMovedRef.current)setChatExpanded(v=>!v)}}
         />
       </section>
     </main>

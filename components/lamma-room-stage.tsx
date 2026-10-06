@@ -5,7 +5,6 @@ import {VoiceGlowBar} from '@/components/voice-glow-bar'
 import {findLammaVoiceParticipant,type LammaMember,type LammaVoiceParticipant} from '@/lib/lamma-room'
 
 type Props={
-  chatExpanded:boolean
   space:any
   members:LammaMember[]
   voiceMembers:LammaVoiceParticipant[]
@@ -31,7 +30,7 @@ type Props={
 }
 
 export function LammaRoomStage({
-  chatExpanded,space,members,voiceMembers,voiceStreams,inVoice,isHost,uid,
+  space,members,voiceMembers,voiceStreams,inVoice,isHost,uid,
   hostMember,royalMember,challengeA,challengeB,otherGuests,voiceRequestStatus,
   micEnabled,voiceRequestsCount,onShowGuests,onBack,onSelectMember,onAssignRoyal,
   onRequestVoiceApproval,onToggleMic,onLeaveVoice,
@@ -44,14 +43,47 @@ export function LammaRoomStage({
   }
 
   return <>
-    <div className={`relative z-10 flex shrink-0 flex-col overflow-hidden transition-[height] duration-300 ${chatExpanded?'h-[18%]':'h-[55%]'}`}>
+    <div className="relative z-30 flex h-[57%] shrink-0 flex-col overflow-hidden">
       <div className="relative flex items-center justify-center pt-1">
         <button onClick={onShowGuests} className="tap-action absolute right-0 top-0 flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-2 text-xs font-black backdrop-blur">
           <Users size={17}/> الضيوف <span className="rounded-full bg-white/20 px-2 py-0.5">{members.length}</span>
         </button>
-        <button onClick={onBack} aria-label="رجوع" className="tap-action absolute left-0 top-0 grid h-9 w-9 place-items-center rounded-full border border-white/30 bg-white/16">
-          <ChevronLeft size={20}/>
-        </button>
+        <div className="absolute left-0 top-0 flex items-center gap-2">
+          <button onClick={onBack} aria-label="رجوع" className="tap-action grid h-9 w-9 place-items-center rounded-full border border-white/30 bg-white/16">
+            <ChevronLeft size={20}/>
+          </button>
+          {!inVoice
+            ? <button
+                onClick={onRequestVoiceApproval}
+                disabled={!isHost&&voiceRequestStatus==='pending'}
+                aria-label="طلب المايك"
+                title="طلب المايك"
+                className="tap-action relative grid h-9 w-9 place-items-center rounded-full border border-white/35 bg-white/18 text-white shadow-sm backdrop-blur disabled:opacity-60"
+              >
+                <Mic size={17}/>
+                {voiceRequestStatus==='pending'?<span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#ffe16d] ring-2 ring-[#2d6df6]"/>:null}
+                {isHost&&voiceRequestsCount?<span className="absolute -right-1 -top-2 min-w-4 rounded-full bg-[#ffe16d] px-1 text-[8px] font-black text-[#694000]">{voiceRequestsCount}</span>:null}
+              </button>
+            : <>
+                <button
+                  onClick={onToggleMic}
+                  aria-label={micEnabled?'كتم المايك':'فتح المايك'}
+                  title={micEnabled?'كتم المايك':'فتح المايك'}
+                  className={`tap-action grid h-9 w-9 place-items-center rounded-full border border-white/35 ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}
+                >
+                  {micEnabled?<Mic size={17}/>:<MicOff size={17}/>}
+                </button>
+                <button
+                  onClick={onLeaveVoice}
+                  aria-label="الخروج من الصوت"
+                  title="الخروج من الصوت"
+                  className="tap-action grid h-9 w-9 place-items-center rounded-full bg-[#ff337d]"
+                >
+                  <Headphones size={16}/>
+                </button>
+              </>
+          }
+        </div>
         <div className="max-w-[210px] text-center">
           <p className="truncate text-[18px] font-black">{space?.emoji||'🎙️'} {space?.name||'اللَمّة'}</p>
           <p className="mt-0.5 text-[10px] font-bold text-white/75">اللَمّة شغالة · {voiceMembers.length} بالصوت {space?.public_lamma_id?` · ${space.public_lamma_id}`:""}</p>
@@ -61,7 +93,7 @@ export function LammaRoomStage({
       <VoiceGlowBar streams={voiceStreams} active={inVoice||voiceMembers.length>0} compact/>
 
       <div className="mt-2 grid grid-cols-[1fr_1.25fr] items-center gap-3">
-        <div className="rounded-[20px] border border-white/25 bg-white/10 p-2 text-center">
+        <div className="rounded-[20px] border border-white/20 bg-transparent p-2 text-center">
           <p className="mb-1 text-[10px] font-black text-[#ffe083]">👑 الضيف الملكي</p>
           {royalMember
             ? <button onClick={()=>royalMember.user_id!==uid&&onSelectMember(royalMember)} className="tap-action">
@@ -80,7 +112,7 @@ export function LammaRoomStage({
           }
         </div>
 
-        <div className="rounded-[20px] border border-white/25 bg-white/10 p-2">
+        <div className="rounded-[20px] border border-white/20 bg-transparent p-2">
           <p className="mb-1 text-center text-[10px] font-black">⚔️ التحدي الآن</p>
           <div className="flex items-center justify-center gap-2">
             {[challengeA,challengeB].map((member,index)=>
@@ -118,22 +150,5 @@ export function LammaRoomStage({
       </div>
     </div>
 
-    <div className={`relative z-20 mt-2 shrink-0 items-center justify-center gap-2 ${chatExpanded?'hidden':'flex'}`}>
-      {!inVoice
-        ? <button
-            onClick={onRequestVoiceApproval}
-            disabled={!isHost&&voiceRequestStatus==='pending'}
-            className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black text-[#5e25d8] shadow-lg disabled:opacity-65"
-          >
-            <Headphones size={16}/>
-            {isHost?'طلب المايك':voiceRequestStatus==='accepted'?'تمت الموافقة · افتح المايك':voiceRequestStatus==='pending'?'طلب المايك قيد الانتظار':'طلب المايك'}
-          </button>
-        : <>
-            <button onClick={onToggleMic} className={`tap-action grid h-9 w-9 place-items-center rounded-full ${micEnabled?'bg-[#14d29b]':'bg-white/18'}`}>{micEnabled?<Mic size={17}/>:<MicOff size={17}/>}</button>
-            <button onClick={onLeaveVoice} className="tap-action rounded-full bg-[#ff337d] px-4 py-2 text-[11px] font-black">خروج من الصوت</button>
-          </>
-      }
-      {isHost&&voiceRequestsCount?<span className="rounded-full bg-[#ffe16d] px-3 py-2 text-[10px] font-black text-[#694000]">{voiceRequestsCount} طلب صوت</span>:null}
-    </div>
   </>
 }

@@ -18,6 +18,8 @@ create unique index if not exists uq_messages_star_transfer
   on public.messages(star_transfer_id)
   where star_transfer_id is not null;
 
+grant usage on schema private to authenticated;
+
 -- Promotional-star value-transfer protection is already enforced centrally by
 -- private.guard_promotional_star_value_transfer() on public.star_transactions.
 -- Do not duplicate wallet locking here; the central trigger remains the single source of truth.
@@ -59,7 +61,7 @@ create trigger star_transfers_notify_recipient_trg
 after insert on public.star_transfers
 for each row execute function private.notify_star_transfer();
 
-create or replace function public.transfer_stars_in_conversation(
+create or replace function private.transfer_stars_in_conversation_impl(
   p_conversation uuid,
   p_amount bigint,
   p_client_reference_id uuid
@@ -127,7 +129,6 @@ begin
     select 1 from public.messages where star_transfer_id=v_transfer
   );
 
-  -- Make the recipient notification return directly to this conversation.
   update public.notifications
   set data=coalesce(data,'{}'::jsonb)||jsonb_build_object('conversation_id',p_conversation)
   where user_id=v_target
@@ -136,6 +137,24 @@ begin
 
   return v_transfer;
 end
+$$;
+
+revoke all on function private.transfer_stars_in_conversation_impl(uuid,bigint,uuid) from public;
+grant execute on function private.transfer_stars_in_conversation_impl(uuid,bigint,uuid) to authenticated;
+
+create or replace function public.transfer_stars_in_conversation(
+  p_conversation uuid,
+  p_amount bigint,
+  p_client_reference_id uuid
+)
+returns uuid
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.transfer_stars_in_conversation_impl(
+    p_conversation,p_amount,p_client_reference_id
+  )
 $$;
 
 revoke all on function public.transfer_stars_in_conversation(uuid,bigint,uuid) from public;
@@ -163,7 +182,7 @@ $$;
 
 -- A user can participate in only one active call at a time.
 -- Advisory locks make the busy check safe when call requests race.
-create or replace function public.request_chat_call(
+create or replace function private.request_chat_call_impl(
   p_conversation uuid,
   p_kind text
 )
@@ -231,11 +250,26 @@ begin
 end
 $$;
 
+revoke all on function private.request_chat_call_impl(uuid,text) from public;
+grant execute on function private.request_chat_call_impl(uuid,text) to authenticated;
+
+create or replace function public.request_chat_call(
+  p_conversation uuid,
+  p_kind text
+)
+returns uuid
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.request_chat_call_impl(p_conversation,p_kind)
+$$;
+
 revoke all on function public.request_chat_call(uuid,text) from public;
 revoke execute on function public.request_chat_call(uuid,text) from anon;
 grant execute on function public.request_chat_call(uuid,text) to authenticated;
 
-create or replace function public.expire_my_stale_voice_calls()
+create or replace function private.expire_my_stale_voice_calls_impl()
 returns integer
 language plpgsql
 security definer
@@ -261,13 +295,25 @@ begin
 end
 $$;
 
+revoke all on function private.expire_my_stale_voice_calls_impl() from public;
+grant execute on function private.expire_my_stale_voice_calls_impl() to authenticated;
+
+create or replace function public.expire_my_stale_voice_calls()
+returns integer
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.expire_my_stale_voice_calls_impl()
+$$;
+
 revoke all on function public.expire_my_stale_voice_calls() from public;
 revoke execute on function public.expire_my_stale_voice_calls() from anon;
 grant execute on function public.expire_my_stale_voice_calls() to authenticated;
 
 
 -- Prevent accepting a second call if either participant became busy after the ring started.
-create or replace function public.respond_voice_call(
+create or replace function private.respond_voice_call_impl(
   p_call uuid,
   p_accept boolean
 )
@@ -330,6 +376,21 @@ begin
   if v_status is null then raise exception 'call_not_available'; end if;
   return v_status;
 end
+$$;
+
+revoke all on function private.respond_voice_call_impl(uuid,boolean) from public;
+grant execute on function private.respond_voice_call_impl(uuid,boolean) to authenticated;
+
+create or replace function public.respond_voice_call(
+  p_call uuid,
+  p_accept boolean
+)
+returns text
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.respond_voice_call_impl(p_call,p_accept)
 $$;
 
 revoke all on function public.respond_voice_call(uuid,boolean) from public;

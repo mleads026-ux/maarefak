@@ -1,2 +1,105 @@
-import Link from 'next/link';import { redirect } from 'next/navigation';import { Ban,ChevronLeft,Coins,Settings,UserRoundCheck,Users,WalletCards } from 'lucide-react';import { createClient } from '@/lib/supabase/server';import { AppShell } from '@/components/app-shell';import { PageHeader } from '@/components/page-header';import { Card,CardContent } from '@/components/ui/card'
-export default async function Me(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect('/login');const [{data:p},{data:w},{data:tags},{data:views},{count:reqCount}]=await Promise.all([s.from('profiles').select('id,display_name,avatar_url,bio,mood,birth_date,show_age,countries(name_ar),cities(name_ar)').eq('id',user.id).single(),s.from('star_wallets').select('balance').eq('user_id',user.id).single(),s.from('profile_interests').select('interests(name_ar)').eq('profile_id',user.id),s.from('profile_views').select('id,created_at,viewer_id,profiles!profile_views_viewer_id_fkey(display_name,avatar_url)').eq('viewed_id',user.id).order('created_at',{ascending:false}).limit(5),s.from('connection_requests').select('*',{count:'exact',head:true}).eq('receiver_id',user.id).eq('status','pending')]);const age=p?.show_age&&p.birth_date?Math.floor((Date.now()-new Date(p.birth_date).getTime())/31557600000):null;const menu=[['طلبات التواصل',`${reqCount||0}`,UserRoundCheck,'/notifications'],['معارفي','الأشخاص المتصلون بك',Users,'/connections'],['مرّوا من هنا',`${views?.length||0}`,Users,'#visitors'],['رصيد النجوم',`${Number(w?.balance||0).toLocaleString('ar-EG')} ⭐`,Coins,'#stars'],['الحظر','إدارة',Ban,'/settings'],['التحكم','الإعدادات',Settings,'/settings']] as const;return <AppShell><PageHeader title="أنا" stars={Number(w?.balance||0)}/><main className="space-y-4 p-4"><Card><CardContent className="text-center"><div className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-blue-50 text-3xl font-black text-[#1560BD]">{p?.avatar_url?<img src={p.avatar_url} alt="" className="h-full w-full object-cover"/>:(p?.display_name||'م')[0]}</div><h1 className="mt-3 text-xl font-extrabold">{p?.display_name}{age?`، ${age}`:''}</h1><p className="mt-1 text-sm text-slate-500">{[(p?.cities as any)?.name_ar,(p?.countries as any)?.name_ar].filter(Boolean).join('، ')}</p><p className="mt-3 text-sm leading-6 text-slate-600">{p?.bio||'أضف نبذة قصيرة عنك من الإعدادات.'}</p><p className="mt-3 inline-flex rounded-full bg-[#EAF2FC] px-3 py-2 text-xs font-bold text-[#1560BD]">{p?.mood||'☕ رايق'}</p><div className="mt-4 flex flex-wrap justify-center gap-2">{(tags||[]).map((x:any)=><span key={(x.interests as any)?.name_ar} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold">{(x.interests as any)?.name_ar}</span>)}</div></CardContent></Card><div className="space-y-2">{menu.map(([label,value,Icon,href])=><Link key={label} href={href} className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-4"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#EAF2FC] text-[#1560BD]"><Icon size={19}/></div><div className="flex-1"><p className="font-bold">{label}</p><p className="text-xs text-slate-500">{value}</p></div><ChevronLeft size={18} className="text-slate-400"/></Link>)}</div><section id="visitors"><h2 className="mb-2 font-extrabold">مرّوا من هنا</h2><div className="space-y-2">{(views||[]).map((x:any)=><div key={x.id} className="rounded-3xl border border-slate-200 bg-white p-3 text-sm"><span className="font-bold">{x.profiles?.display_name||'مستخدم'}</span><span className="mr-2 text-slate-400">زار ملفك</span></div>)}{!views?.length&&<p className="text-sm text-slate-500">لا توجد زيارات مسجلة حتى الآن.</p>}</div></section><section id="stars"><Card><CardContent><div className="flex items-center gap-3"><WalletCards className="text-amber-600"/><div><p className="font-extrabold">باقات النجوم</p><p className="text-xs text-slate-500">الشراء الفعلي سيُربط عند مرحلة الدفع والنشر التجاري.</p></div></div><div className="mt-4 grid grid-cols-2 gap-2">{[['100','البداية'],['500','الشعبية'],['1,200','التميز'],['3,000','النجوم الكبرى']].map(([n,t])=><div key={n} className="rounded-2xl border border-slate-200 p-3 text-center"><p className="font-black text-amber-700">⭐ {n}</p><p className="text-xs text-slate-500">{t}</p></div>)}</div></CardContent></Card></section></main></AppShell>}
+import Link from 'next/link'
+import {redirect} from 'next/navigation'
+import {Settings,MapPin,Plus,Star,Heart,Smile,WalletCards,UserRoundCheck,Users,Footprints,Ban,ChevronLeft,Music,Plane,Image as ImageIcon} from 'lucide-react'
+import {createClient} from '@/lib/supabase/server'
+import {AppShell} from '@/components/app-shell'
+import {BrandLogo} from '@/components/brand-logo'
+import {CopyTextButton} from '@/components/copy-text-button'
+import {ProfileAvatarEditor} from '@/components/profile-avatar-editor'
+
+export const dynamic='force-dynamic'
+export const revalidate=0
+
+export default async function Me(){
+  const s=await createClient()
+  const {data:{user}}=await s.auth.getUser()
+  if(!user)redirect('/login')
+
+  // Load the authenticated user's own profile first, without relationship joins.
+  // A relationship/select error must never be treated as "new user -> onboarding".
+  const {data:p,error:profileError}=await s.from('profiles')
+    .select('id,display_name,avatar_url,bio,mood,show_age,is_online,city_id,country_id,profile_complete')
+    .eq('id',user.id)
+    .maybeSingle()
+
+  if(profileError){
+    return <AppShell><main className="px-4 pb-5 pt-3">
+      <header className="safe-top flex items-center justify-between">
+        <div className="flex items-center gap-2.5"><BrandLogo size={50}/><div><h1 className="text-[31px] font-black leading-none">لمتنا</h1><p className="mt-1 text-[12px] font-bold text-[#6d7890]">صفحة حسابي</p></div></div>
+      </header>
+      <section className="pixel-card mt-4 rounded-[28px] p-6 text-center">
+        <p className="text-lg font-black">تعذر تحميل حسابك الآن</p>
+        <p className="mt-2 text-sm font-bold text-[#748198]">جرّب تحديث الصفحة مرة أخرى.</p>
+        <Link href="/me" className="tap-action lammetna-gradient mt-4 inline-flex rounded-full px-5 py-3 text-sm font-black text-white">إعادة المحاولة</Link>
+      </section>
+    </main></AppShell>
+  }
+
+  if(!p || p.profile_complete!==true)redirect('/onboarding')
+
+  const {data:publicIdRow}=await s.rpc('my_public_user_id')
+
+  const cityPromise=p.city_id
+    ? s.from('cities').select('name_ar').eq('id',p.city_id).maybeSingle()
+    : Promise.resolve({data:null,error:null} as any)
+
+  const [{data:w},{data:tags},{count:reqCount},{count:viewCount},{data:cityRow}]=await Promise.all([
+    s.from('star_wallets').select('balance').eq('user_id',user.id).maybeSingle(),
+    s.from('profile_interests').select('interests(name_ar)').eq('profile_id',user.id),
+    s.from('connection_requests').select('*',{count:'exact',head:true}).eq('receiver_id',user.id).eq('status','pending'),
+    s.from('profile_views').select('*',{count:'exact',head:true}).eq('viewed_id',user.id),
+    cityPromise,
+  ])
+
+  const stars=Number(w?.balance||0)
+  const city=cityRow?.name_ar||'غير محدد'
+  const publicId=publicIdRow||`LM${String(user.id).replace(/-/g,'').slice(0,10).toUpperCase()}`
+  const interests=(tags||[]).map((x:any)=>(x.interests as any)?.name_ar).filter(Boolean)
+  const avatar=p.avatar_url||null
+
+  const menu=[
+    ['اهتماماتي',interests.slice(0,3).join('، ')||'لم تضف اهتمامات بعد',Heart,'/settings','#db22b0'],
+    ['حالتي الآن',p.mood||'لم تحدد حالتك',Smile,'/social-hub','#1768f4'],
+    ['طلبات التواصل',`${reqCount||0} طلبات`,UserRoundCheck,'/notifications','#0e67f5'],
+    ['المدفوعات والنجوم','إدارة مشترياتك وعمليات الدفع',WalletCards,'/payments','#8f24e7'],
+    ['مرّوا من هنا',`${viewCount||0} زاروا ملفك الشخصي`,Footprints,'/social-hub','#c42dbd'],
+    ['معارفي','أصدقائي وقائمتي',Users,'/connections','#13b985'],
+    ['التحكم','الخصوصية والإعدادات',Settings,'/settings','#0e67f5'],
+    ['الحظر','إدارة قائمة المحظورين',Ban,'/settings','#ef233c'],
+  ] as const
+
+  return <AppShell><main className="px-4 pb-5 pt-3">
+    <header className="safe-top flex items-center justify-between"><div className="flex items-center gap-2.5"><BrandLogo size={50}/><div><h1 className="text-[31px] font-black leading-none">لمتنا</h1><p className="mt-1 text-[12px] font-bold text-[#6d7890]">دائمًا مساحة أجمل مع أصدقاء جدد</p></div></div><Link href="/settings" className="tap-action grid h-11 w-11 place-items-center rounded-full bg-white text-[#0e67f5] shadow-sm ring-1 ring-[#dfe9f5]"><Settings size={23}/></Link></header>
+
+    <section className="lammetna-gradient hero-shadow animated-gradient-card relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+      <div className="grid grid-cols-[1fr_155px] items-center gap-4"><div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-black"><span className="h-2.5 w-2.5 rounded-full bg-[#17e3a2] shadow-[0_0_12px_rgba(23,227,162,.85)]"/>متصل الآن</span>
+        <h2 className="mt-3 text-[34px] font-black">{p.display_name||'حسابي'}</h2>
+        <p className="mt-1 flex items-center gap-1 text-[16px] font-bold"><MapPin size={18}/>{city}<ChevronLeft size={17}/></p>
+        <p className="mt-4 text-[15px] font-bold leading-7 text-white/90">{p.bio||'أضف نبذة عنك من الإعدادات.'}</p>
+      </div><ProfileAvatarEditor userId={user.id} avatar={avatar} isOnline={true}/></div>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        {interests.length?interests.slice(0,4).map((x:string,i:number)=><span key={x} className="rounded-full border border-white/35 bg-white/12 px-3 py-2 text-xs font-black">{i===0?<Plane className="ml-1 inline" size={14}/>:i===1?<Music className="ml-1 inline" size={14}/>:i===2?<ImageIcon className="ml-1 inline" size={14}/>:null}{x}</span>):<span className="rounded-full border border-white/35 bg-white/12 px-3 py-2 text-xs font-black text-white/90">لم تضف اهتمامات بعد</span>}
+        <Link href="/settings" className="tap-action grid h-9 w-9 place-items-center rounded-full border border-white/35 bg-white/12"><Plus size={19}/></Link>
+      </div>
+    </section>
+
+    <section className="pixel-card mt-3 flex items-center gap-3 rounded-[23px] p-4">
+      <div className="grid h-11 w-11 place-items-center rounded-full bg-[#eaf4ff] text-[#0e67f5]"><Users size={20}/></div>
+      <div className="flex-1"><p className="text-[11px] font-bold text-[#77839a]">معرّفي العام في لمتنا</p><p dir="ltr" className="mt-1 text-[18px] font-black tracking-wide">{publicId}</p></div>
+      <CopyTextButton text={publicId}/>
+    </section>
+
+    <section className="mt-3 overflow-hidden rounded-[27px] bg-[linear-gradient(135deg,#044d87,#0877bc_42%,#6622d8_100%)] p-4 text-white shadow-lg">
+      <div className="flex items-center justify-between"><div className="flex items-center gap-3"><span className="grid h-20 w-20 place-items-center rounded-full bg-white/10"><Star size={46} fill="#ffc21d" className="text-[#ffc21d]"/></span><div><p className="text-sm font-bold">رصيد النجوم</p><p className="mt-1 text-[29px] font-black">{stars.toLocaleString('en-US')}</p><p className="text-xs font-bold">نجمة ⭐</p></div></div><Link href="/payments" className="tap-action flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-black text-[#5d24d8]">شراء نجوم <Plus size={18}/></Link></div>
+      <p className="mt-3 text-center text-xs font-black text-white/90">⭐ نجوم للاستخدام داخل لمتنا فقط ⓘ</p>
+    </section>
+
+    <section className="mt-3 grid grid-cols-2 gap-3">
+      {menu.map(([label,desc,Icon,href,color])=><Link key={label} href={href} className="tap-action pixel-card flex items-center gap-3 rounded-[23px] p-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-[17px] bg-[#edf5ff]" style={{color}}><Icon size={21}/></span><div className="min-w-0 flex-1"><p className="text-[14px] font-black">{label}</p><p className="mt-1 truncate text-[10px] font-bold text-[#7a869a]">{desc}</p></div><ChevronLeft size={17} className="text-[#0e67f5]"/></Link>)}
+    </section>
+
+    <Link href="/settings" className="tap-action lammetna-gradient hero-shadow glow-card-surface mt-4 flex items-center justify-between rounded-[27px] p-5 text-white"><div><p className="text-[24px] font-black">إعدادات الحساب</p><p className="mt-1 text-sm font-bold text-white/85">تخصيص تجربتك في لمتنا</p></div><div className="flex items-center gap-2"><span className="grid h-[52px] w-[52px] place-items-center rounded-full bg-white/16"><Settings size={28}/></span><ChevronLeft size={25}/></div></Link>
+  </main></AppShell>
+}

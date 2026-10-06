@@ -1,0 +1,5 @@
+Lammetna green theme patch
+Target branch: chatgpt/lammetna-production-hardeni
+Copy these files over the same paths, then commit and push.
+Suggested commit: Apply Lammetna green visual theme
+Palette: #006B57 primary, #004D40 dark, #E7F5F1 soft, #CDECE3 mint, #FBFCF8 surface, gold retained for stars.

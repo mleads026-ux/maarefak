@@ -1,705 +1,478 @@
 'use client'
 
-import { use, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import {use,useEffect,useMemo,useRef,useState} from 'react'
+import {useRouter} from 'next/navigation'
+import {createClient} from '@/lib/supabase/client'
+import {AppShell} from '@/components/app-shell'
+import {LammaRoomStage} from '@/components/lamma-room-stage'
+import {LammaGiftBurst,LammaGiftPicker,LammaGiftRecipientPicker} from '@/components/lamma-gift-modals'
+import {LammaChatPanel} from '@/components/lamma-chat-panel'
+import {LammaMemberSheet} from '@/components/lamma-member-sheet'
+import {LammaGuestDrawer} from '@/components/lamma-guest-drawer'
 import {
-  Gift,
-  Mic,
-  MicOff,
-  PhoneCall,
-  Send,
-  Star,
-  Users,
-  X,
-} from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { AppShell } from '@/components/app-shell'
-import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+  buildLammaGuestLayout,
+  findLammaMember,
+  type LammaGiftItem,
+  type LammaMember,
+  type LammaVoiceParticipant,
+} from '@/lib/lamma-room'
+import {fetchLammaMessages,fetchLammaRoomSnapshot} from '@/lib/lamma-room-data'
+import {subscribeLammaRoomRealtime} from '@/lib/lamma-room-realtime'
+import {useLammaWebRtc} from '@/hooks/use-lamma-webrtc'
+import {useLammaVoiceControls} from '@/hooks/use-lamma-voice-controls'
+import {
+  assignLammaRoyal,
+  controlLammaMember,
+  createLammaTextMessage,
+  requestLammaPrivateContact,
+  requestLammaRoyalSeat,
+  respondLammaRoyalSeat,
+  sendLammaGift,
+  setLammaPairSpotlight,
+  type LammaRoyalAction,
+} from '@/lib/lamma-actions'
 
-type Member = {
-  user_id: string
-  role: string
-  profiles: {
-    display_name: string | null
-    avatar_url: string | null
-    mood: string | null
-  } | null
-}
+export default function SpaceChat({params}:{params:Promise<{id:string}>}){
+  const {id}=use(params)
+  const s=useMemo(()=>createClient(),[])
+  const r=useRouter()
 
-type VoiceParticipant = {
-  user_id: string
-  mic_enabled: boolean
-  profiles: {
-    display_name: string | null
-    avatar_url: string | null
-  } | null
-}
+  const [space,setSpace]=useState<any>(null)
+  const [messages,setMessages]=useState<any[]>([])
+  const [members,setMembers]=useState<LammaMember[]>([])
+  const [voiceMembers,setVoiceMembers]=useState<LammaVoiceParticipant[]>([])
+  const [gifts,setGifts]=useState<LammaGiftItem[]>([])
+  const [privateContactPrice,setPrivateContactPrice]=useState(20)
+  const [uid,setUid]=useState('')
+  const [body,setBody]=useState('')
+  const messageSyncBusyRef=useRef(false)
+  const [selectedMember,setSelectedMember]=useState<LammaMember|null>(null)
+  const [showGifts,setShowGifts]=useState(false)
+  const [showGiftRecipients,setShowGiftRecipients]=useState(false)
+  const [giftRecipient,setGiftRecipient]=useState<LammaMember|null>(null)
+  const [giftMode,setGiftMode]=useState<'profile'|'chat'>('profile')
+  const [giftBurst,setGiftBurst]=useState<{emoji:string;name:string}|null>(null)
+  const [voiceRequestStatus,setVoiceRequestStatus]=useState<'none'|'pending'|'accepted'|'rejected'|'host'>('none')
+  const [voiceRequests,setVoiceRequests]=useState<any[]>([])
+  const [notice,setNotice]=useState('')
+  const [inVoice,setInVoice]=useState(false)
+  const [micEnabled,setMicEnabled]=useState(false)
+  const [seats,setSeats]=useState<any[]>([])
+  const [starRequests,setStarRequests]=useState<any[]>([])
+  const [spotlight,setSpotlight]=useState<any>(null)
+  const [isHost,setIsHost]=useState(false)
+  const [voiceStreams,setVoiceStreams]=useState<MediaStream[]>([])
+  const [showGuests,setShowGuests]=useState(false)
+  const [challengePick,setChallengePick]=useState<string[]>([])
+  const [micPick,setMicPick]=useState<string[]>([])
+  const [royalBusy,setRoyalBusy]=useState(false)
 
-type GiftItem = {
-  id: string
-  name_ar: string
-  emoji: string
-  price_stars: number
-}
+  const localStreamRef=useRef<MediaStream|null>(null)
 
-export default function SpaceChat({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = use(params)
-  const s = useMemo(() => createClient(), [])
-  const r = useRouter()
+  const {
+    refreshVoiceMembers,
+    startVoiceRealtime,
+    cleanupVoice,
+  }=useLammaWebRtc({
+    s,
+    id,
+    uid,
+    localStreamRef,
+    setVoiceMembers,
+    setMicEnabled,
+    setVoiceStreams,
+    setNotice,
+  })
 
-  const [space, setSpace] = useState<any>(null)
-  const [messages, setMessages] = useState<any[]>([])
-  const [members, setMembers] = useState<Member[]>([])
-  const [voiceMembers, setVoiceMembers] = useState<VoiceParticipant[]>([])
-  const [gifts, setGifts] = useState<GiftItem[]>([])
-  const [privateContactPrice, setPrivateContactPrice] = useState(20)
-  const [uid, setUid] = useState('')
-  const [body, setBody] = useState('')
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
-  const [showGifts, setShowGifts] = useState(false)
-  const [notice, setNotice] = useState('')
-  const [inVoice, setInVoice] = useState(false)
-  const [micEnabled, setMicEnabled] = useState(true)
+  const {
+    requestVoiceApproval,
+    hostVoiceDecision,
+    joinVoice,
+    leaveVoice,
+    toggleMic,
+  }=useLammaVoiceControls({
+    s,
+    id,
+    uid,
+    isHost,
+    inVoice,
+    micEnabled,
+    voiceRequestStatus,
+    localStreamRef,
+    setVoiceRequestStatus,
+    setInVoice,
+    setMicEnabled,
+    setVoiceMembers,
+    setVoiceStreams,
+    setNotice,
+    startVoiceRealtime,
+    refreshVoiceMembers,
+    cleanupVoice,
+    onReload:load,
+  })
 
-  const localStreamRef = useRef<MediaStream | null>(null)
-  const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map())
-  const audiosRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const pendingIceRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
-  const voiceChannelRef = useRef<any>(null)
-
-  async function load() {
-    const { data: { user } } = await s.auth.getUser()
-
-    if (!user) {
-      r.push('/login')
-      return
-    }
-
+  async function load(){
+    const {data:{user}}=await s.auth.getUser()
+    if(!user){r.push('/login');return}
     setUid(user.id)
 
-    const { data: member } = await s
-      .from('space_members')
-      .select('role')
-      .eq('space_id', id)
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const {data:membership}=await s.from('space_members')
+      .select('role').eq('space_id',id).eq('user_id',user.id).maybeSingle()
+    if(!membership){r.push('/spaces');return}
 
-    if (!member) {
-      r.push('/spaces')
-      return
+    const snapshot=await fetchLammaRoomSnapshot(s,id,user.id)
+    const voices=snapshot.voiceMembers
+    setSpace(snapshot.space)
+    setMessages(snapshot.messages)
+    setMembers(snapshot.members)
+    setVoiceMembers(voices)
+    setGifts(snapshot.gifts)
+    setSeats(snapshot.seats)
+    setStarRequests(snapshot.starRequests)
+    setSpotlight(snapshot.spotlight)
+    setIsHost(snapshot.isHost)
+    if(snapshot.privateContactPrice!=null)setPrivateContactPrice(snapshot.privateContactPrice)
+    setVoiceRequestStatus(snapshot.voiceRequestStatus)
+    setVoiceRequests(snapshot.voiceRequests)
+
+    const ownVoice=voices.find(x=>x.user_id===user.id)
+    setInVoice(Boolean(ownVoice))
+    if(ownVoice){
+      const allowed=Boolean(ownVoice.mic_enabled)
+      setMicEnabled(allowed)
+      localStreamRef.current?.getAudioTracks().forEach(track=>{track.enabled=allowed})
     }
-
-    const [
-      { data: sp },
-      { data: ms },
-      { data: memberRows },
-      { data: voiceRows },
-      { data: giftRows },
-      { data: priceRow },
-    ] = await Promise.all([
-      s.from('spaces')
-        .select('id,name,emoji,is_public,owner_id')
-        .eq('id', id)
-        .single(),
-
-      s.from('space_messages')
-        .select('id,body,created_at,sender_id,profiles!space_messages_sender_id_fkey(display_name,avatar_url)')
-        .eq('space_id', id)
-        .order('created_at', { ascending: true })
-        .limit(200),
-
-      s.from('space_members')
-        .select('user_id,role,profiles(display_name,avatar_url,mood)')
-        .eq('space_id', id),
-
-      s.from('space_voice_participants')
-        .select('user_id,mic_enabled,profiles(display_name,avatar_url)')
-        .eq('space_id', id),
-
-      s.from('gift_catalog')
-        .select('id,name_ar,emoji,price_stars')
-        .eq('active', true)
-        .order('sort_order'),
-
-      s.from('feature_prices')
-        .select('price_stars')
-        .eq('key', 'private_contact_from_lamma')
-        .maybeSingle(),
-    ])
-
-    setSpace(sp)
-    setMessages(ms || [])
-    setMembers((memberRows || []) as any)
-    setVoiceMembers((voiceRows || []) as any)
-    setGifts((giftRows || []) as any)
-    if (priceRow?.price_stars != null) {
-      setPrivateContactPrice(Number(priceRow.price_stars))
-    }
-
-    setInVoice(!!voiceRows?.some((x: any) => x.user_id === user.id))
   }
 
-  useEffect(() => {
-    load()
+  async function refreshMessages(){
+    if(messageSyncBusyRef.current)return
+    messageSyncBusyRef.current=true
+    try{
+      const rows=await fetchLammaMessages(s,id)
+      setMessages(rows)
+    }catch{
+      // Keep the current feed if a transient realtime refresh fails.
+    }finally{
+      messageSyncBusyRef.current=false
+    }
+  }
 
-    const chatChannel = s
-      .channel(`space-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'space_messages',
-          filter: `space_id=eq.${id}`,
-        },
-        () => load()
-      )
-      .subscribe()
+  useEffect(()=>{
+    let cancelled=false
+    let roomChannel:any=null
 
-    return () => {
-      s.removeChannel(chatChannel)
+    const start=async()=>{
+      const {data:{session}}=await s.auth.getSession()
+      if(session?.access_token)await s.realtime.setAuth(session.access_token)
+      await load()
+      if(cancelled)return
+      roomChannel=subscribeLammaRoomRealtime(s,id,refreshMessages,load)
+    }
+
+    void start()
+
+    const {data:{subscription:authSubscription}}=s.auth.onAuthStateChange((_event,session)=>{
+      if(session?.access_token)void s.realtime.setAuth(session.access_token)
+    })
+
+    const syncOnFocus=()=>{void refreshMessages()}
+    window.addEventListener('focus',syncOnFocus)
+
+    // Realtime is the primary path. This one-second visible-page sync is a
+    // lightweight fallback for mobile browsers that occasionally miss a
+    // Postgres Changes event while keeping the room open.
+    const messagePoll=window.setInterval(()=>{
+      if(document.visibilityState==='visible')void refreshMessages()
+    },1000)
+
+    return()=>{
+      cancelled=true
+      window.clearInterval(messagePoll)
+      authSubscription.unsubscribe()
+      window.removeEventListener('focus',syncOnFocus)
+      if(roomChannel)s.removeChannel(roomChannel)
       cleanupVoice()
     }
-  }, [id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[id])
 
-  async function send() {
-    const text = body.trim()
-    if (!text) return
 
+  const royalSeat=seats.find((x:any)=>x.seat_type==='star'&&x.user_id)
+  const royalId=royalSeat?.user_id||null
+  const isRoyal=Boolean(uid&&royalId===uid)
+
+  const memberById=(userId?:string|null)=>findLammaMember(members,userId)
+  const hostMember=memberById(space?.owner_id)
+  const {
+    royalMember,
+    challengeA,
+    challengeB,
+    otherGuests,
+    orderedGuests,
+  }=buildLammaGuestLayout(
+    members,
+    royalId,
+    spotlight?.user_a,
+    spotlight?.user_b
+  )
+
+  async function send(){
+    const text=body.trim()
+    if(!text)return
     setBody('')
+    const {data:row,error}=await createLammaTextMessage(s,id,uid,text)
 
-    await s.from('space_messages').insert({
-      space_id: id,
-      sender_id: uid,
-      body: text,
-    })
-  }
-
-  async function requestPrivateContact(member: Member) {
-    setNotice('')
-
-    const { error } = await s.rpc('request_private_contact_from_space', {
-      p_space: id,
-      p_target: member.user_id,
-      p_message: null,
-    })
-
-    if (error) {
-      if (error.message.includes('insufficient_stars')) {
-        setNotice('رصيد النجوم غير كافٍ.')
-      } else if (error.message.includes('already_connected')) {
-        setNotice('أنتم بالفعل متصلون في كلامنا.')
-      } else if (error.message.includes('target_not_accepting_requests')) {
-        setNotice('هذا المستخدم لا يستقبل طلبات تواصل حاليًا.')
-      } else {
-        setNotice('تعذر إرسال طلب التواصل.')
-      }
+    if(error){
+      setNotice(error.message.includes('text_not_allowed')?'الشات مقفول عن حسابك حاليًا.':'تعذر إرسال الرسالة.')
+      setBody(text)
       return
     }
 
-    setNotice(
-      `تم خصم ${privateContactPrice} نجمة وإرسال طلب تواصل خاص. لن يفتح الشات إلا بعد موافقة الطرف الآخر.`
-    )
+    if(row){
+      const me=memberById(uid)
+      setMessages(current=>current.some((x:any)=>x.id===row.id)
+        ? current
+        : [...current,{...row,profiles:me?.profiles||{display_name:'أنت',avatar_url:null}}])
+    }
+  }
+
+
+  async function requestPrivateContact(member:LammaMember){
+    setNotice('')
+    const {error}=await requestLammaPrivateContact(s,id,member)
+    if(error){
+      if(error.message.includes('insufficient_stars'))setNotice('رصيد النجوم غير كافٍ.')
+      else if(error.message.includes('already_connected'))setNotice('أنتم بالفعل متصلون في كلامنا.')
+      else setNotice('تعذر إرسال طلب التواصل.')
+      return
+    }
+    setNotice(`تم خصم ${privateContactPrice} نجمة وإرسال طلب تواصل خاص.`)
     setSelectedMember(null)
   }
 
-  async function sendGift(gift: GiftItem) {
-    if (!selectedMember) return
+  function chooseGiftRecipient(member:LammaMember){
+    setGiftRecipient(member)
+    setGiftMode(member.user_id===space?.owner_id&&uid!==space?.owner_id?'chat':'profile')
+    setShowGiftRecipients(false)
+    setShowGifts(true)
+  }
 
-    setNotice('')
-
-    const { error } = await s.rpc('send_gift', {
-      p_target: selectedMember.user_id,
-      p_gift: gift.id,
-      p_space: id,
-    })
-
-    if (error) {
-      if (error.message.includes('insufficient_stars')) {
-        setNotice('رصيد النجوم غير كافٍ لإرسال الهدية.')
-      } else {
-        setNotice('تعذر إرسال الهدية.')
-      }
+  async function sendGift(gift:LammaGiftItem){
+    if(!giftRecipient)return
+    const {error}=await sendLammaGift(s,id,gift,giftRecipient,giftMode)
+    if(error){
+      setNotice(
+        error.message.includes('promotional_stars_not_transferable')
+          ?'النجوم الترويجية لا تُستخدم في الهدايا التي تتحول إلى أرباح.'
+          :error.message.includes('insufficient_stars')
+            ?'رصيد النجوم غير كافٍ.'
+            :'تعذر إرسال الهدية.'
+      )
       return
     }
-
-    setNotice(
-      `تم إرسال ${gift.emoji} ${gift.name_ar}. المنصة تحتفظ بـ15% ويصل للمستلم 85% من قيمة النجوم.`
-    )
+    setGiftBurst({emoji:gift.emoji,name:gift.name_ar})
+    setTimeout(()=>setGiftBurst(null),1500)
+    setNotice(`تم إرسال ${gift.emoji} ${gift.name_ar}.`)
     setShowGifts(false)
     setSelectedMember(null)
+    setGiftRecipient(null)
   }
 
-  async function joinVoice() {
-    if (inVoice) return
-
-    setNotice('')
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
-      })
-
-      localStreamRef.current = stream
-
-      const { error } = await s.rpc('enter_lamma_voice', {
-        p_space: id,
-      })
-
-      if (error) {
-        stream.getTracks().forEach((t) => t.stop())
-        localStreamRef.current = null
-        setNotice('تعذر دخول الصوت.')
-        return
-      }
-
-      setInVoice(true)
-      setMicEnabled(true)
-      await startVoiceRealtime()
-      await refreshVoiceMembers()
-    } catch {
-      setNotice('اسمح للموقع باستخدام الميكروفون ثم حاول مرة أخرى.')
-    }
+  async function assignRoyal(member:LammaMember){
+    if(!isHost)return
+    const {error}=await assignLammaRoyal(s,id,member)
+    setNotice(error
+      ? error.message.includes('insufficient_stars')?'رصيدك لا يكفي لتعيين ضيف ملكي بـ150 ⭐.':'تعذر تعيين الضيف الملكي.'
+      :`تم تعيين ${member.profiles?.display_name||'الضيف'} كضيف ملكي مقابل 150 ⭐.`)
+    await load()
   }
 
-  async function leaveVoice() {
-    await s.rpc('leave_lamma_voice', { p_space: id })
-    cleanupVoice()
-    setInVoice(false)
-    setVoiceMembers((current) => current.filter((x) => x.user_id !== uid))
+  async function requestRoyalSeat(){
+    const {error}=await requestLammaRoyalSeat(s,id)
+    setNotice(error
+      ? error.message.includes('insufficient_stars')?'رصيد النجوم غير كافٍ.':'تعذر إرسال طلب الضيف الملكي.'
+      :'تم إرسال طلب الضيف الملكي للمضيف 👑')
   }
 
-  async function toggleMic() {
-    const next = !micEnabled
+  async function hostStarDecision(requestId:string,accept:boolean){
+    const {error}=await respondLammaRoyalSeat(s,requestId,accept)
+    setNotice(error?'تعذر تنفيذ القرار.':accept?'تم تعيين الضيف الملكي 👑':'تم رفض الطلب.')
+    await load()
+  }
 
-    localStreamRef.current?.getAudioTracks().forEach((track) => {
-      track.enabled = next
+  async function royalAction(target:string,action:LammaRoyalAction){
+    if(!isRoyal)return
+    setRoyalBusy(true)
+    const {error}=await controlLammaMember(s,id,target,action)
+    setNotice(error
+      ? 'تعذر تنفيذ الإجراء الملكي.'
+      : action==='kick'?'تم حذف الضيف من اللَمّة.'
+      : action==='mute_voice'?'تم قفل المايك عن الضيف.'
+      : action==='unmute_voice'?'تم فتح المايك للضيف.'
+      : action==='mute_text'?'تم قفل الشات عن الضيف.'
+      :'تم فتح الشات للضيف.')
+    setRoyalBusy(false)
+    await load()
+  }
+
+  function toggleChallengePick(userId:string){
+    if(!isRoyal||userId===uid)return
+    setChallengePick(current=>{
+      if(current.includes(userId))return current.filter(x=>x!==userId)
+      if(current.length>=2)return [current[1],userId]
+      return [...current,userId]
     })
-
-    await s.rpc('set_lamma_mic', {
-      p_space: id,
-      p_enabled: next,
-    })
-
-    setMicEnabled(next)
   }
 
-  async function refreshVoiceMembers() {
-    const { data } = await s
-      .from('space_voice_participants')
-      .select('user_id,mic_enabled,profiles(display_name,avatar_url)')
-      .eq('space_id', id)
-
-    const rows = (data || []) as any
-    setVoiceMembers(rows)
-
-    for (const participant of rows) {
-      if (participant.user_id === uid) continue
-
-      if (uid < participant.user_id) {
-        await makeOffer(participant.user_id)
-      } else {
-        ensurePeer(participant.user_id)
-      }
-    }
+  function toggleMicPick(userId:string){
+    if(!isRoyal||userId===uid)return
+    setMicPick(current=>current.includes(userId)?current.filter(x=>x!==userId):[...current,userId])
   }
 
-  async function startVoiceRealtime() {
-    if (voiceChannelRef.current) return
-
-    const channel = s
-      .channel(`lamma-voice-${id}-${uid}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'space_voice_participants',
-          filter: `space_id=eq.${id}`,
-        },
-        async (payload: any) => {
-          await refreshVoiceMembers()
-
-          if (payload.eventType === 'DELETE') {
-            const peerId = payload.old.user_id
-            closePeer(peerId)
-          }
-        }
+  async function applySelectedMics(){
+    if(!isRoyal)return
+    setRoyalBusy(true)
+    const targets=members.filter(m=>m.user_id!==uid&&m.user_id!==space?.owner_id)
+    for(const member of targets){
+      await controlLammaMember(
+        s,
+        id,
+        member.user_id,
+        micPick.includes(member.user_id)?'unmute_voice':'mute_voice'
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'space_voice_signals',
-          filter: `space_id=eq.${id}`,
-        },
-        async (payload: any) => {
-          const signal = payload.new
-          if (signal.target_id !== uid) return
-          await handleSignal(signal)
-        }
-      )
-      .subscribe()
-
-    voiceChannelRef.current = channel
+    }
+    setRoyalBusy(false)
+    setNotice('تم تطبيق اختيار المايكات.')
+    await load()
   }
 
-  function ensurePeer(peerId: string) {
-    const existing = peersRef.current.get(peerId)
-    if (existing) return existing
-
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-    })
-
-    localStreamRef.current?.getTracks().forEach((track) => {
-      pc.addTrack(track, localStreamRef.current!)
-    })
-
-    pc.onicecandidate = async (event) => {
-      if (!event.candidate) return
-
-      await s.from('space_voice_signals').insert({
-        space_id: id,
-        sender_id: uid,
-        target_id: peerId,
-        signal_type: 'ice',
-        payload: event.candidate.toJSON(),
-      })
-    }
-
-    pc.ontrack = (event) => {
-      let audio = audiosRef.current.get(peerId)
-
-      if (!audio) {
-        audio = new Audio()
-        audio.autoplay = true
-        audiosRef.current.set(peerId, audio)
-      }
-
-      audio.srcObject = event.streams[0]
-      audio.play().catch(() => {})
-    }
-
-    peersRef.current.set(peerId, pc)
-    return pc
+  async function setNewChallenge(){
+    if(!isRoyal||challengePick.length!==2)return
+    setRoyalBusy(true)
+    const {error}=await setLammaPairSpotlight(s,id,challengePick[0],challengePick[1])
+    setNotice(error
+      ? error.message.includes('users_must_join_voice')?'الشخصان لازم يكونا داخل الصوت أولًا.':'تعذر تعيين التحدي الجديد.'
+      :'تم تعيين شخصين جديدين للتحدي ⚔️')
+    if(!error)setChallengePick([])
+    setRoyalBusy(false)
+    await load()
   }
 
-  async function makeOffer(peerId: string) {
-    const pc = ensurePeer(peerId)
-
-    if (pc.signalingState !== 'stable' || pc.localDescription) return
-
-    const offer = await pc.createOffer()
-    await pc.setLocalDescription(offer)
-
-    await s.from('space_voice_signals').insert({
-      space_id: id,
-      sender_id: uid,
-      target_id: peerId,
-      signal_type: 'offer',
-      payload: offer,
-    })
+  const renderAvatar=(member:LammaMember|null,size='h-12 w-12')=>{
+    const name=member?.profiles?.display_name||'ضيف'
+    return member?.profiles?.avatar_url
+      ? <img src={member.profiles.avatar_url} alt="" className={`${size} rounded-full object-cover`}/>
+      : <span className={`${size} grid place-items-center rounded-full bg-white/20 text-lg font-black text-white`}>{name[0]}</span>
   }
 
-  async function handleSignal(signal: any) {
-    const peerId = signal.sender_id
-    const pc = ensurePeer(peerId)
+  return <AppShell>
+    <main className="p-2">
+      {notice?<div className="mb-2 rounded-2xl bg-[#edf5ff] px-3 py-2 text-center text-xs font-black text-[#24528d]">{notice}</div>:null}
 
-    if (signal.signal_type === 'offer') {
-      await pc.setRemoteDescription(signal.payload)
+      <section className="lammetna-gradient animated-gradient-card lamma-room-card relative flex h-[calc(100dvh-144px)] min-h-[650px] flex-col overflow-hidden rounded-[32px] p-3 text-white shadow-[0_24px_60px_rgba(43,72,216,.30)]">
+        <div className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full border-[34px] border-white/10"/>
+        <div className="pointer-events-none absolute -right-20 top-[28%] h-64 w-64 rounded-full bg-fuchsia-400/20 blur-3xl"/>
 
-      const queue = pendingIceRef.current.get(peerId) || []
-      for (const candidate of queue) {
-        await pc.addIceCandidate(candidate).catch(() => {})
-      }
-      pendingIceRef.current.delete(peerId)
+        <LammaRoomStage
+          space={space}
+          members={members}
+          voiceMembers={voiceMembers}
+          voiceStreams={voiceStreams}
+          inVoice={inVoice}
+          isHost={isHost}
+          uid={uid}
+          hostMember={hostMember}
+          royalMember={royalMember}
+          challengeA={challengeA}
+          challengeB={challengeB}
+          otherGuests={otherGuests}
+          voiceRequestStatus={voiceRequestStatus}
+          micEnabled={micEnabled}
+          voiceRequestsCount={voiceRequests.length}
+          onShowGuests={()=>setShowGuests(true)}
+          onBack={()=>r.push('/spaces')}
+          onSelectMember={setSelectedMember}
+          onAssignRoyal={assignRoyal}
+          onRequestVoiceApproval={requestVoiceApproval}
+          onToggleMic={toggleMic}
+          onLeaveVoice={leaveVoice}
+        />
 
-      const answer = await pc.createAnswer()
-      await pc.setLocalDescription(answer)
+        <LammaChatPanel
+          messages={messages}
+          uid={uid}
+          members={members}
+          body={body}
+          onSelectMember={setSelectedMember}
+          onBodyChange={setBody}
+          onSend={send}
+          onOpenGifts={()=>setShowGiftRecipients(true)}
+        />
+      </section>
+    </main>
 
-      await s.from('space_voice_signals').insert({
-        space_id: id,
-        sender_id: uid,
-        target_id: peerId,
-        signal_type: 'answer',
-        payload: answer,
-      })
+    <LammaGuestDrawer
+      open={showGuests}
+      uid={uid}
+      isHost={isHost}
+      isRoyal={isRoyal}
+      royalBusy={royalBusy}
+      royalId={royalId}
+      ownerId={space?.owner_id}
+      orderedGuests={orderedGuests}
+      royalMember={royalMember}
+      challengeA={challengeA}
+      challengeB={challengeB}
+      spotlight={spotlight}
+      voiceMembers={voiceMembers}
+      voiceRequests={voiceRequests}
+      challengePick={challengePick}
+      micPick={micPick}
+      onClose={()=>setShowGuests(false)}
+      onSelectMember={setSelectedMember}
+      onAssignRoyal={assignRoyal}
+      onRoyalAction={royalAction}
+      onToggleChallengePick={toggleChallengePick}
+      onToggleMicPick={toggleMicPick}
+      onApplySelectedMics={applySelectedMics}
+      onSetNewChallenge={setNewChallenge}
+      onVoiceDecision={hostVoiceDecision}
+    />
 
-      return
-    }
+    <LammaGiftRecipientPicker
+      open={showGiftRecipients}
+      members={members}
+      uid={uid}
+      ownerId={space?.owner_id}
+      onClose={()=>setShowGiftRecipients(false)}
+      onChoose={chooseGiftRecipient}
+    />
 
-    if (signal.signal_type === 'answer') {
-      if (!pc.remoteDescription) {
-        await pc.setRemoteDescription(signal.payload)
-      }
-      return
-    }
+    <LammaMemberSheet
+      member={selectedMember}
+      privateContactPrice={privateContactPrice}
+      onClose={()=>setSelectedMember(null)}
+      onContact={requestPrivateContact}
+      onGift={(member)=>{
+        setGiftRecipient(member)
+        setGiftMode('profile')
+        setShowGifts(true)
+        setSelectedMember(null)
+      }}
+    />
 
-    if (signal.signal_type === 'ice') {
-      if (pc.remoteDescription) {
-        await pc.addIceCandidate(signal.payload).catch(() => {})
-      } else {
-        const queue = pendingIceRef.current.get(peerId) || []
-        queue.push(signal.payload)
-        pendingIceRef.current.set(peerId, queue)
-      }
-    }
-  }
+    <LammaGiftPicker
+      open={showGifts}
+      gifts={gifts}
+      recipient={giftRecipient}
+      mode={giftMode}
+      hasSpotlight={Boolean(spotlight)}
+      ownerId={space?.owner_id}
+      isHost={isHost}
+      onClose={()=>{setShowGifts(false);setGiftRecipient(null)}}
+      onSend={sendGift}
+    />
 
-  function closePeer(peerId: string) {
-    peersRef.current.get(peerId)?.close()
-    peersRef.current.delete(peerId)
-
-    const audio = audiosRef.current.get(peerId)
-    if (audio) {
-      audio.pause()
-      audio.srcObject = null
-    }
-    audiosRef.current.delete(peerId)
-    pendingIceRef.current.delete(peerId)
-  }
-
-  function cleanupVoice() {
-    if (voiceChannelRef.current) {
-      s.removeChannel(voiceChannelRef.current)
-      voiceChannelRef.current = null
-    }
-
-    peersRef.current.forEach((pc) => pc.close())
-    peersRef.current.clear()
-
-    audiosRef.current.forEach((audio) => {
-      audio.pause()
-      audio.srcObject = null
-    })
-    audiosRef.current.clear()
-
-    localStreamRef.current?.getTracks().forEach((track) => track.stop())
-    localStreamRef.current = null
-    pendingIceRef.current.clear()
-  }
-
-  return (
-    <AppShell>
-      <PageHeader
-        title={space ? `${space.emoji || '🎙️'} ${space.name}` : 'اللَمّة'}
-      />
-
-      <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
-        {notice ? (
-          <p className="mb-3 rounded-2xl bg-blue-50 p-3 text-xs font-bold text-[#1560BD]">
-            {notice}
-          </p>
-        ) : null}
-
-        <section className="mb-4 rounded-3xl bg-gradient-to-br from-[#1560BD] to-[#0D3D78] p-4 text-white">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-blue-100">الصوت الجماعي</p>
-              <p className="mt-1 font-extrabold">
-                {voiceMembers.length} متواجد بالصوت
-              </p>
-            </div>
-
-            {!inVoice ? (
-              <Button
-                className="bg-white text-[#1560BD] hover:bg-blue-50"
-                onClick={joinVoice}
-              >
-                <PhoneCall size={16} />
-                انضم للصوت
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  size="icon"
-                  className="bg-white/15 text-white hover:bg-white/25"
-                  onClick={toggleMic}
-                >
-                  {micEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={leaveVoice}
-                >
-                  خروج
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {voiceMembers.length ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {voiceMembers.map((m) => (
-                <button
-                  key={m.user_id}
-                  type="button"
-                  onClick={() => {
-                    const full = members.find((x) => x.user_id === m.user_id)
-                    if (full && full.user_id !== uid) setSelectedMember(full)
-                  }}
-                  className="flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-xs font-bold"
-                >
-                  {m.mic_enabled ? <Mic size={13} /> : <MicOff size={13} />}
-                  {m.profiles?.display_name || 'عضو'}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </section>
-
-        <section className="mb-4">
-          <div className="mb-2 flex items-center gap-2">
-            <Users size={17} className="text-[#1560BD]" />
-            <h2 className="font-extrabold">أعضاء اللَمّة</h2>
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {members.map((m) => (
-              <button
-                key={m.user_id}
-                type="button"
-                disabled={m.user_id === uid}
-                onClick={() => setSelectedMember(m)}
-                className="min-w-[96px] rounded-2xl border border-slate-200 bg-white p-3 text-center disabled:opacity-60"
-              >
-                <div className="mx-auto grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-blue-50 font-black text-[#1560BD]">
-                  {m.profiles?.avatar_url ? (
-                    <img
-                      src={m.profiles.avatar_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (m.profiles?.display_name || 'م')[0]
-                  )}
-                </div>
-
-                <p className="mt-2 truncate text-xs font-bold">
-                  {m.user_id === uid
-                    ? 'أنت'
-                    : m.profiles?.display_name || 'عضو'}
-                </p>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {selectedMember ? (
-          <section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-extrabold">
-                  {selectedMember.profiles?.display_name || 'عضو'}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {selectedMember.profiles?.mood || 'عضو في اللَمّة'}
-                </p>
-              </div>
-
-              <button onClick={() => {
-                setSelectedMember(null)
-                setShowGifts(false)
-              }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => requestPrivateContact(selectedMember)}
-              >
-                <Star size={16} />
-                تواصل خاص · {privateContactPrice} ⭐
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => setShowGifts(!showGifts)}
-              >
-                <Gift size={16} />
-                إرسال هدية
-              </Button>
-            </div>
-
-            {showGifts ? (
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {gifts.map((gift) => (
-                  <button
-                    key={gift.id}
-                    type="button"
-                    onClick={() => sendGift(gift)}
-                    className="rounded-2xl bg-slate-50 p-3 text-center"
-                  >
-                    <div className="text-2xl">{gift.emoji}</div>
-                    <p className="mt-1 text-xs font-bold">{gift.name_ar}</p>
-                    <p className="text-[11px] text-amber-700">
-                      {gift.price_stars} ⭐
-                    </p>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <div className="flex-1 space-y-3 pb-4">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={
-                m.sender_id === uid
-                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] p-3 text-white'
-                  : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white p-3 shadow-sm'
-              }
-            >
-              <button
-                type="button"
-                disabled={m.sender_id === uid}
-                onClick={() => {
-                  const member = members.find((x) => x.user_id === m.sender_id)
-                  if (member) setSelectedMember(member)
-                }}
-                className={
-                  m.sender_id === uid
-                    ? 'text-[11px] font-bold text-blue-100'
-                    : 'text-[11px] font-bold text-[#1560BD]'
-                }
-              >
-                {(m.profiles as any)?.display_name || 'عضو'}
-              </button>
-
-              <p className="mt-1 text-sm">{m.body}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="sticky bottom-20 flex gap-2 rounded-3xl border border-slate-200 bg-white p-2">
-          <Input
-            placeholder="اكتب رسالة..."
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') send()
-            }}
-          />
-          <Button size="icon" onClick={send}>
-            <Send size={18} />
-          </Button>
-        </div>
-      </main>
-    </AppShell>
-  )
+    <LammaGiftBurst gift={giftBurst}/>
+  </AppShell>
 }

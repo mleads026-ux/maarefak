@@ -1,784 +1,350 @@
 'use client'
 
-import { use, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Gift, ImagePlus, Phone, PhoneOff, Send, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { AppShell } from '@/components/app-shell'
-import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {use,useEffect,useMemo,useRef,useState} from 'react'
+import {useRouter} from 'next/navigation'
+import {Gift,Phone,PhoneOff,Sparkles,Images,Timer,Gamepad2,RefreshCw,Video,UserRound} from 'lucide-react'
+import {createClient} from '@/lib/supabase/client'
+import {AppShell} from '@/components/app-shell'
+import {PageHeader} from '@/components/page-header'
+import {Button} from '@/components/ui/button'
+import {calculateStarTransferBreakdown,type ChatGiftItem} from '@/lib/chat-room'
+import {fetchChatRoomSnapshot} from '@/lib/chat-room-data'
+import {uploadConversationMedia} from '@/lib/chat-media'
+import {subscribeChatMessages} from '@/lib/chat-room-realtime'
+import {
+  consentPrivatePhotos,
+  fetchConversationPartnerIdentity,
+  fetchConversationPrompt,
+  fetchPrivatePhotoTools,
+  insertChatTextMessage,
+  requestSpeedIntro,
+  sendConversationGift,
+  startDuoChallenge,
+  transferStarsInConversation,
+} from '@/lib/chat-room-actions'
+import {ChatGiftSheet,ChatPartnerSheet} from '@/components/chat-bottom-sheets'
+import {ChatMessageList} from '@/components/chat-message-list'
+import {ChatComposer} from '@/components/chat-composer'
+import {useCallSession} from '@/components/call-session-provider'
 
-type CallRow = {
-  id: string
-  conversation_id: string
-  caller_id: string
-  callee_id: string
-  status: 'ringing' | 'accepted' | 'rejected' | 'ended' | 'missed'
-}
+export default function Chat({params}:{params:Promise<{id:string}>}){
+  const {id}=use(params)
+  const s=useMemo(()=>createClient(),[])
+  const r=useRouter()
+  const {activeCall,callLabel,startCall,endCall,restoreCall}=useCallSession()
 
-type GiftItem = {
-  id: string
-  name_ar: string
-  emoji: string
-  price_stars: number
-}
+  const [uid,setUid]=useState('')
+  const [other,setOther]=useState<any>(null)
+  const [messages,setMessages]=useState<any[]>([])
+  const [body,setBody]=useState('')
+  const [notice,setNotice]=useState('')
+  const [giftItems,setChatGiftItems]=useState<ChatGiftItem[]>([])
+  const [showGifts,setShowGifts]=useState(false)
+  const [revealedImages,setRevealedImages]=useState<Set<string>>(new Set())
+  const [socialOpen,setSocialOpen]=useState(false)
+  const [privateStatus,setPrivateStatus]=useState<any>(null)
+  const [privatePhotos,setPrivatePhotos]=useState<any[]>([])
+  const [duo,setDuo]=useState<any>(null)
+  const [speedSession,setSpeedSession]=useState<string|null>(null)
+  const [prompt,setPrompt]=useState('')
+  const [partner,setPartner]=useState<any>(null)
+  const [showPartner,setShowPartner]=useState(false)
+  const [transferStars,setTransferStars]=useState('')
+  const [transferRef,setTransferRef]=useState(()=>crypto.randomUUID())
+  const [copiedId,setCopiedId]=useState(false)
+  const [mediaEnabled,setMediaEnabled]=useState(false)
 
-export default function Chat({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const s = useMemo(() => createClient(), [])
-  const r = useRouter()
+  const fileInputRef=useRef<HTMLInputElement|null>(null)
+  const callInThisChat=activeCall?.conversation_id===id
 
-  const [uid, setUid] = useState('')
-  const [other, setOther] = useState<any>(null)
-  const [messages, setMessages] = useState<any[]>([])
-  const [body, setBody] = useState('')
-  const [notice, setNotice] = useState('')
-  const [incomingCall, setIncomingCall] = useState<CallRow | null>(null)
-  const [activeCall, setActiveCall] = useState<CallRow | null>(null)
-  const [callLabel, setCallLabel] = useState('')
-  const [giftItems, setGiftItems] = useState<GiftItem[]>([])
-  const [showGifts, setShowGifts] = useState(false)
-  const [revealedImages, setRevealedImages] = useState<Set<string>>(new Set())
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const peerRef = useRef<RTCPeerConnection | null>(null)
-  const localStreamRef = useRef<MediaStream | null>(null)
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
-  const signalChannelRef = useRef<any>(null)
-  const handledSignalsRef = useRef<Set<number>>(new Set())
-  const pendingIceRef = useRef<RTCIceCandidateInit[]>([])
-
-  async function load() {
-    const { data: { user } } = await s.auth.getUser()
-
-    if (!user) {
+  async function load(){
+    const {data:{user}}=await s.auth.getUser()
+    if(!user){
       r.push('/login')
       return
     }
 
     setUid(user.id)
 
-    const { data: members } = await s
-      .from('conversation_members')
-      .select('user_id,profiles(display_name,avatar_url)')
-      .eq('conversation_id', id)
+    const [snapshot,{data:mediaSettings}]=await Promise.all([
+      fetchChatRoomSnapshot(s,id,user.id),
+      s.from('app_media_settings').select('chat_media_uploads_enabled').eq('id',1).maybeSingle(),
+    ])
+    setMediaEnabled(mediaSettings?.chat_media_uploads_enabled===true)
 
-    if (!members?.some((m: any) => m.user_id === user.id)) {
+    if(!snapshot.authorized){
       r.push('/chats')
       return
     }
 
-    const otherMember = (members as any[]).find((m) => m.user_id !== user.id)
-    setOther(otherMember)
+    setOther(snapshot.other)
+    setChatGiftItems(snapshot.gifts)
+    if(snapshot.partner)setPartner(snapshot.partner)
+    setMessages(snapshot.messages)
+  }
 
-    const { data: giftRows } = await s
-      .from('gift_catalog')
-      .select('id,name_ar,emoji,price_stars')
-      .eq('active', true)
-      .order('sort_order')
+  useEffect(()=>{
+    void load()
+    const ch=subscribeChatMessages(s,id,load)
+    return()=>{s.removeChannel(ch)}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[id])
 
-    setGiftItems((giftRows || []) as any)
+  async function refreshPartnerIdentity(){
+    const row=await fetchConversationPartnerIdentity(s,id)
+    if(row)setPartner(row)
+  }
 
-    const { data: ms } = await s
-      .from('messages')
-      .select('id,body,created_at,sender_id,message_type,media_path,moderation_status,moderation_reason')
-      .eq('conversation_id', id)
-      .order('created_at', { ascending: true })
-      .limit(300)
+  useEffect(()=>{
+    if(!uid)return
+    void refreshPartnerIdentity()
+    const timer=window.setInterval(()=>void refreshPartnerIdentity(),30000)
+    return()=>window.clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[uid,id])
 
-    const rows = ms || []
-
-    const withUrls = await Promise.all(
-      rows.map(async (m: any) => {
-        if (
-          m.message_type === 'image' &&
-          m.moderation_status === 'approved' &&
-          m.media_path
-        ) {
-          const { data } = await s.storage
-            .from('chat-media-approved')
-            .createSignedUrl(m.media_path, 600)
-
-          return { ...m, signedUrl: data?.signedUrl || null }
-        }
-
-        return m
-      })
-    )
-
-    setMessages(withUrls)
-
-    const { data: call } = await s
-      .from('voice_call_sessions')
-      .select('*')
-      .eq('conversation_id', id)
-      .in('status', ['ringing', 'accepted'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (call) {
-      if (call.status === 'ringing' && call.callee_id === user.id) {
-        setIncomingCall(call as CallRow)
-      } else {
-        setActiveCall(call as CallRow)
-        setCallLabel(
-          call.status === 'ringing'
-            ? 'جارٍ انتظار موافقة الطرف الآخر...'
-            : 'المكالمة متصلة'
-        )
-      }
+  async function copyPartnerId(){
+    if(!partner?.public_user_id)return
+    try{
+      await navigator.clipboard.writeText(partner.public_user_id)
+      setCopiedId(true)
+      setTimeout(()=>setCopiedId(false),1400)
+    }catch{
+      setNotice('تعذر نسخ الـID.')
     }
   }
 
-  useEffect(() => {
-    load()
+  async function sendStarsToPartner(){
+    const amount=Number(transferStars)
+    if(!Number.isInteger(amount)||amount<1)return
 
-    const ch = s
-      .channel(`chat-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${id}`,
-        },
-        () => load()
+    const {error}=await transferStarsInConversation(s,id,amount,transferRef)
+    if(error){
+      setNotice(
+        error.message.includes('promotional_stars_not_transferable')
+          ?'النجوم الترويجية مخصصة للاستخدام داخل لمتنا ولا يمكن تحويلها لمستخدم آخر.'
+          :error.message.includes('insufficient_stars')
+            ?'رصيد النجوم غير كافٍ.'
+            :'تعذر إرسال النجوم.'
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${id}`,
-        },
-        () => load()
-      )
-      .subscribe()
-
-    return () => {
-      s.removeChannel(ch)
-    }
-  }, [id])
-
-  useEffect(() => {
-    if (!uid) return
-
-    const ch = s
-      .channel(`voice-call-${id}-${uid}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'voice_call_sessions',
-          filter: `conversation_id=eq.${id}`,
-        },
-        (payload: any) => handleCallRow(payload.new)
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'voice_call_sessions',
-          filter: `conversation_id=eq.${id}`,
-        },
-        (payload: any) => handleCallRow(payload.new)
-      )
-      .subscribe()
-
-    return () => {
-      s.removeChannel(ch)
-    }
-  }, [uid, id])
-
-  function handleCallRow(row: CallRow) {
-    if (row.caller_id !== uid && row.callee_id !== uid) return
-
-    if (row.status === 'ringing') {
-      if (row.callee_id === uid) {
-        setIncomingCall(row)
-      } else {
-        setActiveCall(row)
-        setCallLabel('جارٍ انتظار موافقة الطرف الآخر...')
-      }
       return
     }
 
-    if (row.status === 'accepted') {
-      setIncomingCall(null)
-      setActiveCall(row)
-      setCallLabel('المكالمة متصلة')
-      return
-    }
+    const fee=Math.ceil(amount*0.15)
+    setNotice(`تم إرسال ${amount} ⭐ — وصل للطرف الآخر ${amount-fee} ⭐ بعد عمولة التطبيق 15%.`)
+    setTransferStars('')
+    setTransferRef(crypto.randomUUID())
+    setShowPartner(false)
+    window.dispatchEvent(new Event('lammetna:wallet-change'))
+  }
 
-    if (row.status === 'rejected') {
-      cleanupPeer()
-      setIncomingCall(null)
-      setActiveCall(null)
-      setCallLabel('')
-      setNotice('تم رفض المكالمة.')
-      return
-    }
+  async function loadSocialTools(){
+    const target=other?.user_id
+    if(!target)return
+    setSocialOpen(true)
+    const snapshot=await fetchPrivatePhotoTools(s,target)
+    setPrivateStatus(snapshot.status)
+    setPrivatePhotos(snapshot.photos)
+  }
 
-    if (row.status === 'ended' || row.status === 'missed') {
-      cleanupPeer()
-      setIncomingCall(null)
-      setActiveCall(null)
-      setCallLabel('')
-      setNotice(row.status === 'missed' ? 'لم يتم الرد على المكالمة.' : 'انتهت المكالمة.')
+  async function privateConsent(){
+    const target=other?.user_id
+    if(!target)return
+    const {data,error}=await consentPrivatePhotos(s,target)
+    if(error)setNotice('تعذر تحديث الموافقة.')
+    else{
+      setNotice(data?'الموافقة متبادلة ويمكن عرض الصور الخاصة.':'تم تسجيل موافقتك وفي انتظار الطرف الآخر.')
+      await loadSocialTools()
     }
   }
 
-  useEffect(() => {
-    if (!activeCall || activeCall.status !== 'accepted' || !uid) return
-
-    let cancelled = false
-    const callId = activeCall.id
-    const isCaller = activeCall.caller_id === uid
-
-    async function processSignal(signal: any) {
-      const pc = peerRef.current
-      if (!pc) return
-      if (signal.sender_id === uid) return
-      if (handledSignalsRef.current.has(signal.id)) return
-
-      handledSignalsRef.current.add(signal.id)
-
-      if (signal.signal_type === 'offer' && !isCaller) {
-        await pc.setRemoteDescription(signal.payload)
-
-        for (const candidate of pendingIceRef.current.splice(0)) {
-          await pc.addIceCandidate(candidate).catch(() => {})
-        }
-
-        const answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-
-        await s.from('voice_call_signals').insert({
-          call_id: callId,
-          sender_id: uid,
-          signal_type: 'answer',
-          payload: answer,
-        })
-        return
-      }
-
-      if (signal.signal_type === 'answer' && isCaller) {
-        if (!pc.remoteDescription) {
-          await pc.setRemoteDescription(signal.payload)
-
-          for (const candidate of pendingIceRef.current.splice(0)) {
-            await pc.addIceCandidate(candidate).catch(() => {})
-          }
-        }
-        return
-      }
-
-      if (signal.signal_type === 'ice') {
-        if (pc.remoteDescription) {
-          await pc.addIceCandidate(signal.payload).catch(() => {})
-        } else {
-          pendingIceRef.current.push(signal.payload)
-        }
-      }
-    }
-
-    async function beginRtc() {
-      cleanupPeer()
-      handledSignalsRef.current = new Set()
-      pendingIceRef.current = []
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false,
-        })
-
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop())
-          return
-        }
-
-        localStreamRef.current = stream
-
-        const pc = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-        })
-
-        peerRef.current = pc
-
-        stream.getTracks().forEach((track) => {
-          pc.addTrack(track, stream)
-        })
-
-        pc.ontrack = (event) => {
-          if (remoteAudioRef.current) {
-            remoteAudioRef.current.srcObject = event.streams[0]
-            remoteAudioRef.current.play().catch(() => {})
-          }
-        }
-
-        pc.onicecandidate = async (event) => {
-          if (!event.candidate) return
-
-          await s.from('voice_call_signals').insert({
-            call_id: callId,
-            sender_id: uid,
-            signal_type: 'ice',
-            payload: event.candidate.toJSON(),
-          })
-        }
-
-        const signalChannel = s
-          .channel(`voice-signal-${callId}-${uid}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'voice_call_signals',
-              filter: `call_id=eq.${callId}`,
-            },
-            async (payload: any) => {
-              await processSignal(payload.new)
-            }
-          )
-          .subscribe()
-
-        signalChannelRef.current = signalChannel
-
-        const { data: existing } = await s
-          .from('voice_call_signals')
-          .select('*')
-          .eq('call_id', callId)
-          .order('id', { ascending: true })
-
-        for (const signal of existing || []) {
-          await processSignal(signal)
-        }
-
-        if (isCaller && !pc.localDescription) {
-          const offer = await pc.createOffer()
-          await pc.setLocalDescription(offer)
-
-          await s.from('voice_call_signals').insert({
-            call_id: callId,
-            sender_id: uid,
-            signal_type: 'offer',
-            payload: offer,
-          })
-        }
-      } catch {
-        setNotice('تعذر تشغيل الميكروفون. اسمح للموقع باستخدام الميكروفون وحاول مرة أخرى.')
-      }
-    }
-
-    beginRtc()
-
-    return () => {
-      cancelled = true
-      cleanupPeer()
-    }
-  }, [activeCall?.id, activeCall?.status, uid])
-
-  function cleanupPeer() {
-    if (signalChannelRef.current) {
-      s.removeChannel(signalChannelRef.current)
-      signalChannelRef.current = null
-    }
-
-    peerRef.current?.close()
-    peerRef.current = null
-
-    localStreamRef.current?.getTracks().forEach((track) => track.stop())
-    localStreamRef.current = null
-
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null
+  async function speedIntro(){
+    const target=other?.user_id
+    if(!target)return
+    const {data,error}=await requestSpeedIntro(s,target)
+    if(error)setNotice('تعذر إرسال طلب دقيقة التعارف.')
+    else{
+      setSpeedSession(data)
+      setNotice('تم إرسال طلب دقيقة التعارف للطرف الآخر.')
     }
   }
 
-  async function send() {
-    const text = body.trim()
-    if (!text) return
+  async function startDuo(){
+    const {data,error}=await startDuoChallenge(s,id)
+    if(error)setNotice('تعذر بدء تحدي الثنائي.')
+    else{
+      setDuo(data)
+      setNotice('بدأ تحدي الثنائي — 5 أسئلة بدون درجة توافق.')
+    }
+  }
+
+  async function surprise(kind:'surprise'|'restart'){
+    const {data,error}=await fetchConversationPrompt(s,id,kind)
+    if(error)setNotice('تعذر تجهيز السؤال الآن.')
+    else setPrompt(String(data||''))
+  }
+
+  async function send(){
+    const text=body.trim()
+    if(!text)return
 
     setBody('')
+    const {data:row,error}=await insertChatTextMessage(s,id,uid,text)
 
-    const { error } = await s.from('messages').insert({
-      conversation_id: id,
-      sender_id: uid,
-      body: text,
-    })
-
-    if (error) {
+    if(error){
       setNotice('لا يمكن إرسال الرسالة الآن.')
+      setBody(text)
+      return
     }
+
+    if(row)setMessages(current=>current.some((x:any)=>x.id===row.id)?current:[...current,row])
   }
 
-  async function sendGift(gift: GiftItem) {
-    const targetId = other?.user_id
-    if (!targetId) return
+  async function sendGift(gift:ChatGiftItem){
+    const targetId=other?.user_id
+    if(!targetId)return
 
     setNotice('')
+    const {error}=await sendConversationGift(s,id,targetId,gift)
 
-    const { error } = await s.rpc('send_gift', {
-      p_target: targetId,
-      p_gift: gift.id,
-      p_conversation: id,
-    })
-
-    if (error) {
+    if(error){
       setNotice(
-        error.message.includes('insufficient_stars')
-          ? 'رصيد النجوم غير كافٍ لإرسال الهدية.'
-          : 'تعذر إرسال الهدية.'
+        error.message.includes('promotional_stars_not_transferable')
+          ?'النجوم الترويجية لا تُستخدم في الهدايا التي تتحول إلى أرباح للمستلم.'
+          :error.message.includes('insufficient_stars')
+            ?'رصيد النجوم غير كافٍ لإرسال الهدية.'
+            :'تعذر إرسال الهدية.'
       )
       return
     }
 
-    setNotice(
-      `تم إرسال ${gift.emoji} ${gift.name_ar}. يصل للطرف الآخر 85% من قيمة النجوم والمنصة تحتفظ بـ15%.`
-    )
+    setNotice(`تم إرسال ${gift.emoji} ${gift.name_ar}. يصل للطرف الآخر 85% من قيمة النجوم والمنصة تحتفظ بـ15%.`)
     setShowGifts(false)
+    window.dispatchEvent(new Event('lammetna:wallet-change'))
+    await load()
   }
 
-  async function startCall() {
+  async function uploadMedia(file:File){
     setNotice('')
+    if(!mediaEnabled){
+      setNotice('إرسال الصور والفيديو متوقف مؤقتًا لحين تفعيل فحص المحتوى.')
+      return
+    }
+    const result=await uploadConversationMedia(s,id,uid,file)
 
-    const { data, error } = await s.rpc('request_voice_call', {
-      p_conversation: id,
-    })
-
-    if (error) {
-      setNotice('تعذر بدء المكالمة الآن.')
+    if(!result.ok){
+      if(result.code==='invalid_type')setNotice('المسموح صورة JPG/PNG/WEBP أو فيديو MP4/MOV/WEBM.')
+      else if(result.code==='too_large')setNotice('حجم الملف يجب ألا يتجاوز 25MB.')
+      else if(result.code==='duration_read')setNotice('تعذر قراءة مدة الفيديو.')
+      else if(result.code==='too_long')setNotice('الفيديو يجب ألا يتجاوز 10 ثوانٍ.')
+      else if(result.code==='upload')setNotice(result.isVideo?'تعذر رفع الفيديو.':'تعذر رفع الصورة.')
+      else setNotice(result.isVideo?'تعذر إرسال الفيديو.':'تعذر إرسال الصورة.')
       return
     }
 
-    const { data: row } = await s
-      .from('voice_call_sessions')
-      .select('*')
-      .eq('id', data)
-      .single()
-
-    if (row) {
-      setActiveCall(row as CallRow)
-      setCallLabel('جارٍ انتظار موافقة الطرف الآخر...')
-    }
+    setNotice(result.isVideo?'تم إرسال الفيديو.':'تم إرسال الصورة. ستظهر للطرف الآخر مموهة حتى يختار إظهارها.')
+    await load()
   }
 
-  async function respondToCall(accept: boolean) {
-    if (!incomingCall) return
-
-    await s.rpc('respond_voice_call', {
-      p_call: incomingCall.id,
-      p_accept: accept,
-    })
-
-    if (!accept) {
-      setIncomingCall(null)
-      return
-    }
-
-    const { data: row } = await s
-      .from('voice_call_sessions')
-      .select('*')
-      .eq('id', incomingCall.id)
-      .single()
-
-    if (row) {
-      setIncomingCall(null)
-      setActiveCall(row as CallRow)
-      setCallLabel('المكالمة متصلة')
-    }
-  }
-
-  async function endCall() {
-    if (!activeCall) return
-
-    await s.rpc('end_voice_call', {
-      p_call: activeCall.id,
-    })
-
-    cleanupPeer()
-    setActiveCall(null)
-    setCallLabel('')
-  }
-
-  async function uploadImage(file: File) {
-    setNotice('')
-
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setNotice('المسموح JPG أو PNG أو WEBP فقط.')
-      return
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setNotice('حجم الصورة يجب ألا يتجاوز 10MB.')
-      return
-    }
-
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const path = `${id}/${uid}/${crypto.randomUUID()}.${ext}`
-
-    const { error: uploadError } = await s.storage
-      .from('chat-media-approved')
-      .upload(path, file, {
-        upsert: false,
-        contentType: file.type,
-      })
-
-    if (uploadError) {
-      setNotice('تعذر رفع الصورة.')
-      return
-    }
-
-    const { error } = await s.rpc('create_image_message', {
-      p_conversation: id,
-      p_pending_path: path,
-    })
-
-    if (error) {
-      setNotice('تعذر إرسال الصورة.')
-      return
-    }
-
-    setNotice('تم إرسال الصورة. ستظهر للطرف الآخر مموهة حتى يختار إظهارها.')
-  }
-
-  const visibleMessages = messages
-
-  function revealImage(messageId: string) {
-    setRevealedImages((current) => {
-      const next = new Set(current)
+  function revealImage(messageId:string){
+    setRevealedImages(current=>{
+      const next=new Set(current)
       next.add(messageId)
       return next
     })
   }
 
-  function hideImage(messageId: string) {
-    setRevealedImages((current) => {
-      const next = new Set(current)
+  function hideImage(messageId:string){
+    setRevealedImages(current=>{
+      const next=new Set(current)
       next.delete(messageId)
       return next
     })
   }
 
-  return (
-    <AppShell>
-      <PageHeader title={other?.profiles?.display_name || 'الحوار'} />
+  const {gross:transferGross,fee:transferFee,net:transferNet}=calculateStarTransferBreakdown(transferStars)
 
-      <audio ref={remoteAudioRef} autoPlay />
+  return <AppShell>
+    <PageHeader title={other?.profiles?.display_name||'الحوار'}/>
 
-      <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="truncate text-xs font-bold text-[#1560BD]">
-            {callLabel || 'مكالمات صوتية بموافقة الطرفين'}
-          </p>
+    <main className="flex min-h-[calc(100vh-160px)] flex-col p-4">
+      <button onClick={()=>setShowPartner(true)} className="tap-action mb-3 flex items-center gap-3 rounded-[24px] bg-white p-3 text-right shadow-sm ring-1 ring-[#dfe9f5]">
+        <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-[#eaf3fb]">
+          {partner?.avatar_url||other?.profiles?.avatar_url?<img src={partner?.avatar_url||other?.profiles?.avatar_url} alt="" className="h-full w-full object-cover"/>:<span className="grid h-full w-full place-items-center font-black text-[#1768f4]">{(partner?.display_name||other?.profiles?.display_name||'م')[0]}</span>}
+          <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full ring-2 ring-white ${partner?.is_online?'bg-[#12d79d]':'bg-slate-400'}`}/>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[16px] font-black">{partner?.display_name||other?.profiles?.display_name||'المستخدم'}</span>
+          <span className={`mt-0.5 block text-[10px] font-black ${partner?.is_online?'text-[#159a70]':'text-[#7d8798]'}`}>{partner?.is_online?'متصل':'غير متصل'}</span>
+        </span>
+        <UserRound size={20} className="text-[#1768f4]"/>
+      </button>
 
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
-              onClick={() => setShowGifts(!showGifts)}
-            >
-              <Gift size={16} />
-              هدية
-            </Button>
+      <div className="mb-3">
+        <p className="mb-2 truncate text-center text-xs font-bold text-[#1560BD]">{callInThisChat?callLabel:'المكالمات تبدأ فقط بعد قبول الطرف الآخر'}</p>
+        {callInThisChat?<div className="grid grid-cols-3 gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={()=>setShowGifts(true)}><Gift size={15}/> هدية</Button>
+          <Button size="sm" variant="outline" className="gap-1" onClick={restoreCall}><Phone size={15}/> فتح المكالمة</Button>
+          <Button size="sm" variant="outline" className="gap-1 text-red-600" onClick={()=>void endCall()}><PhoneOff size={15}/> إنهاء</Button>
+        </div>:<div className="grid grid-cols-3 gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={()=>setShowGifts(true)}><Gift size={15}/> هدية</Button>
+          <Button size="sm" variant="outline" className="gap-1" disabled={!!activeCall} onClick={()=>void startCall(id,'voice')}><Phone size={15}/> صوتي</Button>
+          <Button size="sm" variant="outline" className="gap-1" disabled={!!activeCall} onClick={()=>void startCall(id,'video')}><Video size={15}/> فيديو</Button>
+        </div>}
+      </div>
 
-            {activeCall ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-2 text-red-600"
-                onClick={endCall}
-              >
-                <PhoneOff size={16} />
-                إنهاء
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-2"
-                onClick={startCall}
-              >
-                <Phone size={16} />
-                اتصال صوتي
-              </Button>
-            )}
-          </div>
-        </div>
+      <div className="mb-3 grid grid-cols-4 gap-2">
+        <Button size="sm" variant="outline" onClick={loadSocialTools}><Images size={15}/> صور خاصة</Button>
+        <Button size="sm" variant="outline" onClick={speedIntro}><Timer size={15}/> دقيقة تعارف</Button>
+        <Button size="sm" variant="outline" onClick={startDuo}><Gamepad2 size={15}/> تحدي</Button>
+        <Button size="sm" variant="outline" onClick={()=>surprise('surprise')}><Sparkles size={15}/> مفاجأة</Button>
+      </div>
 
-        {showGifts ? (
-          <div className="mb-4 rounded-3xl border border-slate-200 bg-white p-3">
-            <p className="mb-2 text-sm font-extrabold">اختار هدية</p>
-            <div className="grid grid-cols-3 gap-2">
-              {giftItems.map((gift) => (
-                <button
-                  key={gift.id}
-                  type="button"
-                  onClick={() => sendGift(gift)}
-                  className="rounded-2xl bg-slate-50 p-3 text-center"
-                >
-                  <div className="text-2xl">{gift.emoji}</div>
-                  <p className="mt-1 text-xs font-bold">{gift.name_ar}</p>
-                  <p className="text-[11px] text-amber-700">
-                    {gift.price_stars} ⭐
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
+      {prompt?<div className="mb-3 rounded-2xl border border-[#DCE8F7] bg-[#EAF2FC] p-3"><p className="text-xs font-bold text-[#1560BD]">اقتراح للكلام</p><p className="mt-1 text-sm font-extrabold">{prompt}</p><Button className="mt-2" size="sm" variant="secondary" onClick={()=>surprise('restart')}><RefreshCw size={14}/> اقتراح آخر</Button></div>:null}
+      {socialOpen?<div className="mb-3 rounded-3xl border border-[#DCE8F7] bg-white p-3"><div className="flex items-center justify-between"><div><p className="font-extrabold">الصور الخاصة</p><p className="text-xs text-slate-500">لا تظهر إلا بعد موافقة الطرفين.</p></div><Button size="sm" onClick={privateConsent} disabled={privateStatus?.mutual}>{privateStatus?.mutual?'الموافقة متبادلة ✓':privateStatus?.my_consented?'في انتظار الطرف الآخر':'أوافق على المشاركة'}</Button></div>{privatePhotos.length?<div className="mt-3 grid grid-cols-3 gap-2">{privatePhotos.map((p:any)=><div key={p.photo_id} className="grid aspect-square place-items-center rounded-2xl bg-[#EAF2FC] text-xs font-bold text-[#1560BD]">صورة خاصة ✓</div>)}</div>:<p className="mt-3 text-xs text-slate-500">{privateStatus?.target_has_photos?'لديه صور خاصة؛ ستظهر بعد اكتمال الموافقة.':'لا توجد صور خاصة متاحة حاليًا.'}</p>}</div>:null}
+      {duo?<div className="mb-3 rounded-2xl bg-[#F4F8FD] p-3 text-sm font-bold">تحدي الثنائي نشط 🎮 — أجبوا عن 5 أسئلة للتعارف، بدون تقييم أو نسبة توافق.</div>:null}
+      {speedSession?<div className="mb-3 rounded-2xl bg-[#F4F8FD] p-3 text-sm font-bold">طلب دقيقة التعارف مرسل ⏱️ — يبدأ فقط بعد موافقة الطرف الآخر.</div>:null}
 
-        {incomingCall ? (
-          <div className="mb-4 rounded-3xl border border-blue-100 bg-blue-50 p-4">
-            <p className="font-extrabold">
-              {other?.profiles?.display_name || 'الطرف الآخر'} يتصل بك صوتيًا
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              لن تبدأ المكالمة إلا بعد موافقتك.
-            </p>
+      {notice?<p className="mb-3 rounded-2xl bg-slate-100 p-3 text-xs font-bold text-slate-600">{notice}</p>:null}
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button onClick={() => respondToCall(true)}>
-                <Phone size={16} className="ml-2" />
-                قبول
-              </Button>
+      <ChatMessageList
+        messages={messages}
+        uid={uid}
+        revealedImages={revealedImages}
+        onRevealImage={revealImage}
+        onHideImage={hideImage}
+      />
 
-              <Button
-                variant="outline"
-                onClick={() => respondToCall(false)}
-              >
-                <X size={16} className="ml-2" />
-                رفض
-              </Button>
-            </div>
-          </div>
-        ) : null}
+      <ChatComposer
+        fileInputRef={fileInputRef}
+        body={body}
+        onBodyChange={setBody}
+        onSend={send}
+        onOpenGifts={()=>setShowGifts(true)}
+        onMediaFile={uploadMedia}
+        mediaEnabled={mediaEnabled}
+      />
+    </main>
 
-        {notice ? (
-          <p className="mb-3 rounded-2xl bg-slate-100 p-3 text-xs font-bold text-slate-600">
-            {notice}
-          </p>
-        ) : null}
+    <ChatPartnerSheet
+      open={showPartner}
+      partner={partner}
+      copiedId={copiedId}
+      transferStars={transferStars}
+      transferGross={transferGross}
+      transferFee={transferFee}
+      transferNet={transferNet}
+      onClose={()=>setShowPartner(false)}
+      onCopy={copyPartnerId}
+      onChangeTransfer={setTransferStars}
+      onSendStars={sendStarsToPartner}
+    />
 
-        <div className="flex-1 space-y-2 pb-4">
-          {visibleMessages.map((m: any) => (
-            <div
-              key={m.id}
-              className={
-                m.sender_id === uid
-                  ? 'mr-auto max-w-[82%] rounded-3xl rounded-br-lg bg-[#1560BD] px-4 py-3 text-white'
-                  : 'ml-auto max-w-[82%] rounded-3xl rounded-bl-lg bg-white px-4 py-3 shadow-sm'
-              }
-            >
-              {m.message_type === 'image' ? (
-                m.signedUrl ? (
-                  m.sender_id === uid || revealedImages.has(m.id) ? (
-                    <div className="space-y-2">
-                      <img
-                        src={m.signedUrl}
-                        alt="صورة داخل المحادثة"
-                        className="max-h-80 w-full rounded-2xl object-cover"
-                      />
-                      {m.sender_id !== uid ? (
-                        <button
-                          type="button"
-                          onClick={() => hideImage(m.id)}
-                          className="text-xs font-bold underline underline-offset-4"
-                        >
-                          إخفاء الصورة
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="relative overflow-hidden rounded-2xl">
-                      <img
-                        src={m.signedUrl}
-                        alt="صورة مموهة"
-                        className="max-h-80 w-full scale-110 rounded-2xl object-cover blur-2xl"
-                      />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/30 p-4 text-center text-white">
-                        <p className="text-sm font-extrabold">صورة مخفية</p>
-                        <p className="mt-1 text-xs text-white/90">
-                          اختَر بنفسك إذا كنت تريد رؤية الصورة.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => revealImage(m.id)}
-                          className="mt-3 rounded-full bg-white px-4 py-2 text-xs font-extrabold text-slate-900"
-                        >
-                          إظهار الصورة
-                        </button>
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <p className="text-sm">تعذر تحميل الصورة.</p>
-                )
-              ) : (
-                <p className="text-sm leading-6">{m.body}</p>
-              )}
-
-              <p
-                className={
-                  m.sender_id === uid
-                    ? 'mt-1 text-[10px] text-blue-100'
-                    : 'mt-1 text-[10px] text-slate-400'
-                }
-              >
-                {new Date(m.created_at).toLocaleTimeString('ar-EG', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) uploadImage(file)
-            e.currentTarget.value = ''
-          }}
-        />
-
-        <div className="sticky bottom-20 flex gap-2 rounded-3xl border border-slate-200 bg-white p-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="إرسال صورة"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImagePlus size={19} />
-          </Button>
-
-          <Input
-            placeholder="اكتب رسالة..."
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') send()
-            }}
-          />
-
-          <Button size="icon" onClick={send}>
-            <Send size={18} />
-          </Button>
-        </div>
-      </main>
-    </AppShell>
-  )
+    <ChatGiftSheet
+      open={showGifts}
+      gifts={giftItems}
+      onClose={()=>setShowGifts(false)}
+      onSend={sendGift}
+    />
+  </AppShell>
 }

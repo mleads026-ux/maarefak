@@ -1,1 +1,3 @@
-import { cn } from '@/lib/utils';export function Card({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn('rounded-3xl border border-slate-200/80 bg-white shadow-sm',className)} {...props}/>}export function CardContent({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn('p-4',className)} {...props}/>}
+import { cn } from '@/lib/utils'
+export function Card({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn('rounded-[28px] border border-[#DCE8F7] bg-white/95 shadow-[0_14px_40px_rgba(21,96,189,.075)] backdrop-blur-sm',className)} {...props}/>}
+export function CardContent({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn('p-4',className)} {...props}/>}

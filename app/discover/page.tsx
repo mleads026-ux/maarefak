@@ -1,334 +1,187 @@
 'use client'
+import Link from 'next/link'
+import {useEffect,useMemo,useState} from 'react'
+import {Users,Heart,Mic2,MapPin,Eye,Star,Bell,ChevronLeft,LockKeyhole,Play,RefreshCw} from 'lucide-react'
+import {createClient} from '@/lib/supabase/client'
+import {AppShell} from '@/components/app-shell'
+import {BrandLogo} from '@/components/brand-logo'
+import {
+  discoveryRpcForMode,
+  getDiscoveryCardView,
+  normalizeNewFace,
+  type DiscoveryMode,
+} from '@/lib/discover-room'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Ban, Flag, Heart, Shuffle, SkipForward } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { AppShell } from '@/components/app-shell'
-import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+export default function Discover(){
+  const s=useMemo(()=>createClient(),[])
+  const [userId,setUserId]=useState<string|null>(null)
+  const [notice,setNotice]=useState('')
+  const [advanced,setAdvanced]=useState<any[]>([])
+  const [mode,setMode]=useState<DiscoveryMode>('mystery')
+  const [advBusy,setAdvBusy]=useState(false)
+  const [stars,setStars]=useState(0)
+  const [voicePlaying,setVoicePlaying]=useState(false)
 
-type Match = {
-  session_id: string
-  matched_user_id: string
-  display_name: string
-  avatar_url: string | null
-  city_name: string | null
-  country_name: string | null
-  mood: string | null
-  age: number | null
-  user_a: string
-  user_b: string
-  user_a_accepted: boolean
-  user_b_accepted: boolean
-}
+  useEffect(()=>{(async()=>{
+    const {data:{user}}=await s.auth.getUser()
+    setUserId(user?.id||null)
+    if(user){
+      const {data:w}=await s.from('star_wallets').select('balance').eq('user_id',user.id).maybeSingle()
+      setStars(Number(w?.balance||0))
+    }
+    const {data}=await s.rpc('mystery_discovery_cards',{p_limit:20})
+    setAdvanced(data||[])
+  })()},[s])
 
-export default function Discover() {
-  const s = useMemo(() => createClient(), [])
-  const r = useRouter()
-  const [waiting, setWaiting] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [match, setMatch] = useState<Match | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [notice, setNotice] = useState('')
+  useEffect(()=>{
+    if(!userId)return
+    const refresh=async()=>{
+      const {data:w}=await s.from('star_wallets').select('balance').eq('user_id',userId).maybeSingle()
+      setStars(Number(w?.balance||0))
+    }
+    const onWalletChange=()=>{void refresh()}
+    window.addEventListener('lammetna:wallet-change',onWalletChange)
+    return()=>window.removeEventListener('lammetna:wallet-change',onWalletChange)
+  },[s,userId])
 
-  useEffect(() => {
-    s.auth.getUser().then(({ data }) => setUserId(data.user?.id || null))
-  }, [s])
-
-  async function hydrateSession(row: any) {
-    if (!userId) return
-
-    if (row.conversation_id) {
-      r.push(`/chats/${row.conversation_id}`)
+  async function load(m:DiscoveryMode){
+    setMode(m);setAdvBusy(true);setNotice('')
+    if(m==='new'){
+      let q=s.from('profiles')
+        .select('id,display_name,avatar_url,mood,show_age,is_online,created_at,cities(name_ar)')
+        .eq('profile_complete',true)
+        .eq('discoverable',true)
+        .order('created_at',{ascending:false})
+        .limit(20)
+      if(userId)q=q.neq('id',userId)
+      const {data,error}=await q
+      const rows=(data||[]) as any[]
+      const ageEntries=!error?await Promise.all(rows.map(async (x:any)=>{
+        const {data:ageValue}=await s.rpc('public_profile_age',{p_target:x.id})
+        return [x.id,ageValue==null?null:Number(ageValue)] as const
+      })):[]
+      const ageMap=new Map(ageEntries)
+      const normalized=rows.map((x:any)=>normalizeNewFace(x,ageMap.get(x.id)??null))
+      if(error){setNotice('تعذر تحميل الوجوه الجديدة الآن.');setAdvanced([])}else setAdvanced(normalized)
+      setAdvBusy(false)
       return
     }
-
-    if (row.status !== 'active') {
-      setMatch(null)
-      setWaiting(false)
-      setNotice('انتهت المطابقة. يمكنك البحث عن شخص آخر.')
-      return
-    }
-
-    const other = row.user_a === userId ? row.user_b : row.user_a
-
-    const { data: p } = await s
-      .from('profiles')
-      .select('id,display_name,avatar_url,mood,birth_date,show_age,cities(name_ar),countries(name_ar)')
-      .eq('id', other)
-      .single()
-
-    if (!p) return
-
-    setMatch({
-      session_id: row.id,
-      matched_user_id: other,
-      display_name: p.display_name,
-      avatar_url: p.avatar_url,
-      city_name: (p.cities as any)?.name_ar || null,
-      country_name: (p.countries as any)?.name_ar || null,
-      mood: p.mood,
-      age:
-        p.show_age && p.birth_date
-          ? Math.floor((Date.now() - new Date(p.birth_date).getTime()) / 31557600000)
-          : null,
-      user_a: row.user_a,
-      user_b: row.user_b,
-      user_a_accepted: !!row.user_a_accepted,
-      user_b_accepted: !!row.user_b_accepted,
-    })
-
-    setWaiting(false)
-    setNotice('')
+    const fn=discoveryRpcForMode(m)
+    const {data,error}=await s.rpc(fn,{p_limit:20})
+    if(error){setNotice('تعذر تحميل الاقتراحات الآن.');setAdvanced([])}else setAdvanced(data||[])
+    setAdvBusy(false)
   }
 
-  useEffect(() => {
-    if (!userId) return
-
-    const channel = s
-      .channel(`random-consent-${userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'random_chat_sessions' },
-        async (payload: any) => {
-          const row = payload.new
-          if (row.user_a === userId || row.user_b === userId) {
-            await hydrateSession(row)
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'random_chat_sessions' },
-        async (payload: any) => {
-          const row = payload.new
-          if (row.user_a === userId || row.user_b === userId) {
-            await hydrateSession(row)
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      s.removeChannel(channel)
+  async function actOnCard(action:'skip'|'interest'){
+    const first=advanced[0]
+    const target=first?.id||first?.user_id
+    if(!target)return
+    setAdvBusy(true)
+    if(action==='skip'){
+      await s.rpc('record_profile_swipe',{p_target:target,p_action:'skip'})
+      setAdvanced(v=>v.slice(1))
+      setNotice('تم التخطي وعرض اقتراح جديد.')
+    }else{
+      const {data,error}=await s.rpc('toggle_interest',{p_target:target})
+      setNotice(error?'تعذر تسجيل الاهتمام.':data?'تم تسجيل الاهتمام 💗':'تم إلغاء الاهتمام.')
     }
-  }, [userId, s])
-
-  async function start() {
-    setBusy(true)
-    setMatch(null)
-    setNotice('')
-
-    const { data, error } = await s.rpc('random_chat_match')
-    const row = Array.isArray(data) ? data[0] : data
-
-    if (error) {
-      setNotice('تعذر بدء البحث الآن. حاول مرة أخرى.')
-      setBusy(false)
-      return
-    }
-
-    if (row?.waiting) {
-      setWaiting(true)
-      setBusy(false)
-      return
-    }
-
-    if (row?.session_id) {
-      const { data: session } = await s
-        .from('random_chat_sessions')
-        .select('id,user_a,user_b,status,conversation_id,user_a_accepted,user_b_accepted')
-        .eq('id', row.session_id)
-        .single()
-
-      if (session) await hydrateSession(session)
-    }
-
-    setBusy(false)
+    setAdvBusy(false)
   }
 
-  async function cancel() {
-    await s.rpc('cancel_random_chat')
-    setWaiting(false)
+  async function playVoice(){
+    const first=advanced[0]
+    if(!first?.voice_intro_path||voicePlaying)return
+    setVoicePlaying(true)
+    const {data,error}=await s.storage.from('voice-intros').createSignedUrl(first.voice_intro_path,300)
+    if(error||!data?.signedUrl){setNotice('تعذر تشغيل المقدمة الصوتية.');setVoicePlaying(false);return}
+    const audio=new Audio(data.signedUrl)
+    audio.onended=()=>setVoicePlaying(false)
+    audio.onerror=()=>setVoicePlaying(false)
+    await audio.play().catch(()=>{setNotice('تعذر تشغيل الصوت على هذا الجهاز.');setVoicePlaying(false)})
   }
 
-  async function skip() {
-    if (match) {
-      await s.rpc('decline_random_chat', { p_session: match.session_id })
-    }
-    setMatch(null)
-    setNotice('')
-    await start()
-  }
+  const first=advanced[0]
+  const {
+    target,
+    showName,
+    showImage,
+    knownImage,
+    cardName,
+    cardCity,
+    cardMood,
+    promptText,
+  }=getDiscoveryCardView(mode,first)
 
-  async function approveChat() {
-    if (!match || !userId) return
+  return <AppShell>
+    <main className="px-4 pb-5 pt-3">
+      <header className="safe-top flex items-center justify-between">
+        <div className="flex items-center gap-2.5"><BrandLogo size={50}/><div><h1 className="text-[30px] font-black leading-none">لمتنا</h1><p className="mt-1 text-[11px] font-bold text-[#68758e]">دائمًا مساحة أجمل مع أصدقاء جدد</p></div></div>
+        <div className="flex items-center gap-2">
+          <Link href="/payments" className="tap-action flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-black shadow-sm ring-1 ring-[#dfe9f5]"><Star size={19} fill="#ffc21d" className="text-[#ffc21d]"/>{stars.toLocaleString('en-US')}<ChevronLeft size={14} className="text-[#0e67f5]"/></Link>
+          <Link href="/notifications" className="tap-action relative grid h-11 w-11 place-items-center rounded-full bg-white text-[#0e67f5] shadow-sm ring-1 ring-[#dfe9f5]"><Bell size={21}/><span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-[#ff1678] ring-2 ring-white"/></Link>
+        </div>
+      </header>
 
-    setBusy(true)
+      <div className="mt-5"><h1 className="text-[31px] font-black">اكتشف ✨</h1><p className="text-[14px] font-bold text-[#6f7b94]">تعرّف على أشخاص جدد بطرق مختلفة وممتعة</p></div>
 
-    const { data, error } = await s.rpc('start_random_chat_conversation', {
-      p_session: match.session_id,
-    })
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        {[
+          [Users,'وجوه جديدة','تعرّف على أشخاص جدد بالقرب منك','new','#0e67f5'],
+          [Heart,'مين على مزاجي؟','اكتشف أشخاص بناءً على اهتماماتك','vibe','#f20aa0'],
+          [Eye,'اكتشاف غامض','دردش مع شخص مجهول واكتشفه تدريجيًا','mystery','#ffffff'],
+          [Mic2,'صوت أول','تعرّف على الصوت قبل الصورة','voice','#a92be5'],
+        ].map(([I,t,d,m,c]:any)=>{
+          const active=mode===m
+          return <button key={t} onClick={()=>load(m)} className={`tap-action rounded-[23px] p-3 text-center shadow-sm ring-1 ring-[#e0e9f5] ${active?'lammetna-gradient text-white':'bg-white text-[#13213f]'}`}>
+            <span className={`mx-auto grid h-12 w-12 place-items-center rounded-[18px] ${active?'bg-white/16':'bg-gradient-to-br from-[#e9f6ff] to-[#f6e8ff]'}`} style={{color:active?'white':c}}><I size={25}/></span>
+            <p className="mt-2 text-[11px] font-black leading-4">{t}</p><p className={`mt-1 text-[9px] font-bold leading-4 ${active?'text-white/80':'text-[#79859b]'}`}>{d}</p><ChevronLeft size={14} className={`mx-auto mt-1 ${active?'text-white':'text-[#0e67f5]'}`}/>
+          </button>
+        })}
+      </div>
 
-    if (error) {
-      setNotice('تعذر تسجيل الموافقة. حاول مرة أخرى.')
-      setBusy(false)
-      return
-    }
+      {notice?<p className="mt-3 rounded-2xl bg-[#edf5ff] p-3 text-sm font-bold text-[#24528d]">{notice}</p>:null}
+      {advBusy?<p className="mt-3 text-center text-xs font-bold text-[#738097]">جاري التحميل...</p>:null}
 
-    if (data) {
-      r.push(`/chats/${data}`)
-      return
-    }
-
-    setMatch((current) => {
-      if (!current) return current
-      return current.user_a === userId
-        ? { ...current, user_a_accepted: true }
-        : { ...current, user_b_accepted: true }
-    })
-
-    setBusy(false)
-  }
-
-  async function interest() {
-    if (match) await s.rpc('toggle_interest', { p_target: match.matched_user_id })
-  }
-
-  async function block() {
-    if (!match) return
-    await s.rpc('block_user', { p_target: match.matched_user_id })
-    setMatch(null)
-  }
-
-  async function report() {
-    if (!match) return
-    await s.rpc('report_user', {
-      p_target: match.matched_user_id,
-      p_reason: 'other',
-      p_description: 'بلاغ من الدردشة العشوائية',
-    })
-    setNotice('تم إرسال البلاغ.')
-  }
-
-  const meAccepted =
-    !!match &&
-    !!userId &&
-    (match.user_a === userId ? match.user_a_accepted : match.user_b_accepted)
-
-  const otherAccepted =
-    !!match &&
-    !!userId &&
-    (match.user_a === userId ? match.user_b_accepted : match.user_a_accepted)
-
-  const consentLabel = !match
-    ? ''
-    : meAccepted
-      ? `في انتظار موافقة ${match.display_name}...`
-      : otherAccepted
-        ? `${match.display_name} وافق — وافق لبدء الحوار`
-        : 'موافق أتكلم'
-
-  return (
-    <AppShell>
-      <PageHeader title="اكتشف" />
-
-      <main className="p-4">
-        {notice ? (
-          <p className="mb-4 rounded-2xl bg-blue-50 p-3 text-sm font-bold text-[#1560BD]">
-            {notice}
-          </p>
-        ) : null}
-
-        {!match ? (
-          <div className="flex min-h-[68vh] flex-col items-center justify-center text-center">
-            <div className="mb-6 grid h-24 w-24 place-items-center rounded-full bg-[#EAF2FC] text-[#1560BD]">
-              <Shuffle size={42} />
+      <section className="lammetna-gradient hero-shadow glow-card-surface relative mt-4 overflow-hidden rounded-[31px] p-5 text-white">
+        <div className="pointer-events-none absolute -left-12 top-8 h-52 w-52 rounded-full border-[26px] border-white/10"/>
+        <div className="grid min-h-[270px] grid-cols-[1fr_1fr] items-center gap-3">
+          <div className="relative flex h-[225px] items-center justify-center">
+            <div className="absolute h-[190px] w-[155px] rotate-[-8deg] rounded-[48%] bg-white/20 blur-[1px]"/>
+            <div className="relative h-[190px] w-[155px] overflow-hidden rounded-[48%] border-2 border-white/60 shadow-2xl">
+              <img src={knownImage} alt="" className={`h-full w-full object-cover ${showImage?'':'scale-110 blur-[18px]'}`}/>
+              {!showImage?<span className="absolute inset-0 grid place-items-center text-6xl font-black text-white">?</span>:null}
             </div>
-
-            <h1 className="text-2xl font-extrabold">Random Chat</h1>
-
-            <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
-              المطابقة لا تفتح الحوار تلقائيًا. لازم الطرفين يوافقوا أولًا.
-            </p>
-
-            {waiting ? (
-              <>
-                <div className="mt-7 h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-[#1560BD]" />
-                <p className="mt-3 text-sm font-bold">جاري انتظار شخص متاح...</p>
-                <Button className="mt-4" variant="outline" onClick={cancel}>
-                  إلغاء البحث
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="lg"
-                className="mt-7 w-full max-w-xs"
-                disabled={busy}
-                onClick={start}
-              >
-                {busy ? 'جاري البحث...' : 'ابدأ دردشة عشوائية'}
-              </Button>
-            )}
+            {!showImage?<span className="absolute bottom-0 rounded-full bg-white px-3 py-2 text-[10px] font-black text-[#2450a4]"><LockKeyhole className="ml-1 inline" size={14}/> {mode==='voice'?'الصورة بعد التعارف':'الصورة مموهة في هذه البطاقة'}</span>:null}
           </div>
-        ) : (
-          <Card className="mt-6">
-            <CardContent className="space-y-5 text-center">
-              <div className="mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-blue-100 to-slate-200">
-                {match.avatar_url ? (
-                  <img src={match.avatar_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-4xl font-black text-[#1560BD]">
-                    {match.display_name?.[0]}
-                  </span>
-                )}
-              </div>
+          <div>
+            <span className="inline-flex rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-black text-[#6c25d9]">{mode==='mystery'?'🎭 اكتشاف غامض':mode==='voice'?'🎙️ صوت أول':'✨ اقتراح لك'}</span>
+            <h2 className="mt-3 text-[29px] font-black">{cardName}</h2>
+            {first?.age?<p className="mt-1 text-sm font-black">{first.age} سنة {first?.is_online===true?<span className="text-[#19e3a1] drop-shadow-[0_0_6px_rgba(25,227,161,.75)]">●</span>:null}</p>:null}
+            <div className="mt-4 space-y-2 text-[12px] font-black">
+              <div className="rounded-full bg-white/14 px-3 py-2"><MapPin className="ml-2 inline" size={16}/> المدينة <span className="float-left">{cardCity}</span></div>
+              <div className="rounded-full bg-white/14 px-3 py-2">😊 المزاج <span className="float-left">{cardMood}</span></div>
+              <div className="rounded-full bg-white/14 px-3 py-2">🎮 اهتمامات مشتركة <span className="float-left">{Number(first?.shared_interests||0)}</span></div>
+            </div>
+            {mode==='mystery'&&promptText?<div className="mt-3 rounded-[18px] bg-white/14 px-3 py-3 text-[11px] font-black leading-5">💬 {promptText}</div>:null}
+            {mode==='voice'?<button onClick={playVoice} disabled={!first?.voice_intro_path||voicePlaying} className="tap-action mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#6c25d9]"><Play size={17} fill="currentColor"/>{voicePlaying?'جاري التشغيل...':'تشغيل المقدمة الصوتية'}</button>:null}
+          </div>
+        </div>
+        {target?<button onClick={()=>actOnCard('interest')} disabled={advBusy} className="tap-action mt-2 w-full rounded-full bg-white py-2.5 text-xs font-black text-[#e41e91]">💗 تسجيل اهتمام</button>:<p className="text-center text-xs font-black text-white/85">لا توجد اقتراحات أخرى الآن.</p>}
+      </section>
 
-              <div>
-                <h2 className="text-xl font-extrabold">
-                  {match.display_name}
-                  {match.age ? `، ${match.age}` : ''}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  {[match.city_name, match.country_name].filter(Boolean).join('، ')}
-                  {match.mood ? ` · ${match.mood}` : ''}
-                </p>
-              </div>
+      <section className="pixel-card mt-4 rounded-[27px] p-4">
+        <button onClick={()=>actOnCard('skip')} disabled={!target||advBusy} className="tap-action lammetna-gradient hero-shadow flex w-full items-center justify-center gap-2 rounded-[23px] py-4 text-[19px] font-black text-white disabled:opacity-60">
+          <RefreshCw size={21} className={advBusy?'animate-spin':''}/>
+          {advBusy?'جاري تحميل اقتراح جديد...':mode==='mystery'?'شخص غامض آخر':'اعرض اقتراحًا آخر'}
+        </button>
+        <p className="mt-2 text-center text-[11px] font-bold text-[#76839a]">{mode==='mystery'?'كل ضغطة تعرض لك بطاقة شخص غامض جديدة.':'يمكنك التنقل بين الاقتراحات بدون بدء محادثة عشوائية.'}</p>
+      </section>
 
-              <Button
-                className="w-full"
-                onClick={approveChat}
-                disabled={busy || meAccepted}
-              >
-                {busy ? 'جاري التنفيذ...' : consentLabel}
-              </Button>
-
-              {meAccepted && !otherAccepted ? (
-                <p className="text-xs text-slate-500">
-                  لن يتم فتح صفحة الحوار إلا بعد موافقة {match.display_name}.
-                </p>
-              ) : null}
-
-              <div className="grid grid-cols-4 gap-2">
-                <Button size="icon" variant="outline" onClick={skip}>
-                  <SkipForward size={18} />
-                </Button>
-                <Button size="icon" variant="outline" onClick={interest}>
-                  <Heart size={18} />
-                </Button>
-                <Button size="icon" variant="outline" onClick={block}>
-                  <Ban size={18} />
-                </Button>
-                <Button size="icon" variant="outline" onClick={report}>
-                  <Flag size={18} />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </main>
-    </AppShell>
-  )
+      <section className="mt-4"><p className="mb-2 text-sm font-black">كيف تستخدم «اكتشف»؟ ⓘ</p><div className="grid grid-cols-3 gap-2 text-center">
+        <div className="pixel-card rounded-[21px] p-3"><Eye className="mx-auto mb-1 text-[#7744ff]"/><p className="text-[11px] font-black">شاهد الاقتراح</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">بطاقة واحدة في كل مرة</p></div>
+        <div className="pixel-card rounded-[21px] p-3"><RefreshCw className="mx-auto mb-1 text-[#1768f4]"/><p className="text-[11px] font-black">بدّل البطاقة</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">اعرض شخصًا آخر فورًا</p></div>
+        <div className="pixel-card rounded-[21px] p-3"><Heart className="mx-auto mb-1 text-[#e41e91]"/><p className="text-[11px] font-black">سجّل اهتمامك</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">عندما يعجبك الاقتراح</p></div>
+      </div></section>
+    </main>
+  </AppShell>
 }

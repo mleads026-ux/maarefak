@@ -1,110 +1,34 @@
-import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { AppShell } from '@/components/app-shell'
-import { PageHeader } from '@/components/page-header'
-import { Card, CardContent } from '@/components/ui/card'
-import { MessagesSquare } from 'lucide-react'
+import {redirect} from 'next/navigation'
+import {createClient} from '@/lib/supabase/server'
+import {AppShell} from '@/components/app-shell'
+import {ChatsExperience} from '@/components/chats-experience'
 
-export default async function Chats() {
-  const s = await createClient()
+export default async function Chats(){
+  const s=await createClient()
+  const {data:{user}}=await s.auth.getUser()
+  if(!user)redirect('/login')
 
-  const {
-    data: { user },
-  } = await s.auth.getUser()
-
-  if (!user) redirect('/login')
-
-  const { data: own } = await s
-    .from('conversation_members')
-    .select('conversation_id')
-    .eq('user_id', user.id)
-
-  const ids = (own || []).map((x) => x.conversation_id)
-  let rows: any[] = []
-
-  if (ids.length) {
-    const [{ data: members }, { data: messages }] = await Promise.all([
-      s.from('conversation_members')
-        .select('conversation_id,user_id,profiles(display_name,avatar_url)')
-        .in('conversation_id', ids),
-
-      s.from('messages')
-        .select('conversation_id,body,created_at,sender_id,message_type')
-        .in('conversation_id', ids)
-        .order('created_at', { ascending: false }),
+  const [{data:own},{data:people}]=await Promise.all([
+    s.from('conversation_members').select('conversation_id').eq('user_id',user.id),
+    s.from('profiles').select('id,display_name,avatar_url').neq('id',user.id).eq('profile_complete',true).eq('discoverable',true).limit(3),
+  ])
+  const ids=(own||[]).map((x:any)=>x.conversation_id)
+  let rows:any[]=[]
+  if(ids.length){
+    const [{data:members},{data:messages}]=await Promise.all([
+      s.from('conversation_members').select('conversation_id,user_id,profiles(display_name,avatar_url,is_online)').in('conversation_id',ids),
+      s.from('messages').select('conversation_id,body,created_at,sender_id,message_type,read_at,media_path').in('conversation_id',ids).order('created_at',{ascending:false}),
     ])
-
-    rows = ids.map((id) => {
-      const other = (members || []).find(
-        (m: any) => m.conversation_id === id && m.user_id !== user.id
-      )
-
-      const last = (messages || []).find(
-        (m: any) => m.conversation_id === id
-      )
-
-      return { id, other, last }
+    rows=ids.map(id=>{
+      const ownMsgs=(messages||[]).filter((m:any)=>m.conversation_id===id)
+      return {
+        id,
+        other:(members||[]).find((m:any)=>m.conversation_id===id&&m.user_id!==user.id),
+        last:ownMsgs[0]||null,
+        unread:ownMsgs.filter((m:any)=>m.sender_id!==user.id&&!m.read_at).length,
+      }
     })
   }
 
-  return (
-    <AppShell>
-      <PageHeader title="كلامنا" />
-
-      <main className="space-y-3 p-4">
-        {rows.map((x: any) => (
-          <Link key={x.id} href={`/chats/${x.id}`} className="block">
-            <Card>
-              <CardContent className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-blue-50 font-black text-[#1560BD]">
-                  {x.other?.profiles?.avatar_url ? (
-                    <img
-                      src={x.other.profiles.avatar_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (x.other?.profiles?.display_name || 'م')[0]
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-extrabold">
-                      {x.other?.profiles?.display_name || 'مستخدم'}
-                    </p>
-                    <span className="text-[10px] text-slate-400">
-                      {x.last
-                        ? new Date(x.last.created_at).toLocaleDateString('ar-EG')
-                        : ''}
-                    </span>
-                  </div>
-
-                  <p className="truncate text-sm text-slate-500">
-                    {x.last?.message_type === 'image'
-                      ? '📷 صورة'
-                      : x.last?.body || 'ابدأ الكلام الآن'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-
-        {!rows.length ? (
-          <div className="py-20 text-center">
-            <MessagesSquare
-              className="mx-auto mb-3 text-slate-300"
-              size={44}
-            />
-            <p className="font-bold">لسه مفيش كلام بينكم</p>
-            <p className="mt-1 text-sm text-slate-500">
-              ابدأ بالتعرف على أشخاص جدد من اكتشف.
-            </p>
-          </div>
-        ) : null}
-      </main>
-    </AppShell>
-  )
+  return <AppShell><ChatsExperience rows={rows} people={people||[]}/></AppShell>
 }

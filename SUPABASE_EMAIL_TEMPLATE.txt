@@ -1,9 +1,9 @@
 SUBJECT:
-رمز تأكيد حسابك في معارفك
+رمز تأكيد حسابك في لمتنا
 
 BODY:
 <div dir="rtl" style="font-family:Arial,sans-serif;text-align:right;line-height:1.8">
-  <h2>أهلًا بك في معارفك</h2>
+  <h2>أهلًا بك في لمتنا</h2>
   <p>استخدم رمز التحقق التالي لتأكيد بريدك الإلكتروني:</p>
   <div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#1560BD">
     {{ .Token }}

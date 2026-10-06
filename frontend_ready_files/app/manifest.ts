@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'معارفك',
-    short_name: 'معارفك',
+    name: 'لمتنا',
+    short_name: 'لمتنا',
     description: 'معارف جديدة تبدأ بخطوة',
     start_url: '/home',
     scope: '/',

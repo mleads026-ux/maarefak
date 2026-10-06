@@ -3,11 +3,13 @@ const PHONE_PATH="M415 358 L391 379 L377 394 L364 412 L356 427 L348 458 L348 491
 
 export function AuthLayeredAppIcon(){
   return <span aria-hidden="true" className="auth-layered-icon">
+    <span className="auth-layered-icon__tile">
+      <svg className="auth-layered-icon__phone" viewBox="0 0 1254 1254">
+        <path d={PHONE_PATH} fill="currentColor"/>
+      </svg>
+    </span>
     <svg className="auth-layered-icon__ring" viewBox="0 0 1254 1254">
       <path d={RING_PATH} fill="currentColor" fillRule="evenodd"/>
-    </svg>
-    <svg className="auth-layered-icon__phone" viewBox="0 0 1254 1254">
-      <path d={PHONE_PATH} fill="currentColor"/>
     </svg>
   </span>
 }

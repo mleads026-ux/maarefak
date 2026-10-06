@@ -357,7 +357,6 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
         />
 
         <LammaChatPanel
-          chatExpanded={chatExpanded}
           messages={messages}
           uid={uid}
           members={members}

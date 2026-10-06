@@ -213,12 +213,16 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
           const incoming=event.streams[0]
           remoteStreamRef.current=incoming
 
+          // Keep remote audio attached to the persistent hidden audio element.
+          // This preserves sound when a video call is minimized and its video UI unmounts.
+          if(remoteAudioRef.current){
+            remoteAudioRef.current.srcObject=incoming
+            void remoteAudioRef.current.play().catch(()=>{})
+          }
+
           if(callKind==='video'&&remoteVideoRef.current){
             remoteVideoRef.current.srcObject=incoming
             void remoteVideoRef.current.play().catch(()=>{})
-          }else if(remoteAudioRef.current){
-            remoteAudioRef.current.srcObject=incoming
-            void remoteAudioRef.current.play().catch(()=>{})
           }
         }
 

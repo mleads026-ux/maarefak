@@ -346,7 +346,7 @@ export function CallSessionProvider({children}:{children:React.ReactNode}){
 
     {activeCall&&!minimized?<div className={`fixed inset-0 z-[180] overflow-hidden ${activeCall.call_kind==='video'&&activeCall.status==='accepted'?'bg-black':'bg-[radial-gradient(circle_at_top,#224b86,#071427_68%)]'} text-white`}>
       {activeCall.call_kind==='video'&&activeCall.status==='accepted'?<>
-        <video ref={bindRemoteVideo} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover"/>
+        <video ref={bindRemoteVideo} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-cover"/>
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/65"/>
         <video ref={bindLocalVideo} autoPlay playsInline muted className="absolute right-4 top-[max(24px,env(safe-area-inset-top))] h-40 w-28 rounded-[22px] border-2 border-white/70 bg-black object-cover shadow-2xl"/>
       </>:<div className="absolute inset-0 flex flex-col items-center justify-center px-6 pb-44 text-center">

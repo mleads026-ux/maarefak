@@ -18,6 +18,116 @@ create unique index if not exists uq_messages_star_transfer
   on public.messages(star_transfer_id)
   where star_transfer_id is not null;
 
+-- Enforce on the server that promotional stars can be spent inside Lammetna,
+-- but can never be converted into another user's transferable balance or earnings.
+create or replace function public.transfer_stars_by_user_id(
+  p_public_user_id text,
+  p_amount bigint,
+  p_client_reference_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path=public,private
+as $$
+declare
+  v_user uuid:=auth.uid();
+  v_balance bigint;
+  v_promotional bigint;
+  v_existing uuid;
+begin
+  if v_user is null then raise exception 'authentication_required'; end if;
+  if p_amount is null or p_amount<1 then raise exception 'invalid_amount'; end if;
+
+  perform private.assert_mfa_if_enrolled();
+
+  select id into v_existing
+  from public.star_transfers
+  where sender_id=v_user and client_reference_id=p_client_reference_id;
+
+  if v_existing is not null then return v_existing; end if;
+
+  insert into public.star_wallets(user_id,balance,promotional_balance)
+  values(v_user,0,0)
+  on conflict(user_id) do nothing;
+
+  select balance,promotional_balance
+  into v_balance,v_promotional
+  from public.star_wallets
+  where user_id=v_user
+  for update;
+
+  if coalesce(v_balance,0)<p_amount then
+    raise exception 'insufficient_stars';
+  end if;
+
+  if coalesce(v_balance,0)-coalesce(v_promotional,0)<p_amount then
+    raise exception 'promotional_stars_not_transferable';
+  end if;
+
+  return public.transfer_stars_by_user_id_core_v14(
+    p_public_user_id,p_amount,p_client_reference_id
+  );
+end
+$$;
+
+revoke all on function public.transfer_stars_by_user_id(text,bigint,uuid) from public;
+revoke execute on function public.transfer_stars_by_user_id(text,bigint,uuid) from anon;
+grant execute on function public.transfer_stars_by_user_id(text,bigint,uuid) to authenticated;
+
+create or replace function public.send_gift(
+  p_target uuid,
+  p_gift uuid,
+  p_space uuid default null,
+  p_conversation uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path=public,private
+as $$
+declare
+  v_user uuid:=auth.uid();
+  v_price bigint;
+  v_balance bigint;
+  v_promotional bigint;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+
+  perform private.assert_mfa_if_enrolled();
+
+  select price_stars into v_price
+  from public.gift_catalog
+  where id=p_gift and active=true;
+
+  if v_price is null then raise exception 'gift_not_available'; end if;
+
+  insert into public.star_wallets(user_id,balance,promotional_balance)
+  values(v_user,0,0)
+  on conflict(user_id) do nothing;
+
+  select balance,promotional_balance
+  into v_balance,v_promotional
+  from public.star_wallets
+  where user_id=v_user
+  for update;
+
+  if coalesce(v_balance,0)<v_price then
+    raise exception 'insufficient_stars';
+  end if;
+
+  if coalesce(v_balance,0)-coalesce(v_promotional,0)<v_price then
+    raise exception 'promotional_stars_not_transferable';
+  end if;
+
+  return public.send_gift_core_v14(p_target,p_gift,p_space,p_conversation);
+end
+$$;
+
+revoke all on function public.send_gift(uuid,uuid,uuid,uuid) from public;
+revoke execute on function public.send_gift(uuid,uuid,uuid,uuid) from anon;
+grant execute on function public.send_gift(uuid,uuid,uuid,uuid) to authenticated;
+
 create or replace function private.notify_star_transfer()
 returns trigger
 language plpgsql

@@ -33,6 +33,17 @@ export default function Discover(){
     setAdvanced(data||[])
   })()},[s])
 
+  useEffect(()=>{
+    if(!userId)return
+    const refresh=async()=>{
+      const {data:w}=await s.from('star_wallets').select('balance').eq('user_id',userId).maybeSingle()
+      setStars(Number(w?.balance||0))
+    }
+    const onWalletChange=()=>{void refresh()}
+    window.addEventListener('lammetna:wallet-change',onWalletChange)
+    return()=>window.removeEventListener('lammetna:wallet-change',onWalletChange)
+  },[s,userId])
+
   async function load(m:DiscoveryMode){
     setMode(m);setAdvBusy(true);setNotice('')
     if(m==='new'){

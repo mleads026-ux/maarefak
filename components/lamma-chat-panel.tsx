@@ -1,9 +1,9 @@
 'use client'
 
-import {useEffect,useRef,useState} from 'react'
 import {Gift,Send} from 'lucide-react'
 import {LammaMessageList} from '@/components/lamma-message-list'
 import type {LammaMember} from '@/lib/lamma-room'
+import {useLammaChatScroll} from '@/hooks/use-lamma-chat-scroll'
 
 type Props={
   messages:any[]
@@ -19,54 +19,17 @@ type Props={
 export function LammaChatPanel({
   messages,uid,members,body,onSelectMember,onBodyChange,onSend,onOpenGifts,
 }:Props){
-  const scrollRef=useRef<HTMLDivElement|null>(null)
-  const endRef=useRef<HTMLDivElement|null>(null)
-  const atBottomRef=useRef(true)
-  const previousLatestIdRef=useRef<string|null>(null)
-  const readTimerRef=useRef<number|null>(null)
-  const [unreadFromId,setUnreadFromId]=useState<string|null>(null)
-
-  useEffect(()=>{
-    const latest=messages[messages.length-1]
-    if(!latest)return
-
-    const previousLatestId=previousLatestIdRef.current
-    const firstLoad=previousLatestId==null
-    const mine=latest.sender_id===uid
-
-    if(firstLoad||atBottomRef.current||mine){
-      requestAnimationFrame(()=>{
-        endRef.current?.scrollIntoView({behavior:firstLoad?'auto':'smooth',block:'end'})
-      })
-      setUnreadFromId(null)
-    }else if(!unreadFromId){
-      const previousIndex=messages.findIndex(message=>message.id===previousLatestId)
-      const firstUnread=messages[Math.max(0,previousIndex+1)]
-      if(firstUnread)setUnreadFromId(firstUnread.id)
-    }
-
-    previousLatestIdRef.current=latest.id
-  },[messages,uid,unreadFromId])
-
-  function handleScroll(){
-    const element=scrollRef.current
-    if(!element)return
-    const distance=element.scrollHeight-element.scrollTop-element.clientHeight
-    const atBottom=distance<56
-    atBottomRef.current=atBottom
-
-    if(readTimerRef.current)window.clearTimeout(readTimerRef.current)
-    if(atBottom&&unreadFromId){
-      readTimerRef.current=window.setTimeout(()=>{
-        if(atBottomRef.current)setUnreadFromId(null)
-      },1200)
-    }
-  }
+  const {
+    scrollRef,
+    endRef,
+    unreadFromId,
+    onScroll,
+  }=useLammaChatScroll(messages,uid)
 
   return <div className="pointer-events-none absolute inset-0 z-20">
     <div
       ref={scrollRef}
-      onScroll={handleScroll}
+      onScroll={onScroll}
       className="pointer-events-auto absolute inset-x-2 bottom-[76px] top-[26%] overflow-y-auto overscroll-contain px-2 pb-5 pt-16"
       style={{
         WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, transparent 16%, rgba(0,0,0,.4) 38%, #000 61%, #000 100%)',

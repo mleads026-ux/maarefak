@@ -253,19 +253,20 @@ input,textarea,select{min-width:0;max-width:100%}
 }
 
 
-/* LAMMETNA_LOGIN_BRAND_CARD_SCALE_V16 */
+/* LAMMETNA_LOGIN_BRAND_CARD_SCALE_V17 */
 .auth-login-brand-hero{
-  height:25svh;
-  min-height:180px;
-  max-height:240px;
+  width:100%;
+  aspect-ratio:1536/963;
   display:flex;
   align-items:center;
   justify-content:center;
   background:#eef8ff;
 }
 .auth-login-brand-hero>img:first-child{
+  display:block;
   width:100%;
-  height:100%;
+  height:auto;
+  max-width:none;
   object-fit:contain;
   object-position:center;
 }

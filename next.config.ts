@@ -10,6 +10,7 @@ const contentSecurityPolicy=[
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
+  "webrtc 'allow'",
   "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",

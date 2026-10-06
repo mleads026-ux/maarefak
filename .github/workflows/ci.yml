@@ -62,8 +62,12 @@ jobs:
           HOME_HEADERS="$(curl -fsSI http://127.0.0.1:3000/home | tr -d '\r')"
           echo "$HOME_HEADERS" | grep -qi '^location: /login'
           echo "$HOME_HEADERS" | grep -qi '^content-security-policy:'
+          echo "$HOME_HEADERS" | grep -Fqi "webrtc 'allow'"
           echo "$HOME_HEADERS" | grep -qi '^x-frame-options: DENY'
           echo "$HOME_HEADERS" | grep -qi '^x-content-type-options: nosniff'
+
+          ICE_HEADERS="$(curl -fsSI http://127.0.0.1:3000/api/rtc/ice-servers | tr -d '\r')"
+          echo "$ICE_HEADERS" | grep -qi '^location: /login'
 
           kill "$APP_PID"
           wait "$APP_PID" || true

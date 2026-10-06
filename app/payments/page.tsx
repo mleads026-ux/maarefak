@@ -63,7 +63,13 @@ export default function Payments(){
    setBusy(false)
  }
 
- useEffect(()=>{load()},[])
+ useEffect(()=>{
+   void load()
+   const refresh=()=>{void load()}
+   window.addEventListener('lammetna:wallet-change',refresh)
+   return()=>window.removeEventListener('lammetna:wallet-change',refresh)
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[])
 
  async function useEarnings(action:'convert'|'withdraw'){
    const n=Number(stars)

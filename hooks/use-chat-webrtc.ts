@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect,useRef} from 'react'
+import {useEffect,useRef,useState} from 'react'
 import type {ChatCallRow} from '@/lib/chat-room'
 
 type Args={
@@ -13,28 +13,110 @@ type Args={
 export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
   const peerRef=useRef<RTCPeerConnection|null>(null)
   const localStreamRef=useRef<MediaStream|null>(null)
+  const remoteStreamRef=useRef<MediaStream|null>(null)
   const remoteAudioRef=useRef<HTMLAudioElement|null>(null)
   const localVideoRef=useRef<HTMLVideoElement|null>(null)
   const remoteVideoRef=useRef<HTMLVideoElement|null>(null)
   const signalChannelRef=useRef<any>(null)
   const handledSignalsRef=useRef<Set<number>>(new Set())
   const pendingIceRef=useRef<RTCIceCandidateInit[]>([])
+  const [micMuted,setMicMuted]=useState(false)
+  const [cameraFacing,setCameraFacing]=useState<'user'|'environment'>('user')
+
+  function bindLocalVideo(el:HTMLVideoElement|null){
+    localVideoRef.current=el
+    if(el&&localStreamRef.current){
+      el.srcObject=localStreamRef.current
+      el.muted=true
+      void el.play().catch(()=>{})
+    }
+  }
+
+  function bindRemoteVideo(el:HTMLVideoElement|null){
+    remoteVideoRef.current=el
+    if(el&&remoteStreamRef.current){
+      el.srcObject=remoteStreamRef.current
+      void el.play().catch(()=>{})
+    }
+  }
 
   function cleanupPeer(){
     if(signalChannelRef.current){
       s.removeChannel(signalChannelRef.current)
       signalChannelRef.current=null
     }
-
     peerRef.current?.close()
     peerRef.current=null
-
     localStreamRef.current?.getTracks().forEach(track=>track.stop())
     localStreamRef.current=null
-
+    remoteStreamRef.current=null
     if(remoteAudioRef.current)remoteAudioRef.current.srcObject=null
     if(localVideoRef.current)localVideoRef.current.srcObject=null
     if(remoteVideoRef.current)remoteVideoRef.current.srcObject=null
+    setMicMuted(false)
+    setCameraFacing('user')
+  }
+
+  function toggleMic(){
+    const track=localStreamRef.current?.getAudioTracks()[0]
+    if(!track){
+      setNotice('الميكروفون غير متاح بعد.')
+      return
+    }
+    track.enabled=!track.enabled
+    setMicMuted(!track.enabled)
+  }
+
+  async function switchCamera(){
+    if(activeCall?.call_kind!=='video')return
+    const pc=peerRef.current
+    const stream=localStreamRef.current
+    if(!pc||!stream){
+      setNotice('الكاميرا غير جاهزة بعد.')
+      return
+    }
+    const next=cameraFacing==='user'?'environment':'user'
+    try{
+      const nextStream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:{ideal:next}},
+        audio:false,
+      })
+      const nextTrack=nextStream.getVideoTracks()[0]
+      if(!nextTrack)throw new Error('camera_unavailable')
+      const sender=pc.getSenders().find(item=>item.track?.kind==='video')
+      if(sender)await sender.replaceTrack(nextTrack)
+      const old=stream.getVideoTracks()[0]
+      if(old){
+        stream.removeTrack(old)
+        old.stop()
+      }
+      stream.addTrack(nextTrack)
+      if(localVideoRef.current){
+        localVideoRef.current.srcObject=stream
+        void localVideoRef.current.play().catch(()=>{})
+      }
+      setCameraFacing(next)
+    }catch{
+      setNotice('تعذر تبديل الكاميرا على هذا الجهاز.')
+    }
+  }
+
+  async function chooseAudioOutput(){
+    const mediaDevices:any=navigator.mediaDevices
+    const audio:any=remoteAudioRef.current
+    if(!mediaDevices||typeof mediaDevices.selectAudioOutput!=='function'||!audio||typeof audio.setSinkId!=='function'){
+      setNotice('اختيار السماعة أو مخرج الصوت غير مدعوم من هذا المتصفح. استخدم تحكم الصوت في الجهاز.')
+      return false
+    }
+    try{
+      const device=await mediaDevices.selectAudioOutput()
+      await audio.setSinkId(device.deviceId)
+      setNotice('تم تغيير مخرج الصوت.')
+      return true
+    }catch{
+      setNotice('لم يتم تغيير مخرج الصوت.')
+      return false
+    }
   }
 
   useEffect(()=>{
@@ -42,52 +124,50 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
 
     let cancelled=false
     const callId=activeCall.id
-    const callKind:ChatCallRow['call_kind']=activeCall.call_kind
+    const callKind=activeCall.call_kind
     const isCaller=activeCall.caller_id===uid
 
     async function processSignal(signal:any){
       const pc=peerRef.current
-      if(!pc)return
-      if(signal.sender_id===uid)return
-      if(handledSignalsRef.current.has(signal.id))return
-
+      if(!pc||signal.sender_id===uid||handledSignalsRef.current.has(signal.id))return
       handledSignalsRef.current.add(signal.id)
 
-      if(signal.signal_type==='offer'&&!isCaller){
-        await pc.setRemoteDescription(signal.payload)
-
-        for(const candidate of pendingIceRef.current.splice(0)){
-          await pc.addIceCandidate(candidate).catch(()=>{})
-        }
-
-        const answer=await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-
-        await s.from('voice_call_signals').insert({
-          call_id:callId,
-          sender_id:uid,
-          signal_type:'answer',
-          payload:answer,
-        })
-        return
-      }
-
-      if(signal.signal_type==='answer'&&isCaller){
-        if(!pc.remoteDescription){
+      try{
+        if(signal.signal_type==='offer'&&!isCaller){
           await pc.setRemoteDescription(signal.payload)
           for(const candidate of pendingIceRef.current.splice(0)){
             await pc.addIceCandidate(candidate).catch(()=>{})
           }
+          const answer=await pc.createAnswer()
+          await pc.setLocalDescription(answer)
+          await s.from('voice_call_signals').insert({
+            call_id:callId,
+            sender_id:uid,
+            signal_type:'answer',
+            payload:answer,
+          })
+          return
         }
-        return
-      }
 
-      if(signal.signal_type==='ice'){
-        if(pc.remoteDescription){
-          await pc.addIceCandidate(signal.payload).catch(()=>{})
-        }else{
-          pendingIceRef.current.push(signal.payload)
+        if(signal.signal_type==='answer'&&isCaller){
+          if(pc.localDescription&&!pc.remoteDescription){
+            await pc.setRemoteDescription(signal.payload)
+            for(const candidate of pendingIceRef.current.splice(0)){
+              await pc.addIceCandidate(candidate).catch(()=>{})
+            }
+          }
+          return
         }
+
+        if(signal.signal_type==='ice'){
+          if(pc.remoteDescription){
+            await pc.addIceCandidate(signal.payload).catch(()=>{})
+          }else{
+            pendingIceRef.current.push(signal.payload)
+          }
+        }
+      }catch{
+        // Stale signaling rows can exist when reconnecting a call.
       }
     }
 
@@ -100,7 +180,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
         const isVideo=callKind==='video'
         const stream=await navigator.mediaDevices.getUserMedia({
           audio:true,
-          video:isVideo,
+          video:isVideo?{facingMode:{ideal:cameraFacing}}:false,
         })
 
         if(cancelled){
@@ -109,10 +189,10 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
         }
 
         localStreamRef.current=stream
-        if(callKind==='video'&&localVideoRef.current){
+        if(isVideo&&localVideoRef.current){
           localVideoRef.current.srcObject=stream
           localVideoRef.current.muted=true
-          localVideoRef.current.play().catch(()=>{})
+          void localVideoRef.current.play().catch(()=>{})
         }
 
         const pc=new RTCPeerConnection({
@@ -122,7 +202,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
 
         pc.oniceconnectionstatechange=()=>{
           if(pc.iceConnectionState==='failed'){
-            setNotice('تعذر إنشاء اتصال صوتي مباشر على هذه الشبكة. يلزم TURN لضمان الاتصال على الشبكات المقيدة.')
+            setNotice('تعذر إنشاء الاتصال المباشر على هذه الشبكة. يلزم TURN لضمان المكالمات على الشبكات المقيدة.')
           }
         }
 
@@ -130,12 +210,14 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
 
         pc.ontrack=event=>{
           const incoming=event.streams[0]
+          remoteStreamRef.current=incoming
+
           if(callKind==='video'&&remoteVideoRef.current){
             remoteVideoRef.current.srcObject=incoming
-            remoteVideoRef.current.play().catch(()=>{})
+            void remoteVideoRef.current.play().catch(()=>{})
           }else if(remoteAudioRef.current){
             remoteAudioRef.current.srcObject=incoming
-            remoteAudioRef.current.play().catch(()=>{})
+            void remoteAudioRef.current.play().catch(()=>{})
           }
         }
 
@@ -159,26 +241,25 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
               table:'voice_call_signals',
               filter:`call_id=eq.${callId}`,
             },
-            async(payload:any)=>{
-              await processSignal(payload.new)
-            }
+            async(payload:any)=>{await processSignal(payload.new)}
           )
           .subscribe()
 
         signalChannelRef.current=signalChannel
 
-        const {data:existing}=await s
+        let q=s
           .from('voice_call_signals')
           .select('*')
           .eq('call_id',callId)
           .order('id',{ascending:true})
 
+        if(activeCall.accepted_at)q=q.gte('created_at',activeCall.accepted_at)
+        const {data:existing}=await q
         for(const signal of existing||[])await processSignal(signal)
 
         if(isCaller&&!pc.localDescription){
           const offer=await pc.createOffer()
           await pc.setLocalDescription(offer)
-
           await s.from('voice_call_signals').insert({
             call_id:callId,
             sender_id:uid,
@@ -193,7 +274,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
       }
     }
 
-    beginRtc()
+    void beginRtc()
 
     return()=>{
       cancelled=true
@@ -204,8 +285,13 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
 
   return {
     remoteAudioRef,
-    localVideoRef,
-    remoteVideoRef,
+    bindLocalVideo,
+    bindRemoteVideo,
     cleanupPeer,
+    micMuted,
+    cameraFacing,
+    toggleMic,
+    switchCamera,
+    chooseAudioOutput,
   }
 }

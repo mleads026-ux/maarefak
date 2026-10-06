@@ -1,5 +1,7 @@
 import type {Metadata,Viewport} from 'next'
 import './globals.css'
+import {CallSessionProvider} from '@/components/call-session-provider'
+import {WalletSync} from '@/components/wallet-sync'
 
 export const metadata:Metadata={
   title:'لمتنا',
@@ -17,5 +19,5 @@ export const metadata:Metadata={
 export const viewport:Viewport={themeColor:'#1268F5'}
 
 export default function RootLayout({children}:{children:React.ReactNode}){
-  return <html lang="ar" dir="rtl"><body>{children}</body></html>
+  return <html lang="ar" dir="rtl"><body><CallSessionProvider><WalletSync/>{children}</CallSessionProvider></body></html>
 }

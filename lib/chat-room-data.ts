@@ -44,7 +44,7 @@ export async function fetchChatRoomSnapshot(
       .order('price_stars'),
     s.rpc('conversation_partner_identity',{p_conversation:conversationId}),
     s.from('messages')
-      .select('id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id')
+      .select('id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id,star_transfer_id')
       .eq('conversation_id',conversationId)
       .order('created_at',{ascending:true})
       .limit(300),

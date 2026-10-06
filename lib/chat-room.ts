@@ -5,6 +5,9 @@ export type ChatCallRow={
   callee_id:string
   status:'ringing'|'accepted'|'rejected'|'ended'|'missed'
   call_kind:'voice'|'video'
+  created_at?:string|null
+  accepted_at?:string|null
+  ended_at?:string|null
 }
 
 export type ChatGiftItem={

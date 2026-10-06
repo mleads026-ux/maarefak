@@ -23,6 +23,19 @@ export async function transferStarsToPublicUser(
   })
 }
 
+export async function transferStarsInConversation(
+  s:SupabaseClientLike,
+  conversationId:string,
+  amount:number,
+  clientReferenceId:string
+){
+  return s.rpc('transfer_stars_in_conversation',{
+    p_conversation:conversationId,
+    p_amount:amount,
+    p_client_reference_id:clientReferenceId,
+  })
+}
+
 export async function fetchPrivatePhotoTools(
   s:SupabaseClientLike,
   targetId:string
@@ -82,7 +95,7 @@ export async function insertChatTextMessage(
     body,
     message_type:'text',
   }).select(
-    'id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id'
+    'id,body,created_at,sender_id,message_type,media_path,media_duration_seconds,moderation_status,moderation_reason,gift_transaction_id,gift_id,gift_recipient_id,star_transfer_id'
   ).single()
 }
 

@@ -126,6 +126,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
     const callId=activeCall.id
     const callKind=activeCall.call_kind
     const isCaller=activeCall.caller_id===uid
+    const acceptedAt=activeCall.accepted_at
 
     async function processSignal(signal:any){
       const pc=peerRef.current
@@ -253,7 +254,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
           .eq('call_id',callId)
           .order('id',{ascending:true})
 
-        if(activeCall.accepted_at)q=q.gte('created_at',activeCall.accepted_at)
+        if(acceptedAt)q=q.gte('created_at',acceptedAt)
         const {data:existing}=await q
         for(const signal of existing||[])await processSignal(signal)
 

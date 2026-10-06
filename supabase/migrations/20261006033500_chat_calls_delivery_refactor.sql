@@ -159,3 +159,108 @@ begin
   end if;
 end
 $$;
+
+
+-- A user can participate in only one active call at a time.
+-- Advisory locks make the busy check safe when call requests race.
+create or replace function public.request_chat_call(
+  p_conversation uuid,
+  p_kind text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path=public,private
+as $$
+declare
+  v_user uuid:=auth.uid();
+  v_other uuid;
+  v_call uuid;
+  v_first text;
+  v_second text;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+  if p_kind not in ('voice','video') then raise exception 'invalid_call_kind'; end if;
+  if not private.is_conversation_member(p_conversation,v_user) then
+    raise exception 'not_a_member';
+  end if;
+
+  select cm.user_id into v_other
+  from public.conversation_members cm
+  where cm.conversation_id=p_conversation
+    and cm.user_id<>v_user
+  limit 1;
+
+  if v_other is null then raise exception 'callee_not_found'; end if;
+  if private.is_blocked_pair(v_user,v_other) then raise exception 'blocked'; end if;
+
+  v_first:=least(v_user::text,v_other::text);
+  v_second:=greatest(v_user::text,v_other::text);
+
+  perform pg_advisory_xact_lock(hashtextextended('voice-call:'||v_first,0));
+  perform pg_advisory_xact_lock(hashtextextended('voice-call:'||v_second,0));
+
+  update public.voice_call_sessions
+  set status='missed',ended_at=now()
+  where status='ringing'
+    and created_at<now()-interval '60 seconds'
+    and (
+      caller_id in (v_user,v_other)
+      or callee_id in (v_user,v_other)
+    );
+
+  if exists(
+    select 1
+    from public.voice_call_sessions
+    where status in ('ringing','accepted')
+      and (
+        caller_id in (v_user,v_other)
+        or callee_id in (v_user,v_other)
+      )
+  ) then
+    raise exception 'user_already_in_call';
+  end if;
+
+  insert into public.voice_call_sessions(
+    conversation_id,caller_id,callee_id,call_kind
+  )
+  values(p_conversation,v_user,v_other,p_kind)
+  returning id into v_call;
+
+  return v_call;
+end
+$$;
+
+revoke all on function public.request_chat_call(uuid,text) from public;
+revoke execute on function public.request_chat_call(uuid,text) from anon;
+grant execute on function public.request_chat_call(uuid,text) to authenticated;
+
+create or replace function public.expire_my_stale_voice_calls()
+returns integer
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  v_user uuid:=auth.uid();
+  v_count integer:=0;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+
+  with expired as (
+    update public.voice_call_sessions
+    set status='missed',ended_at=now()
+    where status='ringing'
+      and created_at<now()-interval '60 seconds'
+      and v_user in (caller_id,callee_id)
+    returning 1
+  )
+  select count(*) into v_count from expired;
+
+  return v_count;
+end
+$$;
+
+revoke all on function public.expire_my_stale_voice_calls() from public;
+revoke execute on function public.expire_my_stale_voice_calls() from anon;
+grant execute on function public.expire_my_stale_voice_calls() to authenticated;

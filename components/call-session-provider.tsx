@@ -122,6 +122,9 @@ export function CallSessionProvider({children}:{children:React.ReactNode}){
     let channel:any=null
 
     void (async()=>{
+      // Clear unanswered calls that are older than the ringing window before restoring call state.
+      await s.rpc('expire_my_stale_voice_calls')
+
       const {data:rows}=await s
         .from('voice_call_sessions')
         .select('*')

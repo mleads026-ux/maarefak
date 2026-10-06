@@ -3,7 +3,7 @@
 import {useEffect,useRef,type RefObject} from 'react'
 import {
   Camera,Gift,Lock,MessageCircle,Mic,MicOff,Minimize2,
-  Phone,PhoneOff,Send,Unlock,Video,Volume2,X,
+  Eye,EyeOff,Phone,PhoneOff,Send,Unlock,Video,Volume2,X,
 } from 'lucide-react'
 import type {ChatCallRow,ChatGiftItem} from '@/lib/chat-room'
 import type {CallFeedMessage,CallPartner} from '@/lib/call-session'
@@ -24,6 +24,7 @@ type Props={
   body:string
   gifts:ChatGiftItem[]
   micMuted:boolean
+  videoPrivacyMode:'normal'|'blur'|'hidden'
   remoteAudioRef:RefObject<HTMLAudioElement|null>
   bindLocalVideo:(element:HTMLVideoElement|null)=>void
   bindRemoteVideo:(element:HTMLVideoElement|null)=>void
@@ -39,6 +40,7 @@ type Props={
   onSendGift:(gift:ChatGiftItem)=>void
   onToggleMic:()=>void
   onSwitchCamera:()=>void
+  onCycleVideoPrivacy:()=>void
   onChooseAudioOutput:()=>void
   onMinimize:()=>void
   onLockControls:()=>void
@@ -50,10 +52,10 @@ type Props={
 export function CallSessionOverlay(props:Props){
   const {
     uid,activeCall,incomingCall,partner,minimized,callLabel,notice,giftToast,
-    chatOpen,giftPicker,controlsLocked,callMessages,body,gifts,micMuted,
+    chatOpen,giftPicker,controlsLocked,callMessages,body,gifts,micMuted,videoPrivacyMode,
     remoteAudioRef,bindLocalVideo,bindRemoteVideo,onAccept,onReject,onRestore,
     onDismissNotice,onToggleChat,onOpenGifts,onCloseGifts,onBodyChange,onSendMessage,
-    onSendGift,onToggleMic,onSwitchCamera,onChooseAudioOutput,onMinimize,
+    onSendGift,onToggleMic,onSwitchCamera,onCycleVideoPrivacy,onChooseAudioOutput,onMinimize,
     onLockControls,onUnlockControls,onGoToChat,onEndCall,
   }=props
 
@@ -91,6 +93,7 @@ export function CallSessionOverlay(props:Props){
       body={body}
       gifts={gifts}
       micMuted={micMuted}
+      videoPrivacyMode={videoPrivacyMode}
       bindLocalVideo={bindLocalVideo}
       bindRemoteVideo={bindRemoteVideo}
       onDismissNotice={onDismissNotice}
@@ -102,6 +105,7 @@ export function CallSessionOverlay(props:Props){
       onSendGift={onSendGift}
       onToggleMic={onToggleMic}
       onSwitchCamera={onSwitchCamera}
+      onCycleVideoPrivacy={onCycleVideoPrivacy}
       onChooseAudioOutput={onChooseAudioOutput}
       onMinimize={onMinimize}
       onLockControls={onLockControls}
@@ -145,6 +149,7 @@ function ActiveCallScreen(props:{
   body:string
   gifts:ChatGiftItem[]
   micMuted:boolean
+  videoPrivacyMode:'normal'|'blur'|'hidden'
   bindLocalVideo:(element:HTMLVideoElement|null)=>void
   bindRemoteVideo:(element:HTMLVideoElement|null)=>void
   onDismissNotice:()=>void
@@ -156,6 +161,7 @@ function ActiveCallScreen(props:{
   onSendGift:(gift:ChatGiftItem)=>void
   onToggleMic:()=>void
   onSwitchCamera:()=>void
+  onCycleVideoPrivacy:()=>void
   onChooseAudioOutput:()=>void
   onMinimize:()=>void
   onLockControls:()=>void
@@ -165,10 +171,10 @@ function ActiveCallScreen(props:{
 }){
   const {
     uid,call,partner,callLabel,notice,giftToast,chatOpen,giftPicker,
-    controlsLocked,callMessages,body,gifts,micMuted,bindLocalVideo,
+    controlsLocked,callMessages,body,gifts,micMuted,videoPrivacyMode,bindLocalVideo,
     bindRemoteVideo,onDismissNotice,onToggleChat,onOpenGifts,onCloseGifts,
     onBodyChange,onSendMessage,onSendGift,onToggleMic,onSwitchCamera,
-    onChooseAudioOutput,onMinimize,onLockControls,onUnlockControls,
+    onCycleVideoPrivacy,onChooseAudioOutput,onMinimize,onLockControls,onUnlockControls,
     onGoToChat,onEndCall,
   }=props
   const videoConnected=call.call_kind==='video'&&call.status==='accepted'
@@ -177,7 +183,24 @@ function ActiveCallScreen(props:{
     {videoConnected?<>
       <video ref={bindRemoteVideo} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-cover"/>
       <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/65"/>
-      <video ref={bindLocalVideo} autoPlay playsInline muted className="absolute right-4 top-[max(24px,env(safe-area-inset-top))] h-40 w-28 rounded-[22px] border-2 border-white/70 bg-black object-cover shadow-2xl"/>
+      <div className="absolute right-4 top-[max(24px,env(safe-area-inset-top))] z-20 h-40 w-28 overflow-hidden rounded-[22px] border-2 border-white/70 bg-black shadow-2xl">
+        <video
+          ref={bindLocalVideo}
+          autoPlay
+          playsInline
+          muted
+          className={`h-full w-full object-cover transition-all duration-200 ${videoPrivacyMode==='blur'?'scale-110 blur-md':videoPrivacyMode==='hidden'?'opacity-0':'opacity-100'}`}
+        />
+        {videoPrivacyMode==='hidden'?<div className="absolute inset-0 grid place-items-center bg-black/70 text-[10px] font-black text-white/80">المعاينة مخفية</div>:null}
+        <button
+          type="button"
+          onClick={onCycleVideoPrivacy}
+          className="tap-action absolute bottom-1.5 left-1.5 right-1.5 flex h-7 items-center justify-center gap-1 rounded-full bg-black/55 px-2 text-[9px] font-black text-white backdrop-blur-md ring-1 ring-white/20"
+          aria-label="خصوصية معاينة الفيديو"
+        >
+          {videoPrivacyMode==='normal'?<><Eye size={12}/> Blur</>:videoPrivacyMode==='blur'?<><EyeOff size={12}/> إخفاء</>:<><Eye size={12}/> إظهار</>}
+        </button>
+      </div>
     </>:<div className="absolute inset-0 flex flex-col items-center justify-center px-6 pb-44 text-center">
       <PartnerAvatar partner={partner} size="hero"/>
       <h2 className="mt-5 text-3xl font-black">{partner?.display_name||'مستخدم لمتنا'}</h2>

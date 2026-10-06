@@ -68,8 +68,10 @@ export function CallSessionProvider({children}:{children:React.ReactNode}){
     bindRemoteVideo,
     cleanupPeer,
     micMuted,
+    videoPrivacyMode,
     toggleMic,
     switchCamera,
+    cycleVideoPrivacy,
     chooseAudioOutput,
   }=useChatWebRtc({s,uid,activeCall,setNotice})
 
@@ -363,6 +365,7 @@ export function CallSessionProvider({children}:{children:React.ReactNode}){
       body={body}
       gifts={gifts}
       micMuted={micMuted}
+      videoPrivacyMode={videoPrivacyMode}
       remoteAudioRef={remoteAudioRef}
       bindLocalVideo={bindLocalVideo}
       bindRemoteVideo={bindRemoteVideo}
@@ -378,6 +381,7 @@ export function CallSessionProvider({children}:{children:React.ReactNode}){
       onSendGift={gift=>void sendCallGift(gift)}
       onToggleMic={toggleMic}
       onSwitchCamera={()=>void switchCamera()}
+      onCycleVideoPrivacy={()=>void cycleVideoPrivacy()}
       onChooseAudioOutput={()=>void chooseAudioOutput()}
       onMinimize={()=>setMinimized(true)}
       onLockControls={()=>setControlsLocked(true)}

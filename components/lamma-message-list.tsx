@@ -27,10 +27,10 @@ export function LammaMessageList({
         </div>:null}
 
         {message.message_type==='gift'
-          ? <div className="ml-auto w-fit max-w-[90%] rounded-full bg-[#fff1a8]/92 px-3 py-1.5 text-right text-[11px] font-black text-[#704a00] shadow-sm">
+          ? <div className="ml-auto w-fit max-w-[90%] rounded-full bg-[#fff1a8]/92 px-3 py-1.5 text-right text-[11px] font-black text-[#704a00] opacity-50 shadow-sm">
               {message.body}
             </div>
-          : <div className="flex items-start justify-end gap-2" dir="ltr">
+          : <div className="flex items-start justify-end gap-2 opacity-50" dir="ltr">
               <p dir="rtl" className={`ml-auto w-fit min-w-0 max-w-[88%] whitespace-pre-wrap break-words text-right text-[12px] leading-5 [overflow-wrap:anywhere] ${mine?'text-white':'text-white/95'}`}>
                 <button
                   type="button"

@@ -72,7 +72,7 @@ export default async function Home(){
           <div className="relative z-10 flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-bold">رصيد النجوم</p>
-              <p className="mt-1 whitespace-nowrap text-[31px] font-black leading-none">{stars.toLocaleString('en-US')}</p>
+              <p className="mt-1 whitespace-nowrap text-[12.4px] font-black leading-none">{stars.toLocaleString('en-US')}</p>
               <p className="mt-1 text-[11px] font-bold">نجمة ⭐</p>
             </div>
             <div className="star-orbit grid h-[74px] w-[74px] shrink-0 place-items-center rounded-full bg-white/10">

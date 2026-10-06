@@ -15,6 +15,7 @@ import {
   requestWithdrawalToSavedMethod,
   startIdentityVerification,
   transferStarsByPublicUserId,
+  convertEarningsToStars,
   useLammaEarnings,
 } from '@/lib/payments-actions'
 
@@ -26,6 +27,7 @@ export default function Payments(){
  const [transferableWallet,setTransferableWallet]=useState(0)
  const [packs,setPacks]=useState<any[]>([])
  const [earn,setEarn]=useState<any>({})
+ const [earningWallet,setEarningWallet]=useState<any>({})
  const [risk,setRisk]=useState<any>({})
  const [profile,setProfile]=useState<any>({})
  const [methods,setMethods]=useState<any[]>([])
@@ -38,6 +40,7 @@ export default function Payments(){
  const [transferStars,setTransferStars]=useState('')
  const [transferRef,setTransferRef]=useState(()=>crypto.randomUUID())
  const [stars,setStars]=useState('')
+ const [convertEarnStars,setConvertEarnStars]=useState('')
  const [notice,setNotice]=useState('')
  const [busy,setBusy]=useState(false)
  const [copied,setCopied]=useState(false)
@@ -53,6 +56,7 @@ export default function Payments(){
    setTransferableWallet(snapshot.transferableWallet)
    setPacks(snapshot.packs)
    setEarn(snapshot.earnings)
+   setEarningWallet(snapshot.earningWallet)
    setRisk(snapshot.risk)
    setProfile(snapshot.profile)
    setPublicId(snapshot.publicId)
@@ -70,6 +74,22 @@ export default function Payments(){
    return()=>window.removeEventListener('lammetna:wallet-change',refresh)
    // eslint-disable-next-line react-hooks/exhaustive-deps
  },[])
+
+ async function convertAvailableEarnings(){
+   const n=Number(convertEarnStars)
+   const available=Number(earningWallet.available_stars||0)
+   if(!Number.isInteger(n)||n<1||n>available)return
+   if(!await appConfirm({
+     title:'تحويل أرباح إلى رصيد نجوم',
+     message:`سيتم تحويل ${n.toLocaleString('ar-EG')} ⭐ من رصيد أرباحك إلى رصيد النجوم داخل لمتنا.\n\nالتحويل نهائي ولا يمكن عكسه إلى أرباح قابلة للسحب.`,
+     confirmLabel:'تحويل'
+   }))return
+   setBusy(true)
+   const {error}=await convertEarningsToStars(s,n)
+   setNotice(error?explainFinancialError(error):`تم تحويل ${n.toLocaleString('ar-EG')} ⭐ إلى رصيد النجوم.`)
+   if(!error)setConvertEarnStars('')
+   await load()
+ }
 
  async function useEarnings(action:'convert'|'withdraw'){
    const n=Number(stars)
@@ -117,7 +137,7 @@ export default function Payments(){
    if(!recipient||!Number.isInteger(n)||n<1)return
    if(!await appConfirm({
      title:'تأكيد تحويل النجوم',
-     message:`إلى: ${recipient.display_name}\nUser ID: ${recipient.public_user_id}\nالمرسل: ${n.toLocaleString('ar-EG')} ⭐\nعمولة التطبيق 15%: ${Math.ceil(n*0.15).toLocaleString('ar-EG')} ⭐\nسيصل للمستلم: ${(n-Math.ceil(n*0.15)).toLocaleString('ar-EG')} ⭐\n\nالتحويل نهائي بعد التأكيد.`,
+     message:`إلى: ${recipient.display_name}\nUser ID: ${recipient.public_user_id}\nالمرسل: ${n.toLocaleString('ar-EG')} ⭐\nعمولة التطبيق 15%: ${Math.ceil(n*0.15).toLocaleString('ar-EG')} ⭐\nسيضاف إلى رصيد أرباح المستلم: ${(n-Math.ceil(n*0.15)).toLocaleString('ar-EG')} ⭐\n\nيستطيع المستلم لاحقًا تحويل كل أو جزء من الأرباح إلى Star Wallet. التحويل نهائي بعد التأكيد.`,
      confirmLabel:'تحويل النجوم',
      danger:true
    }))return
@@ -126,7 +146,7 @@ export default function Payments(){
    if(error){
      setNotice(explainStarTransferError(error))
    }else{
-     setNotice('تم إرسال '+n+' ⭐. وصل للمستلم '+(n-Math.ceil(n*0.15))+' ⭐ بعد عمولة التطبيق 15%.')
+     setNotice('تم إرسال '+n+' ⭐. أضيف للمستلم '+(n-Math.ceil(n*0.15))+' ⭐ إلى رصيد الأرباح بعد عمولة التطبيق 15%.')
      setTransferStars('');setRecipient(null);setRecipientId('');setTransferRef(crypto.randomUUID())
      await load()
    }
@@ -172,8 +192,35 @@ export default function Payments(){
 
  <section className="grid grid-cols-2 gap-3">
    <Card><CardContent><Wallet className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">قابل للتحويل داخل لمتنا</p><p className="text-2xl font-black">{transferableWallet.toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">للتحويل بين المستخدمين فقط، وليس للسحب كأرباح.</p></CardContent></Card>
-   <Card><CardContent><Banknote className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">أرباح متاحة</p><p className="text-2xl font-black">{Number(earn.available_stars||0).toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">هذا الرصيد فقط يدخل مسار الأرباح والسحب.</p></CardContent></Card>
+   <Card><CardContent><Banknote className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">أرباح متاحة</p><p className="text-2xl font-black">{Number(earningWallet.available_stars||0).toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">أرباح الهدايا وتحويلات المستخدمين؛ قابلة للسحب أو للتحويل إلى رصيد نجوم.</p></CardContent></Card>
  </section>
+
+
+ <Card><CardContent>
+   <div className="flex items-center gap-2"><Star className="text-[#ffb918]" fill="#ffb918"/><h2 className="font-extrabold">تحويل الأرباح إلى رصيد النجوم</h2></div>
+   <p className="mt-2 text-xs font-bold leading-5 text-slate-500">اختر أي عدد من أرباحك المتاحة لتحويله إلى Star Wallet واستخدامه داخل لمتنا. التحويل من الأرباح إلى النجوم نهائي ولا يعمل في الاتجاه العكسي.</p>
+   <div className="mt-3 flex items-center gap-2">
+     <Input
+       type="number"
+       min="1"
+       max={Number(earningWallet.available_stars||0)}
+       inputMode="numeric"
+       value={convertEarnStars}
+       onChange={e=>setConvertEarnStars(e.target.value)}
+       placeholder="عدد النجوم"
+     />
+     <Button
+       onClick={()=>setConvertEarnStars(String(Number(earningWallet.available_stars||0)))}
+       variant="secondary"
+       disabled={busy||Number(earningWallet.available_stars||0)<1}
+     >الكل</Button>
+   </div>
+   <Button
+     className="mt-2 w-full"
+     onClick={()=>void convertAvailableEarnings()}
+     disabled={busy||!Number.isInteger(Number(convertEarnStars))||Number(convertEarnStars)<1||Number(convertEarnStars)>Number(earningWallet.available_stars||0)}
+   >تحويل إلى رصيد النجوم ⭐</Button>
+ </CardContent></Card>
 
  {blocked?<div className="rounded-3xl border border-red-200 bg-red-50 p-4"><div className="flex gap-2"><ShieldAlert className="text-red-600"/><div><p className="font-extrabold text-red-700">قيود مالية على الحساب</p>{Number(risk.iap_debt_stars||0)>0?<p className="mt-1 text-sm text-red-700">مديونية IAP: {risk.iap_debt_stars} ⭐ — أي شراء نجوم جديد يسدد الدين أولًا.</p>:null}{risk.manual_payout_hold?<p className="mt-1 text-sm text-red-700">السحب تحت المراجعة{risk.manual_hold_reason?' · '+risk.manual_hold_reason:''}</p>:null}</div></div></div>:null}
 

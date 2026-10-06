@@ -45,6 +45,7 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   const [privateContactPrice,setPrivateContactPrice]=useState(20)
   const [uid,setUid]=useState('')
   const [body,setBody]=useState('')
+  const messageSyncBusyRef=useRef(false)
   const [selectedMember,setSelectedMember]=useState<LammaMember|null>(null)
   const [showGifts,setShowGifts]=useState(false)
   const [showGiftRecipients,setShowGiftRecipients]=useState(false)
@@ -144,11 +145,15 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
   }
 
   async function refreshMessages(){
+    if(messageSyncBusyRef.current)return
+    messageSyncBusyRef.current=true
     try{
       const rows=await fetchLammaMessages(s,id)
       setMessages(rows)
     }catch{
       // Keep the current feed if a transient realtime refresh fails.
+    }finally{
+      messageSyncBusyRef.current=false
     }
   }
 
@@ -173,8 +178,16 @@ export default function SpaceChat({params}:{params:Promise<{id:string}>}){
     const syncOnFocus=()=>{void refreshMessages()}
     window.addEventListener('focus',syncOnFocus)
 
+    // Realtime is the primary path. This one-second visible-page sync is a
+    // lightweight fallback for mobile browsers that occasionally miss a
+    // Postgres Changes event while keeping the room open.
+    const messagePoll=window.setInterval(()=>{
+      if(document.visibilityState==='visible')void refreshMessages()
+    },1000)
+
     return()=>{
       cancelled=true
+      window.clearInterval(messagePoll)
       authSubscription.unsubscribe()
       window.removeEventListener('focus',syncOnFocus)
       if(roomChannel)s.removeChannel(roomChannel)

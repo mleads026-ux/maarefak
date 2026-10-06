@@ -21,8 +21,15 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
   const signalChannelRef=useRef<any>(null)
   const handledSignalsRef=useRef<Set<number>>(new Set())
   const pendingIceRef=useRef<RTCIceCandidateInit[]>([])
+  const videoSenderRef=useRef<RTCRtpSender|null>(null)
+  const privacyStreamRef=useRef<MediaStream|null>(null)
+  const privacyVideoRef=useRef<HTMLVideoElement|null>(null)
+  const privacyCanvasRef=useRef<HTMLCanvasElement|null>(null)
+  const privacyFrameRef=useRef<number|null>(null)
+  const videoPrivacyModeRef=useRef<'normal'|'blur'|'hidden'>('normal')
   const [micMuted,setMicMuted]=useState(false)
   const [cameraFacing,setCameraFacing]=useState<'user'|'environment'>('user')
+  const [videoPrivacyMode,setVideoPrivacyModeState]=useState<'normal'|'blur'|'hidden'>('normal')
 
   function bindLocalVideo(el:HTMLVideoElement|null){
     localVideoRef.current=el
@@ -41,13 +48,141 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
     }
   }
 
+  function setPrivacyState(mode:'normal'|'blur'|'hidden'){
+    videoPrivacyModeRef.current=mode
+    setVideoPrivacyModeState(mode)
+  }
+
+  function stopPrivacyPipeline(){
+    if(privacyFrameRef.current!=null){
+      cancelAnimationFrame(privacyFrameRef.current)
+      privacyFrameRef.current=null
+    }
+    privacyStreamRef.current?.getTracks().forEach(track=>track.stop())
+    privacyStreamRef.current=null
+    if(privacyVideoRef.current){
+      privacyVideoRef.current.pause()
+      privacyVideoRef.current.srcObject=null
+    }
+    privacyVideoRef.current=null
+    privacyCanvasRef.current=null
+  }
+
+  async function buildPrivacyTrack(mode:'blur'|'hidden'){
+    const source=localStreamRef.current?.getVideoTracks()[0]
+    if(!source)throw new Error('camera_unavailable')
+
+    const canvas=document.createElement('canvas')
+    const capture=(canvas as HTMLCanvasElement & {captureStream?:(fps?:number)=>MediaStream}).captureStream
+    if(typeof capture!=='function')throw new Error('canvas_capture_unsupported')
+
+    const settings=source.getSettings()
+    canvas.width=Math.max(320,Number(settings.width)||640)
+    canvas.height=Math.max(240,Number(settings.height)||480)
+    const ctx=canvas.getContext('2d')
+    if(!ctx)throw new Error('canvas_context_unavailable')
+    if(mode==='blur'){
+      const previousFilter=ctx.filter
+      ctx.filter='blur(22px)'
+      if(!ctx.filter||ctx.filter==='none')throw new Error('canvas_blur_unsupported')
+      ctx.filter=previousFilter
+    }
+
+    let processor:HTMLVideoElement|null=null
+    if(mode==='blur'){
+      processor=document.createElement('video')
+      processor.muted=true
+      processor.playsInline=true
+      processor.srcObject=new MediaStream([source])
+      await processor.play()
+      privacyVideoRef.current=processor
+    }
+
+    const draw=()=>{
+      const width=canvas.width
+      const height=canvas.height
+      ctx.save()
+      ctx.clearRect(0,0,width,height)
+      if(mode==='hidden'){
+        ctx.fillStyle='#05070b'
+        ctx.fillRect(0,0,width,height)
+      }else if(processor&&processor.readyState>=2){
+        ctx.filter='blur(22px)'
+        const bleed=34
+        ctx.drawImage(processor,-bleed,-bleed,width+bleed*2,height+bleed*2)
+        ctx.filter='none'
+        ctx.fillStyle='rgba(4,10,25,.10)'
+        ctx.fillRect(0,0,width,height)
+      }else{
+        ctx.fillStyle='#05070b'
+        ctx.fillRect(0,0,width,height)
+      }
+      ctx.restore()
+      privacyFrameRef.current=requestAnimationFrame(draw)
+    }
+    draw()
+
+    const privacyStream=capture.call(canvas,15)
+    const track=privacyStream.getVideoTracks()[0]
+    if(!track)throw new Error('privacy_track_unavailable')
+    privacyCanvasRef.current=canvas
+    privacyStreamRef.current=privacyStream
+    return track
+  }
+
+  async function applyVideoPrivacy(mode:'normal'|'blur'|'hidden'){
+    if(activeCall?.call_kind!=='video')return false
+    const sender=videoSenderRef.current
+    const source=localStreamRef.current?.getVideoTracks()[0]
+    if(!sender||!source){
+      setNotice('الكاميرا غير جاهزة بعد.')
+      return false
+    }
+
+    try{
+      if(mode==='normal'){
+        source.enabled=true
+        await sender.replaceTrack(source)
+        stopPrivacyPipeline()
+        setPrivacyState('normal')
+        return true
+      }
+
+      stopPrivacyPipeline()
+      source.enabled=true
+      const privacyTrack=await buildPrivacyTrack(mode)
+      await sender.replaceTrack(privacyTrack)
+      setPrivacyState(mode)
+      return true
+    }catch{
+      // Security-first fallback: if real-time blur processing is unsupported,
+      // never fall back to sending the clear camera feed.
+      stopPrivacyPipeline()
+      await sender.replaceTrack(null).catch(()=>{})
+      source.enabled=false
+      setPrivacyState('hidden')
+      setNotice(mode==='blur'
+        ?'الـ Blur غير مدعوم على هذا المتصفح؛ تم إخفاء الفيديو عن الطرف الآخر بدلًا منه.'
+        :'تم إخفاء الفيديو عن الطرف الآخر.')
+      return false
+    }
+  }
+
+  async function cycleVideoPrivacy(){
+    const current=videoPrivacyModeRef.current
+    const next=current==='normal'?'blur':current==='blur'?'hidden':'normal'
+    await applyVideoPrivacy(next)
+  }
+
   function cleanupPeer(){
     if(signalChannelRef.current){
       s.removeChannel(signalChannelRef.current)
       signalChannelRef.current=null
     }
+    stopPrivacyPipeline()
     peerRef.current?.close()
     peerRef.current=null
+    videoSenderRef.current=null
     localStreamRef.current?.getTracks().forEach(track=>track.stop())
     localStreamRef.current=null
     remoteStreamRef.current=null
@@ -56,6 +191,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
     if(remoteVideoRef.current)remoteVideoRef.current.srcObject=null
     setMicMuted(false)
     setCameraFacing('user')
+    setPrivacyState('normal')
   }
 
   function toggleMic(){
@@ -84,8 +220,8 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
       })
       const nextTrack=nextStream.getVideoTracks()[0]
       if(!nextTrack)throw new Error('camera_unavailable')
-      const sender=pc.getSenders().find(item=>item.track?.kind==='video')
-      if(sender)await sender.replaceTrack(nextTrack)
+      const sender=videoSenderRef.current
+      if(videoPrivacyModeRef.current==='normal'&&sender)await sender.replaceTrack(nextTrack)
       const old=stream.getVideoTracks()[0]
       if(old){
         stream.removeTrack(old)
@@ -97,6 +233,7 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
         void localVideoRef.current.play().catch(()=>{})
       }
       setCameraFacing(next)
+      if(videoPrivacyModeRef.current!=='normal')await applyVideoPrivacy(videoPrivacyModeRef.current)
     }catch{
       setNotice('تعذر تبديل الكاميرا على هذا الجهاز.')
     }
@@ -208,7 +345,10 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
           }
         }
 
-        stream.getTracks().forEach(track=>pc.addTrack(track,stream))
+        stream.getTracks().forEach(track=>{
+          const sender=pc.addTrack(track,stream)
+          if(track.kind==='video')videoSenderRef.current=sender
+        })
 
         pc.ontrack=event=>{
           const incoming=event.streams[0]
@@ -296,8 +436,11 @@ export function useChatWebRtc({s,uid,activeCall,setNotice}:Args){
     cleanupPeer,
     micMuted,
     cameraFacing,
+    videoPrivacyMode,
     toggleMic,
     switchCamera,
+    applyVideoPrivacy,
+    cycleVideoPrivacy,
     chooseAudioOutput,
   }
 }

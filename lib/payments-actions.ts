@@ -1,3 +1,7 @@
+export async function convertEarningsToStars(s:any,stars:number){
+  return s.rpc('convert_earnings_to_stars',{p_stars:stars})
+}
+
 export async function useLammaEarnings(s:any,action:'convert'|'withdraw',stars:number){
   return s.rpc('use_lamma_earnings',{p_action:action,p_stars:stars})
 }

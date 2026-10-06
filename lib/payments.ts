@@ -4,6 +4,8 @@ export function explainFinancialError(error:any){
   if(message.includes('financial_account_on_hold'))return 'الحساب المالي تحت المراجعة حاليًا.'
   if(message.includes('verification'))return 'يلزم إكمال التحقق من الهوية قبل السحب.'
   if(message.includes('payouts_disabled'))return 'السحب الحقيقي غير مفعّل حاليًا.'
+  if(message.includes('insufficient_earnings'))return 'رصيد الأرباح المتاح غير كافٍ.'
+  if(message.includes('invalid_amount'))return 'أدخل عددًا صحيحًا صالحًا من النجوم.'
   return 'تعذر تنفيذ العملية الآن.'
 }
 

@@ -57,7 +57,7 @@ export default async function Home(){
       <section className="mt-3 grid grid-cols-5 gap-2">
         {[
           [Users,'اكتشف','أصدقاء جدد بانتظارك','/discover','#11c899'],
-          [Shuffle,'دردشة عشوائية','تعرف على أشخاص جدد الآن','/discover','#0e67f5'],
+          [Shuffle,'دردشة عشوائية','تعرف على أشخاص جدد الآن','/random-chat','#0e67f5'],
           [Mic2,'اللَمّة','غرف صوتية حية بمواضيع متنوعة','/spaces','#b329e5'],
           [Star,'رصيد النجوم','الشحن ومميزات أكثر','/payments','#ffb918'],
           [MessagesSquare,'كلامنا','كل محادثاتك في مكان واحد','/chats','#1768f4'],

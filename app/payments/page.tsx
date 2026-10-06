@@ -152,15 +152,22 @@ export default function Payments(){
  return <AppShell><PageHeader title="المدفوعات"/><main className="space-y-4 p-4">
  {notice&&<p className="rounded-2xl bg-[#EAF2FC] p-3 text-sm font-bold text-[#1560BD]">{notice}</p>}
 
- <section className="grid grid-cols-2 gap-3">
-   <Card><CardContent><Wallet className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">رصيد النجوم</p><p className="text-2xl font-black">{wallet.toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">ترويجي: {promotionalWallet.toLocaleString()} ⭐</p><p className="text-[10px] font-bold text-[#1560BD]">قابل للتحويل: {transferableWallet.toLocaleString()} ⭐</p></CardContent></Card>
-   <Card><CardContent><Banknote className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">أرباح متاحة</p><p className="text-2xl font-black">{Number(earn.available_stars||0).toLocaleString()} ⭐</p></CardContent></Card>
- </section>
+ <Card className="overflow-hidden border-[#D9E7F6] bg-[linear-gradient(135deg,#F7FBFF,#EEF5FF)]"><CardContent className="p-5">
+   <div className="flex items-start justify-between gap-4">
+     <div>
+       <p className="text-sm font-black text-[#1560BD]">⭐ رصيد البرنامج</p>
+       <p className="mt-1 text-3xl font-black text-[#12213F]">{wallet.toLocaleString()} ⭐</p>
+     </div>
+     <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-[#1560BD] shadow-sm">داخل لمتنا فقط</span>
+   </div>
+   <p className="mt-3 text-xs font-bold leading-5 text-slate-600">هذا هو رصيد النجوم المخصص للاستخدام داخل البرنامج. لا يُعد أرباحًا، ولا يمكن سحبه نقدًا أو تحويله إلى رصيد أرباح قابل للسحب.</p>
+   {promotionalWallet>0?<p className="mt-2 rounded-2xl bg-white/80 p-2.5 text-[11px] font-bold text-slate-500">منه {promotionalWallet.toLocaleString()} ⭐ ترويجية لا يمكن إرسالها لمستخدم آخر.</p>:null}
+ </CardContent></Card>
 
- <div className="rounded-3xl border border-[#DCE8F7] bg-[#F7FBFF] p-4">
-   <p className="font-black text-[#1560BD]">⭐ نجوم للاستخدام داخل لمتنا فقط</p>
-   <p className="mt-1 text-xs font-bold leading-5 text-slate-600">النجوم المجانية من المهمات والمكافآت هي نجوم ترويجية. يمكن استخدامها داخل التطبيق، ولا يمكن سحبها نقدًا أو تحويلها إلى أرباح قابلة للسحب.</p>
- </div>
+ <section className="grid grid-cols-2 gap-3">
+   <Card><CardContent><Wallet className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">قابل للتحويل داخل لمتنا</p><p className="text-2xl font-black">{transferableWallet.toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">للتحويل بين المستخدمين فقط، وليس للسحب كأرباح.</p></CardContent></Card>
+   <Card><CardContent><Banknote className="text-[#1560BD]"/><p className="mt-2 text-xs text-slate-500">أرباح متاحة</p><p className="text-2xl font-black">{Number(earn.available_stars||0).toLocaleString()} ⭐</p><p className="mt-1 text-[10px] font-bold text-slate-500">هذا الرصيد فقط يدخل مسار الأرباح والسحب.</p></CardContent></Card>
+ </section>
 
  {blocked?<div className="rounded-3xl border border-red-200 bg-red-50 p-4"><div className="flex gap-2"><ShieldAlert className="text-red-600"/><div><p className="font-extrabold text-red-700">قيود مالية على الحساب</p>{Number(risk.iap_debt_stars||0)>0?<p className="mt-1 text-sm text-red-700">مديونية IAP: {risk.iap_debt_stars} ⭐ — أي شراء نجوم جديد يسدد الدين أولًا.</p>:null}{risk.manual_payout_hold?<p className="mt-1 text-sm text-red-700">السحب تحت المراجعة{risk.manual_hold_reason?' · '+risk.manual_hold_reason:''}</p>:null}</div></div></div>:null}
 

@@ -1,28 +1,19 @@
 'use client'
 import Link from 'next/link'
 import {useEffect,useMemo,useState} from 'react'
-import {useRouter} from 'next/navigation'
-import {Users,Heart,Mic2,MapPin,ShieldCheck,MessageCircle,Eye,Ban,Flag,SkipForward,Star,Bell,ChevronLeft,LockKeyhole,Play} from 'lucide-react'
+import {Users,Heart,Mic2,MapPin,Eye,Star,Bell,ChevronLeft,LockKeyhole,Play,RefreshCw} from 'lucide-react'
 import {createClient} from '@/lib/supabase/client'
 import {AppShell} from '@/components/app-shell'
 import {BrandLogo} from '@/components/brand-logo'
-import {appConfirm,appPrompt} from '@/components/interaction-dialog'
 import {
-  createRandomMatch,
-  discoveryFallback,
   discoveryRpcForMode,
   getDiscoveryCardView,
   normalizeNewFace,
   type DiscoveryMode,
-  type RandomMatch,
 } from '@/lib/discover-room'
 
 export default function Discover(){
   const s=useMemo(()=>createClient(),[])
-  const r=useRouter()
-  const [waiting,setWaiting]=useState(false)
-  const [busy,setBusy]=useState(false)
-  const [match,setMatch]=useState<RandomMatch|null>(null)
   const [userId,setUserId]=useState<string|null>(null)
   const [notice,setNotice]=useState('')
   const [advanced,setAdvanced]=useState<any[]>([])
@@ -41,34 +32,6 @@ export default function Discover(){
     const {data}=await s.rpc('mystery_discovery_cards',{p_limit:20})
     setAdvanced(data||[])
   })()},[s])
-
-  async function hydrate(row:any){
-    if(!userId)return
-    if(row.conversation_id){r.push(`/chats/${row.conversation_id}`);return}
-    if(row.status!=='active'){setMatch(null);setWaiting(false);return}
-    const other=row.user_a===userId?row.user_b:row.user_a
-    const [{data:p},{data:ageValue}]=await Promise.all([
-      s.from('profiles').select('id,display_name,avatar_url,mood,show_age,cities(name_ar),countries(name_ar)').eq('id',other).single(),
-      s.rpc('public_profile_age',{p_target:other}),
-    ])
-    if(!p)return
-    setMatch(createRandomMatch({
-      session:row,
-      profile:p,
-      age:ageValue,
-      currentUserId:userId,
-    }))
-    setWaiting(false)
-  }
-
-  useEffect(()=>{
-    if(!userId)return
-    const c=s.channel(`random-consent-${userId}`)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'random_chat_sessions'},(p:any)=>hydrate(p.new))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'random_chat_sessions'},(p:any)=>hydrate(p.new))
-      .subscribe()
-    return()=>{s.removeChannel(c)}
-  },[userId,s])
 
   async function load(m:DiscoveryMode){
     setMode(m);setAdvBusy(true);setNotice('')
@@ -96,34 +59,6 @@ export default function Discover(){
     const {data,error}=await s.rpc(fn,{p_limit:20})
     if(error){setNotice('تعذر تحميل الاقتراحات الآن.');setAdvanced([])}else setAdvanced(data||[])
     setAdvBusy(false)
-  }
-
-  async function start(){
-    setBusy(true);setMatch(null);setNotice('')
-    const {data,error}=await s.rpc('random_chat_match')
-    const row=Array.isArray(data)?data[0]:data
-    if(error){setNotice('تعذر بدء البحث الآن.');setBusy(false);return}
-    if(row?.waiting){setWaiting(true);setBusy(false);return}
-    if(row?.session_id){
-      const {data:ses}=await s.from('random_chat_sessions').select('id,user_a,user_b,status,conversation_id,user_a_accepted,user_b_accepted').eq('id',row.session_id).single()
-      if(ses)await hydrate(ses)
-    }
-    setBusy(false)
-  }
-
-  async function approve(){
-    if(!match||!userId)return
-    setBusy(true)
-    const {data,error}=await s.rpc('start_random_chat_conversation',{p_session:match.session_id})
-    if(error){setNotice('تعذر تسجيل الموافقة.');setBusy(false);return}
-    if(data){r.push(`/chats/${data}`);return}
-    setMatch(c=>c?(c.user_a===userId?{...c,user_a_accepted:true}:{...c,user_b_accepted:true}):c)
-    setBusy(false)
-  }
-
-  async function skip(){
-    if(match)await s.rpc('decline_random_chat',{p_session:match.session_id})
-    setMatch(null);await start()
   }
 
   async function actOnCard(action:'skip'|'interest'){
@@ -220,40 +155,21 @@ export default function Discover(){
             {mode==='voice'?<button onClick={playVoice} disabled={!first?.voice_intro_path||voicePlaying} className="tap-action mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#6c25d9]"><Play size={17} fill="currentColor"/>{voicePlaying?'جاري التشغيل...':'تشغيل المقدمة الصوتية'}</button>:null}
           </div>
         </div>
-        {target?<div className="mt-2 grid grid-cols-2 gap-2">
-          <button onClick={()=>actOnCard('skip')} className="tap-action rounded-full bg-white/15 py-2.5 text-xs font-black">تخطي</button>
-          <button onClick={()=>actOnCard('interest')} className="tap-action rounded-full bg-white py-2.5 text-xs font-black text-[#e41e91]">💗 اهتمام</button>
-        </div>:<p className="text-center text-xs font-black text-white/85">لا توجد اقتراحات أخرى الآن.</p>}
+        {target?<button onClick={()=>actOnCard('interest')} disabled={advBusy} className="tap-action mt-2 w-full rounded-full bg-white py-2.5 text-xs font-black text-[#e41e91]">💗 تسجيل اهتمام</button>:<p className="text-center text-xs font-black text-white/85">لا توجد اقتراحات أخرى الآن.</p>}
       </section>
 
       <section className="pixel-card mt-4 rounded-[27px] p-4">
-        <div className="flex items-center justify-center gap-3"><ShieldCheck className="text-[#13bfc8]" size={32}/><div><p className="text-[17px] font-black">محادثة عشوائية بموافقة الطرفين</p><p className="mt-1 text-[11px] font-bold text-[#76839a]">لن تبدأ المحادثة إلا بعد موافقة الشخص الآخر أيضًا</p></div></div>
-        <button onClick={start} disabled={busy||waiting} className="tap-action lammetna-gradient hero-shadow mt-4 w-full rounded-[23px] py-4 text-[19px] font-black text-white">{waiting?'جاري انتظار شخص متاح...':busy?'جاري البحث...':'ابدأ محادثة عشوائية الآن'}</button>
+        <button onClick={()=>actOnCard('skip')} disabled={!target||advBusy} className="tap-action lammetna-gradient hero-shadow flex w-full items-center justify-center gap-2 rounded-[23px] py-4 text-[19px] font-black text-white disabled:opacity-60">
+          <RefreshCw size={21} className={advBusy?'animate-spin':''}/>
+          {advBusy?'جاري تحميل اقتراح جديد...':mode==='mystery'?'شخص غامض آخر':'اعرض اقتراحًا آخر'}
+        </button>
+        <p className="mt-2 text-center text-[11px] font-bold text-[#76839a]">{mode==='mystery'?'كل ضغطة تعرض لك بطاقة شخص غامض جديدة.':'يمكنك التنقل بين الاقتراحات بدون بدء محادثة عشوائية.'}</p>
       </section>
 
-      {match?<section className="pixel-card mt-4 rounded-[28px] p-5 text-center">
-        <button onClick={()=>r.push(`/people/${match.matched_user_id}`)} className="tap-action mx-auto block h-28 w-28 overflow-hidden rounded-full bg-[#eaf3fc] ring-4 ring-[#32d9e5]">{match.avatar_url?<img src={match.avatar_url} alt="" className="h-full w-full object-cover"/>:<img src={discoveryFallback[1]} alt="" className="h-full w-full object-cover"/>}</button>
-        <h3 className="mt-3 text-xl font-black">{match.display_name}{match.age?`، ${match.age}`:''}</h3>
-        <p className="text-sm font-bold text-[#738098]">{match.city_name||''} {match.mood?`· ${match.mood}`:''}</p>
-        <button onClick={approve} className="tap-action lammetna-gradient mt-4 h-12 w-full rounded-2xl font-black text-white">موافق أتكلم</button>
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          <button onClick={skip} aria-label="تخطي" className="tap-action rounded-2xl bg-[#eef4fa] p-3"><SkipForward/></button>
-          <button onClick={async()=>{const {data}=await s.rpc('toggle_interest',{p_target:match.matched_user_id});setNotice(data?'تم تسجيل الاهتمام 💗':'تم إلغاء الاهتمام.')}} aria-label="اهتمام" className="tap-action rounded-2xl bg-[#eef4fa] p-3"><Heart/></button>
-          <button onClick={async()=>{
-            const ok=await appConfirm({title:'حظر المستخدم',message:'لن يظهر لك هذا المستخدم مرة أخرى.',confirmLabel:'حظر',danger:true})
-            if(ok){await s.rpc('block_user',{p_target:match.matched_user_id});setMatch(null);setNotice('تم الحظر.')}
-          }} aria-label="حظر" className="tap-action rounded-2xl bg-[#eef4fa] p-3"><Ban/></button>
-          <button onClick={async()=>{
-            const reason=await appPrompt({title:'إبلاغ عن المستخدم',message:'اكتب سبب البلاغ باختصار.',placeholder:'سبب البلاغ...',confirmLabel:'إرسال البلاغ',danger:true})
-            if(reason){await s.rpc('report_user',{p_target:match.matched_user_id,p_reason:'other',p_description:reason});setNotice('تم إرسال البلاغ للمراجعة.')}
-          }} aria-label="إبلاغ" className="tap-action rounded-2xl bg-[#eef4fa] p-3"><Flag/></button>
-        </div>
-      </section>:null}
-
-      <section className="mt-4"><p className="mb-2 text-sm font-black">ماذا يحدث بعد ذلك؟ ⓘ</p><div className="grid grid-cols-3 gap-2 text-center">
-        <div className="pixel-card rounded-[21px] p-3"><Users className="mx-auto mb-1 text-[#13c9bd]"/><p className="text-[11px] font-black">موافقة متبادلة</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">لبدء المحادثة</p></div>
-        <div className="pixel-card rounded-[21px] p-3"><MessageCircle className="mx-auto mb-1 text-[#1768f4]"/><p className="text-[11px] font-black">تعرّف من خلال الحديث</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">محادثة آمنة وممتعة</p></div>
-        <div className="pixel-card rounded-[21px] p-3"><Eye className="mx-auto mb-1 text-[#7744ff]"/><p className="text-[11px] font-black">اكتشف تدريجيًا</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">قد تظهر الصورة لاحقًا</p></div>
+      <section className="mt-4"><p className="mb-2 text-sm font-black">كيف تستخدم «اكتشف»؟ ⓘ</p><div className="grid grid-cols-3 gap-2 text-center">
+        <div className="pixel-card rounded-[21px] p-3"><Eye className="mx-auto mb-1 text-[#7744ff]"/><p className="text-[11px] font-black">شاهد الاقتراح</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">بطاقة واحدة في كل مرة</p></div>
+        <div className="pixel-card rounded-[21px] p-3"><RefreshCw className="mx-auto mb-1 text-[#1768f4]"/><p className="text-[11px] font-black">بدّل البطاقة</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">اعرض شخصًا آخر فورًا</p></div>
+        <div className="pixel-card rounded-[21px] p-3"><Heart className="mx-auto mb-1 text-[#e41e91]"/><p className="text-[11px] font-black">سجّل اهتمامك</p><p className="mt-1 text-[9px] font-bold text-[#78859b]">عندما يعجبك الاقتراح</p></div>
       </div></section>
     </main>
   </AppShell>

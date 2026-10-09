@@ -1,44 +1,46 @@
-name: Blender Character Demo (CPU, no RunPod)
+name: Blender Cartoon Character Builder (CPU only)
 on:
   workflow_dispatch:
   push:
     paths:
       - "tools/blender/generate_character.py"
+      - "tools/blender/verify_character.py"
       - ".github/workflows/blender-character-test.yml"
+
 jobs:
-  make-character:
+  make-cartoon-characters:
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Install Blender
+
+      - name: Install Blender and GLB exporter requirements
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y blender python3-numpy
           blender --version
-          blender --background --factory-startup --python-exit-code 1 --python-expr "import numpy; print('BLENDER_NUMPY_OK', numpy.__version__)"
-      - name: Generate GLB with Blender Python API
+          blender --background --factory-startup --python-exit-code 1 --python-expr "import numpy; import bpy; print('BLENDER_READY', bpy.app.version_string, numpy.__version__)"
+
+      - name: Generate scout, guardian, and mage GLB
         run: |
-          blender --background --factory-startup --python-exit-code 1 --python tools/blender/generate_character.py -- --output "$GITHUB_WORKSPACE/artifacts/demo_character.glb"
-          test -s "$GITHUB_WORKSPACE/artifacts/demo_character.glb" || { echo "::error::Blender exited without exporting a GLB"; exit 1; }
-          ls -lh "$GITHUB_WORKSPACE/artifacts/demo_character.glb"
-      - name: Verify GLB header
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import struct
-          p=Path('artifacts/demo_character.glb')
-          blob=p.read_bytes()
-          assert blob[:4]==b'glTF', 'Invalid GLB signature'
-          version,length=struct.unpack_from('<II',blob,4)
-          assert version==2 and length==len(blob), 'Invalid GLB length/version'
-          print(f'VALID_GLB bytes={len(blob)} version={version}')
-          PY
-      - name: Download 3D character
+          set -euo pipefail
+          mkdir -p artifacts
+          blender --background --factory-startup --python-exit-code 1 --python tools/blender/generate_character.py -- --preset scout --skin-tone tan --hair-style spiky --hair-color brown --body-build athletic --height 1.0 --output "$GITHUB_WORKSPACE/artifacts/scout.glb"
+          blender --background --factory-startup --python-exit-code 1 --python tools/blender/generate_character.py -- --preset guardian --skin-tone dark --hair-style short --hair-color black --body-build regular --height 1.08 --output "$GITHUB_WORKSPACE/artifacts/guardian.glb"
+          blender --background --factory-startup --python-exit-code 1 --python tools/blender/generate_character.py -- --preset mage --skin-tone light --hair-style long --hair-color red --body-build slim --height 0.94 --output "$GITHUB_WORKSPACE/artifacts/mage.glb"
+          ls -lh artifacts/
+
+      - name: Verify GLB geometry, materials and customization
+        run: python3 tools/blender/verify_character.py
+
+      - name: Upload playable 3D character files
         uses: actions/upload-artifact@v4
         with:
-          name: blender-demo-character-glb
-          path: artifacts/demo_character.glb
+          name: blender-cartoon-characters
+          path: |
+            artifacts/*.glb
+            artifacts/*.json
           if-no-files-found: error
+          retention-days: 90

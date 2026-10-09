@@ -20,7 +20,9 @@ jobs:
           blender --version
       - name: Generate GLB with Blender Python API
         run: |
-          blender --background --factory-startup --python tools/blender/generate_character.py -- --output artifacts/demo_character.glb
+          blender --background --factory-startup --python-exit-code 1 --python tools/blender/generate_character.py -- --output "$GITHUB_WORKSPACE/artifacts/demo_character.glb"
+          test -s "$GITHUB_WORKSPACE/artifacts/demo_character.glb" || { echo "::error::Blender exited without exporting a GLB"; exit 1; }
+          ls -lh "$GITHUB_WORKSPACE/artifacts/demo_character.glb"
       - name: Verify GLB header
         run: |
           python3 - <<'PY'

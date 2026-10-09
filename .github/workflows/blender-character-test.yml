@@ -1,0 +1,41 @@
+name: Blender Character Demo (CPU, no RunPod)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/blender/generate_character.py"
+      - ".github/workflows/blender-character-test.yml"
+jobs:
+  make-character:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender
+          blender --version
+      - name: Generate GLB with Blender Python API
+        run: |
+          blender --background --factory-startup --python tools/blender/generate_character.py -- --output artifacts/demo_character.glb
+      - name: Verify GLB header
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          p=Path('artifacts/demo_character.glb')
+          blob=p.read_bytes()
+          assert blob[:4]==b'glTF', 'Invalid GLB signature'
+          version,length=struct.unpack_from('<II',blob,4)
+          assert version==2 and length==len(blob), 'Invalid GLB length/version'
+          print(f'VALID_GLB bytes={len(blob)} version={version}')
+          PY
+      - name: Download 3D character
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-demo-character-glb
+          path: artifacts/demo_character.glb
+          if-no-files-found: error

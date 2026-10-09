@@ -37,11 +37,24 @@ def validate_one(name, expected):
     materials = doc.get("materials", [])
     assert len(meshes) >= 25, (name, len(meshes))
     assert len(materials) >= 7, (name, len(materials))
-    names = {m.get("name") for m in meshes}
-    assert "Face.Head" in names, name + " missing head"
-    assert any(n and n.startswith("Body.") for n in names)
-    assert any(n and n.startswith("Hair.") for n in names)
-    assert any(n and n.startswith("Outfit.") for n in names)
+    # Blender exports object names as glTF NODE names. Mesh names are
+    # often their original datablock names (Sphere, Cylinder, Cube), so
+    # checking mesh names gives false negatives despite valid geometry.
+    nodes = doc.get("nodes", [])
+    mesh_nodes = [node for node in nodes if isinstance(node.get("mesh"), int)]
+    names = {node.get("name") for node in mesh_nodes}
+    for node in mesh_nodes:
+        assert 0 <= node["mesh"] < len(meshes), (
+            name, "node has invalid mesh index", node
+        )
+    assert "Face.Head" in names, (
+        name, "missing head object node",
+        sorted(n for n in names if n and n.startswith("Face."))[:20],
+    )
+    assert any(n and n.startswith("Body.") for n in names), name + " missing body objects"
+    assert any(n and n.startswith("Hair.") for n in names), name + " missing hair objects"
+    assert any(n and n.startswith("Outfit.") for n in names), name + " missing outfit objects"
+    assert len(mesh_nodes) >= 25, (name, "too few nodes with meshes", len(mesh_nodes))
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["character"]["preset"] == name
@@ -50,6 +63,7 @@ def validate_one(name, expected):
     assert manifest["bytes"] == len(data)
     assert manifest["meshes"] == len(meshes)
     assert manifest["materials"] == len(materials)
+    assert any(node.get("name") == "Character." + name for node in nodes), name + " missing character root"
     assert manifest["animated"] is False and manifest["rigged"] is False
     digest = hashlib.sha256(data).hexdigest()
     print("VALID_CARTOON_GLB name=%s meshes=%d materials=%d bytes=%d sha256=%s" %
